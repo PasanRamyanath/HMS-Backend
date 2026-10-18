@@ -11,7 +11,7 @@
  * Stage 4: Value Added Tax (VAT) = round((A + TDL + SSCL) * vatRate)
  * Grand Total (G) = Subtotal A + TDL + SSCL + VAT
  */
-
+import { type DomainError, type Result, domainErr, ok } from "./result.js";
 /**
  * Statutory configuration governing Sri Lankan hotel tax computations.
  */
@@ -94,4 +94,55 @@ export function roundLkr(value: number): number {
     return 0;
   }
   return Math.round((value + Number.EPSILON) * 100) / 100;
+}
+
+/**
+ * Computes forward 4-stage compounding Sri Lankan statutory hospitality taxes:
+ *
+ * Stage 1: Service Charge (SC) = roundLkr(baseLkr * scRate)
+ * Subtotal A: subtotalAfterScLkr = baseLkr + scLkr
+ * Stage 2: Tourism Development Levy (TDL) = roundLkr(subtotalAfterScLkr * tdlRate)
+ * Stage 3: Social Security Contribution Levy (SSCL) = roundLkr(subtotalAfterScLkr * ssclRate)
+ * VAT Base: vatBaseLkr = subtotalAfterScLkr + tdlLkr + ssclLkr
+ * Stage 4: Value Added Tax (VAT) = roundLkr(vatBaseLkr * vatRate)
+ * Grand Total: grandTotalLkr = subtotalAfterScLkr + tdlLkr + ssclLkr + vatLkr
+ *
+ * @param baseLkr Base supply amount in Sri Lankan Rupees
+ * @param config Statutory tax configuration
+ * @returns Result containing detailed TaxBreakdownResult or DomainError
+ */
+export function calculateForwardTax(
+  baseLkr: number,
+  config: SriLankaTaxConfig = DEFAULT_SRI_LANKA_TAX_CONFIG,
+): Result<TaxBreakdownResult, DomainError> {
+  if (!Number.isFinite(baseLkr) || baseLkr < 0) {
+    return domainErr(
+      "INVALID_TAX_BASE",
+      "Base taxable supply amount must be a non-negative finite number",
+      { baseLkr },
+    );
+  }
+
+  const base = roundLkr(baseLkr);
+  const scLkr = config.enableSC ? roundLkr(base * config.scRate) : 0;
+  const subtotalAfterScLkr = roundLkr(base + scLkr);
+  const tdlLkr = config.enableTDL ? roundLkr(subtotalAfterScLkr * config.tdlRate) : 0;
+  const ssclLkr = config.enableSSCL ? roundLkr(subtotalAfterScLkr * config.ssclRate) : 0;
+  const vatBaseLkr = roundLkr(subtotalAfterScLkr + tdlLkr + ssclLkr);
+  const vatLkr = config.enableVAT ? roundLkr(vatBaseLkr * config.vatRate) : 0;
+  const grandTotalLkr = roundLkr(subtotalAfterScLkr + tdlLkr + ssclLkr + vatLkr);
+  const effectiveTaxRate = base > 0 ? roundLkr((grandTotalLkr - base) / base) : 0;
+
+  return ok({
+    baseLkr: base,
+    scLkr,
+    subtotalAfterScLkr,
+    tdlLkr,
+    ssclLkr,
+    vatBaseLkr,
+    vatLkr,
+    grandTotalLkr,
+    effectiveTaxRate,
+    isVatRegistered: config.enableVAT,
+  });
 }

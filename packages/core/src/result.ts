@@ -9,6 +9,7 @@ export type DomainErrorCode =
   | "TENANT_MISMATCH"
   | "QUOTA_EXCEEDED"
   | "TAX_MISMATCH"
+  | "INVALID_TAX_BASE"
   | "INVALID_NIC"
   | "HMAC_EXPIRED"
   | "ROOM_CONFLICT"
