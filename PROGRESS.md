@@ -12,7 +12,7 @@ This file tracks the sequential completion of backend implementation steps defin
 - [x] Step 007: Configure Strict Anti-Noise `biome.json`
 - [x] Step 008: Configure `knip.json` Pruner
 - [x] Step 009: Configure `lefthook.yml` Quality Gates
-- [ ] Step 010: Pin Node.js 22 LTS (`.nvmrc`) & Author `package.json` Workspaces + `tsconfig.base.json`
+- [x] Step 010: Pin Node.js 22 LTS (`.nvmrc`) & Author `package.json` Workspaces + `tsconfig.base.json`
 - [ ] Step 011: Scaffold `packages/core` Pure Domain Package
 - [ ] Step 012: Implement Explicit `Result<T, E>` & Error Catalog
 - [ ] Step 013: Implement SHA-256 Hash-Chained `ImmutableAuditLog` Engine

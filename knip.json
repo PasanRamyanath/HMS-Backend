@@ -1,5 +1,9 @@
 {
   "$schema": "https://unpkg.com/knip@5/schema.json",
+  "biome": true,
+  "lefthook": true,
+  "ignoreDependencies": ["@biomejs/biome", "lefthook"],
+  "ignoreBinaries": ["biome", "knip"],
   "workspaces": {
     "packages/core": {
       "entry": ["src/index.ts!"],
