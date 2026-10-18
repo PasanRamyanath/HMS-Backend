@@ -20,10 +20,10 @@ This file tracks the sequential completion of backend implementation steps defin
 - [x] Step 015: Scaffold `packages/cdk` Near-Free-Tier Stack
 - [x] Step 016: Author AWS IAM GitHub OIDC Stack (`packages/cdk/lib/github-oidc-stack.ts`)
 - [x] Step 017: Author Independent Backend GitHub Actions CI/CD Workflow (`.github/workflows/deploy-backend.yml`)
-- [ ] Step 018: Scaffold `HMS-Frontend` for React 19 + Tailwind CSS v4 + Apple HIG
-- [ ] Step 019: Author Independent Frontend GitHub Actions CI/CD Workflow (`HMS-Frontend/.github/workflows/deploy-frontend.yml`)
-- [ ] Step 020: Create Cross-Repo GraphQL Contract Sync Script (`scripts/sync-contracts.sh`)
-- [ ] Step 021: Implement Shared Sri Lankan Currency & `Asia/Colombo` Date Helpers (`format.ts`)
+- [x] Step 018: Scaffold `HMS-Frontend` for React 19 + Tailwind CSS v4 + Apple HIG
+- [x] Step 019: Author Independent Frontend GitHub Actions CI/CD Workflow (`HMS-Frontend/.github/workflows/deploy-frontend.yml`)
+- [x] Step 020: Create Cross-Repo GraphQL Contract Sync Script (`scripts/sync-contracts.sh`)
+- [x] Step 021: Implement Shared Sri Lankan Currency & `Asia/Colombo` Date Helpers (`format.ts`)
 - [ ] Step 022: Implement Runtime Tenant, Mobile, SLTDA & IRD Validators (`config.ts`)
 - [ ] Step 023: Write CloudFormation Permanent Free-Tier Cost-Ceiling Guardrail Test (`cost-guardrails.test.ts`)
 - [ ] Step 024: Author Master Architecture Decision Record (`docs/adr-001-codespaces-saas-apple-hig.md`)
