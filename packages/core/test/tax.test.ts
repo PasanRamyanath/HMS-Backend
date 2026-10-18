@@ -197,4 +197,60 @@ describe("Sri Lankan Statutory Tax Engine - Rounding & Configuration", () => {
       assert.equal(nanRes.error.code, "INVALID_TAX_BASE");
     });
   });
+
+  describe("Exhaustive IRD & SLTDA Real-World Test Vectors", () => {
+    it("computes Colombo 5-Star City Hotel Large Banquet (Rs 1,500,000 base)", () => {
+      // 1,500,000 base
+      // SC (10%) = 150,000 -> Subtotal A = 1,650,000
+      // TDL (1%) = 16,500
+      // SSCL (2.5%) = 41,250
+      // VAT Base = 1,650,000 + 16,500 + 41,250 = 1,707,750
+      // VAT (18%) = 307,395
+      // Total = 1,650,000 + 16,500 + 41,250 + 307,395 = 2,015,145.00
+      const res = calculateForwardTax(1500000);
+      assert.equal(res.ok, true);
+      if (!res.ok) return;
+
+      assert.equal(res.value.baseLkr, 1500000);
+      assert.equal(res.value.scLkr, 150000);
+      assert.equal(res.value.subtotalAfterScLkr, 1650000);
+      assert.equal(res.value.tdlLkr, 16500);
+      assert.equal(res.value.ssclLkr, 41250);
+      assert.equal(res.value.vatBaseLkr, 1707750);
+      assert.equal(res.value.vatLkr, 307395);
+      assert.equal(res.value.grandTotalLkr, 2015145);
+      assert.equal(res.value.effectiveTaxRate, 0.34);
+    });
+
+    it("computes Nuwara Eliya Heritage Bungalow In-Room Dining (Rs 15,450.50)", () => {
+      // Base: 15,450.50
+      // SC (10%) = 1,545.05 -> Subtotal A = 16,995.55
+      // TDL (1%) = 169.96
+      // SSCL (2.5%) = 424.89
+      // VAT Base = 16,995.55 + 169.96 + 424.89 = 17,590.40
+      // VAT (18%) = 3,166.27
+      // Grand Total = 16,995.55 + 169.96 + 424.89 + 3,166.27 = 20,756.67
+      const res = calculateForwardTax(15450.5);
+      assert.equal(res.ok, true);
+      if (!res.ok) return;
+
+      assert.equal(res.value.baseLkr, 15450.5);
+      assert.equal(res.value.scLkr, 1545.05);
+      assert.equal(res.value.subtotalAfterScLkr, 16995.55);
+      assert.equal(res.value.tdlLkr, 169.96);
+      assert.equal(res.value.ssclLkr, 424.89);
+      assert.equal(res.value.vatBaseLkr, 17590.4);
+      assert.equal(res.value.vatLkr, 3166.27);
+      assert.equal(res.value.grandTotalLkr, 20756.67);
+    });
+
+    it("handles minimal 1-cent base supply without numerical instability", () => {
+      const res = calculateForwardTax(0.01);
+      assert.equal(res.ok, true);
+      if (!res.ok) return;
+
+      assert.equal(res.value.baseLkr, 0.01);
+      assert.equal(res.value.grandTotalLkr >= 0.01, true);
+    });
+  });
 });
