@@ -3164,6 +3164,440 @@ input CreateGoodsIssueNoteInput {
 }
 
 # ==============================================================================
+# Night Audit & Statutory SLTDA / TDL / Staff SC Pool Statements (Phase 03.11)
+# ==============================================================================
+
+"""
+Daily Night Audit financial close, ledger balancing, and operational day rollover report.
+"""
+type NightAuditReport @aws_cognito_user_pools @aws_iam @aws_lambda @aws_api_key {
+  """
+  Unique night audit record identifier.
+  """
+  id: ID!
+  """
+  Multi-tenant property identifier.
+  """
+  tenantId: ID!
+  """
+  Business operating date audited.
+  """
+  auditDate: AWSDate!
+  """
+  Exact ISO timestamp when audit execution was triggered.
+  """
+  auditedAt: AWSDateTime!
+  """
+  User identifier of duty manager or night auditor.
+  """
+  auditorUserId: ID!
+  """
+  Total rentable rooms inventory on the audit date.
+  """
+  totalRoomsAvailable: Int!
+  """
+  Total rooms occupied during the night.
+  """
+  totalRoomsOccupied: Int!
+  """
+  Calculated property occupancy percentage.
+  """
+  occupancyPercentage: Float!
+  """
+  Total room accommodation net revenue in LKR.
+  """
+  totalRoomRevenueLkr: Float!
+  """
+  Total food and beverage net revenue in LKR.
+  """
+  totalFnBRevenueLkr: Float!
+  """
+  Total other department net revenue (spa, excursions, laundry, banquets) in LKR.
+  """
+  totalOtherRevenueLkr: Float!
+  """
+  Total gross turnover before statutory deductions in LKR.
+  """
+  totalGrossRevenueLkr: Float!
+  """
+  Total 10% staff service charge collected across folios in LKR.
+  """
+  totalServiceChargeCollectedLkr: Float!
+  """
+  Total 1.0% or 0.5% SLTDA Tourism Development Levy collected in LKR.
+  """
+  totalTdlCollectedLkr: Float!
+  """
+  Total 2.5% Social Security Contribution Levy collected in LKR.
+  """
+  totalSsclCollectedLkr: Float!
+  """
+  Total 18% Value Added Tax collected in LKR.
+  """
+  totalVatCollectedLkr: Float!
+  """
+  Guest and city ledger opening balance in LKR.
+  """
+  ledgerOpeningBalanceLkr: Float!
+  """
+  Guest and city ledger closing balance in LKR.
+  """
+  ledgerClosingBalanceLkr: Float!
+  """
+  Count of unposted or unbalanced folio discrepancies identified.
+  """
+  folioDiscrepanciesCount: Int!
+  """
+  Whether the system business date rollover succeeded.
+  """
+  isRolloverSuccessful: Boolean!
+  """
+  Auditor remarks and variance explanations.
+  """
+  notes: String
+  """
+  Timestamp of report generation.
+  """
+  createdAt: AWSDateTime!
+}
+
+"""
+Guest arrival and room-night count by country of residence for SLTDA statutory returns.
+"""
+type NationalityGuestCount @aws_cognito_user_pools @aws_iam @aws_lambda @aws_api_key {
+  """
+  ISO 3166-1 alpha-2 or alpha-3 country code.
+  """
+  countryCode: String!
+  """
+  English country name (e.g. 'United Kingdom', 'Germany', 'India', 'Sri Lanka').
+  """
+  countryName: String!
+  """
+  Total guest arrivals from this nationality during the month.
+  """
+  guestCount: Int!
+  """
+  Total guest nights spent by residents of this nationality.
+  """
+  guestNights: Int!
+}
+
+"""
+Sri Lanka Tourism Development Authority (SLTDA) Monthly Statistical Return (Tourism Act No. 38 of 2005).
+"""
+type SltdaMonthlyReturn @aws_cognito_user_pools @aws_iam @aws_lambda @aws_api_key {
+  """
+  Unique statutory return identifier.
+  """
+  id: ID!
+  """
+  Multi-tenant property identifier.
+  """
+  tenantId: ID!
+  """
+  Official SLTDA hotel/guesthouse registration number.
+  """
+  sltdaRegNo: String!
+  """
+  Calendar year of the return.
+  """
+  year: Int!
+  """
+  Calendar month of the return (1-12).
+  """
+  month: Int!
+  """
+  Total physical guest rooms available for sale.
+  """
+  totalRoomsInInventory: Int!
+  """
+  Available room nights across the entire month.
+  """
+  totalRoomNightsAvailable: Int!
+  """
+  Total room nights sold/occupied during the month.
+  """
+  totalRoomNightsSold: Int!
+  """
+  Average monthly room occupancy percentage.
+  """
+  averageOccupancyRate: Float!
+  """
+  Total guest nights recorded by foreign tourists.
+  """
+  totalForeignGuestNights: Int!
+  """
+  Total guest nights recorded by Sri Lankan resident domestic travelers.
+  """
+  totalDomesticGuestNights: Int!
+  """
+  Total guest check-in arrivals recorded.
+  """
+  totalGuestArrivals: Int!
+  """
+  Itemized foreign and domestic guest breakdown by nationality.
+  """
+  nationalityBreakdown: [NationalityGuestCount!]!
+  """
+  Average Daily Rate (ADR) achieved in LKR.
+  """
+  averageDailyRateLkr: Float!
+  """
+  Revenue Per Available Room (RevPAR) achieved in LKR.
+  """
+  revParLkr: Float!
+  """
+  Gross accommodation revenue subject to SLTDA levy in LKR.
+  """
+  totalGrossAccommodationTurnoverLkr: Float!
+  """
+  Submission status to SLTDA Tourism Information Management System (TIMS).
+  """
+  isSubmitted: Boolean!
+  """
+  Government submission acknowledgement reference code.
+  """
+  submissionReference: String
+  """
+  Timestamp when submitted to SLTDA portal.
+  """
+  submittedAt: AWSDateTime
+  """
+  User identifier of hotel administrator submitting the return.
+  """
+  submittedByUserId: ID
+  """
+  Timestamp of return record creation.
+  """
+  createdAt: AWSDateTime!
+  """
+  Timestamp of latest return update.
+  """
+  updatedAt: AWSDateTime!
+}
+
+"""
+Inland Revenue Department (IRD) & SLTDA Tourism Development Levy (TDL) Quarterly Summary.
+"""
+type TdlQuarterlySummary @aws_cognito_user_pools @aws_iam @aws_lambda @aws_api_key {
+  """
+  Unique quarterly summary identifier.
+  """
+  id: ID!
+  """
+  Multi-tenant property identifier.
+  """
+  tenantId: ID!
+  """
+  Assessment tax year.
+  """
+  taxYear: Int!
+  """
+  Quarter of assessment (1 = Jan-Mar, 2 = Apr-Jun, 3 = Jul-Sep, 4 = Oct-Dec).
+  """
+  quarter: Int!
+  """
+  Official SLTDA registration reference number.
+  """
+  sltdaRegNo: String!
+  """
+  Inland Revenue Department Tax Identification Number (TIN).
+  """
+  tinNo: String!
+  """
+  Month 1 gross turnover in LKR.
+  """
+  month1TurnoverLkr: Float!
+  """
+  Month 1 TDL liability payable in LKR.
+  """
+  month1TdlPayableLkr: Float!
+  """
+  Month 2 gross turnover in LKR.
+  """
+  month2TurnoverLkr: Float!
+  """
+  Month 2 TDL liability payable in LKR.
+  """
+  month2TdlPayableLkr: Float!
+  """
+  Month 3 gross turnover in LKR.
+  """
+  month3TurnoverLkr: Float!
+  """
+  Month 3 TDL liability payable in LKR.
+  """
+  month3TdlPayableLkr: Float!
+  """
+  Total quarterly turnover subject to TDL in LKR.
+  """
+  totalQuarterlyTurnoverLkr: Float!
+  """
+  Grand total TDL liability for the quarter in LKR.
+  """
+  totalQuarterlyTdlPayableLkr: Float!
+  """
+  Bank or LankaPay settlement voucher reference number.
+  """
+  paymentVoucherRef: String
+  """
+  Whether quarterly tax payment has been settled.
+  """
+  isPaid: Boolean!
+  """
+  Date of bank tax payment.
+  """
+  paidDate: AWSDate
+  """
+  Timestamp of statement generation.
+  """
+  createdAt: AWSDateTime!
+  """
+  Timestamp of latest update.
+  """
+  updatedAt: AWSDateTime!
+}
+
+"""
+Individual employee share in the 10% Service Charge monthly distribution pool.
+"""
+type StaffScMemberShare @aws_cognito_user_pools @aws_iam @aws_lambda @aws_api_key {
+  """
+  Staff member unique user identifier.
+  """
+  userId: ID!
+  """
+  Full name of staff member.
+  """
+  staffName: String!
+  """
+  Staff member primary operating department.
+  """
+  department: Department!
+  """
+  Seniority weighting points or rostered working days.
+  """
+  pointsOrHours: Float!
+  """
+  Gross service charge share allocated in LKR.
+  """
+  grossScShareLkr: Float!
+  """
+  Statutory EPF employee 8% deduction from SC share in LKR.
+  """
+  epfDeduction8PctLkr: Float!
+  """
+  Net take-home service charge disbursed in LKR.
+  """
+  netScDisbursedLkr: Float!
+}
+
+"""
+Sri Lankan 10% Hotel Service Charge Monthly Pool Distribution Statement.
+Enforces breakage reserve cap, EPF deduction, and equal or points-weighted distribution.
+"""
+type StaffScPoolStatement @aws_cognito_user_pools @aws_iam @aws_lambda @aws_api_key {
+  """
+  Unique statement identifier.
+  """
+  id: ID!
+  """
+  Multi-tenant property identifier.
+  """
+  tenantId: ID!
+  """
+  Calendar year of the distribution pool.
+  """
+  year: Int!
+  """
+  Calendar month of the distribution pool (1-12).
+  """
+  month: Int!
+  """
+  Total 10% service charge collected across all property folios during the month in LKR.
+  """
+  totalServiceChargeCollectedLkr: Float!
+  """
+  Agreed breakage deduction percentage (e.g. 5.0% or 10.0%).
+  """
+  breakageReserveDeductionPct: Float!
+  """
+  Breakage fund reserve deduction amount retained in LKR.
+  """
+  breakageReserveAmountLkr: Float!
+  """
+  Net distributable pool remaining for staff in LKR.
+  """
+  distributablePoolLkr: Float!
+  """
+  Count of eligible employees participating in the pool.
+  """
+  eligibleStaffCount: Int!
+  """
+  Individual staff member distribution breakdowns.
+  """
+  staffShares: [StaffScMemberShare!]!
+  """
+  Total net amount disbursed to staff in LKR.
+  """
+  totalScDisbursedLkr: Float!
+  """
+  Disbursement authorization status.
+  """
+  isDisbursed: Boolean!
+  """
+  Timestamp when disbursement was completed.
+  """
+  disbursedAt: AWSDateTime
+  """
+  User identifier of General Manager or Financial Controller authorising disbursement.
+  """
+  authorizedByUserId: ID
+  """
+  Timestamp of pool statement creation.
+  """
+  createdAt: AWSDateTime!
+  """
+  Timestamp of latest update.
+  """
+  updatedAt: AWSDateTime!
+}
+
+"""
+Input for executing the daily automated or manual night audit rollover.
+"""
+input RunNightAuditInput {
+  auditDate: AWSDate!
+  notes: String
+}
+
+"""
+Input for generating an SLTDA monthly statistical return.
+"""
+input GenerateSltdaMonthlyReturnInput {
+  year: Int!
+  month: Int!
+}
+
+"""
+Input for generating an IRD/SLTDA quarterly TDL calculation summary.
+"""
+input GenerateTdlQuarterlySummaryInput {
+  taxYear: Int!
+  quarter: Int!
+}
+
+"""
+Input for calculating and disbursing the monthly 10% Service Charge pool to staff.
+"""
+input DistributeStaffScPoolInput {
+  year: Int!
+  month: Int!
+  breakageReserveDeductionPct: Float!
+}
+
+# ==============================================================================
 # GraphQL Root Types Placeholder
 # ==============================================================================
 
@@ -3436,6 +3870,42 @@ type Query {
     fromDate: AWSDate
     toDate: AWSDate
   ): [InventoryVoucher!]! @aws_cognito_user_pools @aws_iam @aws_lambda @aws_api_key
+
+  """
+  Retrieves a daily night audit rollover report by business date.
+  """
+  getNightAuditReport(tenantId: ID!, auditDate: AWSDate!): NightAuditReport
+    @aws_cognito_user_pools
+    @aws_iam
+    @aws_lambda
+    @aws_api_key
+
+  """
+  Retrieves an SLTDA monthly statistical return by year and month.
+  """
+  getSltdaMonthlyReturn(tenantId: ID!, year: Int!, month: Int!): SltdaMonthlyReturn
+    @aws_cognito_user_pools
+    @aws_iam
+    @aws_lambda
+    @aws_api_key
+
+  """
+  Retrieves an IRD / SLTDA Tourism Development Levy quarterly summary.
+  """
+  getTdlQuarterlySummary(tenantId: ID!, taxYear: Int!, quarter: Int!): TdlQuarterlySummary
+    @aws_cognito_user_pools
+    @aws_iam
+    @aws_lambda
+    @aws_api_key
+
+  """
+  Retrieves the 10% staff service charge monthly pool statement.
+  """
+  getStaffScPoolStatement(tenantId: ID!, year: Int!, month: Int!): StaffScPoolStatement
+    @aws_cognito_user_pools
+    @aws_iam
+    @aws_lambda
+    @aws_api_key
 }
 
 type Mutation {
@@ -3644,6 +4114,36 @@ type Mutation {
   Issues stock items from central store to department or kitchen outlet via Goods Issue Note (GIN).
   """
   createGoodsIssueNote(tenantId: ID!, input: CreateGoodsIssueNoteInput!): InventoryVoucher
+    @aws_cognito_user_pools
+    @aws_iam
+
+  """
+  Executes the daily automated or manual night audit close and ledger rollover.
+  """
+  runNightAudit(tenantId: ID!, input: RunNightAuditInput!): NightAuditReport
+    @aws_cognito_user_pools
+    @aws_iam
+
+  """
+  Compiles and validates an SLTDA monthly statistical occupancy and revenue return.
+  """
+  generateSltdaMonthlyReturn(
+    tenantId: ID!
+    input: GenerateSltdaMonthlyReturnInput!
+  ): SltdaMonthlyReturn @aws_cognito_user_pools @aws_iam
+
+  """
+  Calculates quarterly Tourism Development Levy (TDL) liability for IRD compliance.
+  """
+  generateTdlQuarterlySummary(
+    tenantId: ID!
+    input: GenerateTdlQuarterlySummaryInput!
+  ): TdlQuarterlySummary @aws_cognito_user_pools @aws_iam
+
+  """
+  Calculates and distributes monthly 10% Service Charge pool shares with breakage and EPF.
+  """
+  distributeStaffScPool(tenantId: ID!, input: DistributeStaffScPoolInput!): StaffScPoolStatement
     @aws_cognito_user_pools
     @aws_iam
 }

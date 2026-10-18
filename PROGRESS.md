@@ -67,3 +67,4 @@ This file tracks the sequential completion of backend implementation steps defin
 - [x] Step 058: Define `BanquetEvent` (Sri Lankan Wedding / Function BEO) GraphQL Types (`schema.graphql`)
 - [x] Step 059: Define `ExcursionBooking` & `AyurvedaAppointment` GraphQL Types (`schema.graphql`)
 - [x] Step 060: Define Store Inventory (`StockItem`, `InventoryVoucher`, `PurchaseOrder`) GraphQL Types (`schema.graphql`)
+- [x] Step 061: Define `NightAuditReport`, `SltdaMonthlyReturn`, and `StaffScPoolStatement` Types (`schema.graphql`)
