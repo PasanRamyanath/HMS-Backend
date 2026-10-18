@@ -77,3 +77,4 @@ This file tracks the sequential completion of backend implementation steps defin
 - [x] Step 068: Implement AppSync JS Resolver: `Mutation.upsertMenuItem` & `Mutation.toggleMenuItemStock` (`resolvers/menuMutations.ts`)
 - [x] Step 069: Implement AppSync JS Resolver: `Query.listActiveOrdersByDepartment` (KDS Kanban Query) (`resolvers/kdsOrders.ts`)
 - [x] Step 070: Implement AppSync JS Resolver: `Mutation.updateServiceOrderStatus` (Real-Time KDS Transition) (`resolvers/updateOrderStatus.ts`)
+- [x] Step 071: Implement AppSync JS Resolver: `Query.listReservationsByDateRange` (Tape Chart Query) (`resolvers/reservationsQuery.ts`)
