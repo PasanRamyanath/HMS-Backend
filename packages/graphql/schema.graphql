@@ -1461,6 +1461,316 @@ input CreateGroupBookingInput {
 }
 
 # ==============================================================================
+# Guest Folios, Split Routing & Statutory IRD Tax Invoices
+# ==============================================================================
+
+"""
+Split folio charge routing rule directing specific departments or amounts to separate folios.
+Enables standard Sri Lankan practice: Room and contracted meals to DMC voucher folio, Extras / Minibar / Spa to Guest folio.
+"""
+type SplitFolioRouting @aws_cognito_user_pools @aws_iam @aws_lambda @aws_api_key {
+  """
+  Unique routing rule identifier.
+  """
+  id: ID!
+  """
+  Target sub-folio designation (e.g. 'GUEST_EXTRAS', 'DMC_MASTER').
+  """
+  targetFolioType: String!
+  """
+  Department charges to automatically route (null routes all unassigned).
+  """
+  department: Department
+  """
+  Percentage of charge to route to this folio (1.0 to 100.0).
+  """
+  percentage: Float
+  """
+  Fixed cap amount in LKR to route.
+  """
+  fixedAmountLkr: Float
+  """
+  DMC credit agreement identifier if billing to tour operator City Ledger.
+  """
+  billToTourOperatorContractId: ID
+}
+
+"""
+Granular line item charged to a guest or DMC folio with full 4-stage tax compounding.
+"""
+type FolioLineItem @aws_cognito_user_pools @aws_iam @aws_lambda @aws_api_key {
+  """
+  Unique line item identifier.
+  """
+  id: ID!
+  """
+  Multi-tenant property identifier.
+  """
+  tenantId: ID!
+  """
+  Parent folio identifier.
+  """
+  folioId: ID!
+  """
+  Originating department (Front Desk, Restaurant POS, KDS, Bar, Spa).
+  """
+  department: Department!
+  """
+  Itemized description (e.g. 'Deluxe Room Night', 'Devilled Prawns KOT #42').
+  """
+  description: String!
+  """
+  Quantity consumed.
+  """
+  quantity: Int!
+  """
+  Unit price in LKR prior to service charge and taxes.
+  """
+  unitPriceLkr: Float!
+  """
+  Total net supply base in LKR (quantity * unitPriceLkr).
+  """
+  baseSupplyLkr: Float!
+  """
+  Full itemized 4-stage tax and service charge compounding breakdown.
+  """
+  taxBreakdown: TaxBreakdown!
+  """
+  Final gross billable amount inclusive of service charge and taxes.
+  """
+  totalGrossLkr: Float!
+  """
+  Originating KDS or QR service order identifier if applicable.
+  """
+  serviceOrderId: ID
+  """
+  Whether this charge has been voided by a manager.
+  """
+  isVoided: Boolean!
+  """
+  Audit justification for charge reversal or void.
+  """
+  voidReason: String
+  """
+  Timestamp when charge was posted.
+  """
+  createdAt: AWSDateTime!
+}
+
+"""
+Guest or Tour Operator ledger folio aggregating line item charges, taxes, and settlements.
+"""
+type Folio @aws_cognito_user_pools @aws_iam @aws_lambda @aws_api_key {
+  """
+  Unique folio identifier.
+  """
+  id: ID!
+  """
+  Multi-tenant property identifier.
+  """
+  tenantId: ID!
+  """
+  Associated reservation identifier.
+  """
+  reservationId: ID!
+  """
+  Official folio serial number (e.g. 'FOL-2026-00412').
+  """
+  folioNumber: String!
+  """
+  Folio billing channel ('MAIN', 'GUEST_EXTRAS', 'DMC_CITY_LEDGER').
+  """
+  folioType: String!
+  """
+  Current lifecycle and settlement status.
+  """
+  status: FolioStatus!
+  """
+  Active split routing rules configured for this folio.
+  """
+  splitRouting: [SplitFolioRouting!]
+  """
+  Active and historical line item postings.
+  """
+  lineItems: [FolioLineItem!]!
+  """
+  Sum of net supply bases across all active line items.
+  """
+  totalBaseSupplyLkr: Float!
+  """
+  Sum of 10% Service Charge across all active line items.
+  """
+  totalServiceChargeLkr: Float!
+  """
+  Sum of 1% TDL across all active line items.
+  """
+  totalTdlLkr: Float!
+  """
+  Sum of 2.5641% SSCL across all active line items.
+  """
+  totalSsclLkr: Float!
+  """
+  Sum of 18% VAT across all active line items.
+  """
+  totalVatLkr: Float!
+  """
+  Grand total gross payable amount in Sri Lankan Rupees.
+  """
+  totalGrossLkr: Float!
+  """
+  Total payments and credits applied against this folio.
+  """
+  totalPaidLkr: Float!
+  """
+  Outstanding balance due in LKR.
+  """
+  balanceDueLkr: Float!
+  """
+  Settlement currency.
+  """
+  currency: String!
+  """
+  Whether folio is fully balanced and settled.
+  """
+  isSettled: Boolean!
+  """
+  Timestamp of final settlement.
+  """
+  settledAt: AWSDateTime
+  """
+  Generated official tax invoice identifier once settled.
+  """
+  invoiceId: ID
+  """
+  Timestamp of creation.
+  """
+  createdAt: AWSDateTime!
+  """
+  Timestamp of latest update.
+  """
+  updatedAt: AWSDateTime!
+}
+
+"""
+Official Sri Lankan Inland Revenue Department (IRD) Tax Invoice issued on folio settlement.
+Cryptographically sealed with SHA-256 hash chaining.
+"""
+type FolioInvoice @aws_cognito_user_pools @aws_iam @aws_lambda @aws_api_key {
+  """
+  Unique invoice identifier.
+  """
+  id: ID!
+  """
+  Multi-tenant property identifier.
+  """
+  tenantId: ID!
+  """
+  Settled folio identifier.
+  """
+  folioId: ID!
+  """
+  Statutory sequential tax invoice number (e.g. 'INV-2026-00084').
+  """
+  invoiceNumber: String!
+  """
+  Hotel IRD 9-digit Tax Identification Number.
+  """
+  tinNo: String!
+  """
+  Hotel IRD 12-digit VAT Registration Number.
+  """
+  vatRegNo: String
+  """
+  Billed party legal name (Guest or Tour Operator).
+  """
+  guestName: String!
+  """
+  Billed party billing address.
+  """
+  guestAddress: String
+  """
+  Guest NIC (Sri Lankan resident) or Passport Number (foreign tourist).
+  """
+  guestNicOrPassport: String
+  """
+  Invoice settlement currency ('LKR' or 'USD').
+  """
+  currency: String!
+  """
+  CBSL benchmark conversion rate applied for foreign currency invoices.
+  """
+  exchangeRateToLkr: Float!
+  """
+  Comprehensive 4-stage compounding tax itemization.
+  """
+  taxBreakdown: TaxBreakdown!
+  """
+  Gross invoice amount in Sri Lankan Rupees.
+  """
+  totalGrossLkr: Float!
+  """
+  Gross invoice amount in foreign currency if contracted in USD/EUR.
+  """
+  totalGrossForeign: Float
+  """
+  Final settlement payment instrument.
+  """
+  paymentMethod: PaymentMethod!
+  """
+  Merchant gateway or bank transaction reference.
+  """
+  paymentReference: String
+  """
+  Central Bank LankaQR EMVCo dynamic merchant payment payload string.
+  """
+  lankaQrPayload: String
+  """
+  Timestamp of official tax invoice issuance.
+  """
+  issuedAt: AWSDateTime!
+  """
+  SHA-256 tamper-evident hash chaining value.
+  """
+  hashChainSha256: String!
+}
+
+"""
+Input for posting a charge to an open folio.
+"""
+input AddFolioChargeInput {
+  folioId: ID!
+  department: Department!
+  description: String!
+  quantity: Int!
+  unitPriceLkr: Float!
+  serviceOrderId: ID
+}
+
+"""
+Input for configuring a split-folio routing rule.
+"""
+input CreateSplitFolioRoutingInput {
+  folioId: ID!
+  targetFolioType: String!
+  department: Department
+  percentage: Float
+  fixedAmountLkr: Float
+  billToTourOperatorContractId: ID
+}
+
+"""
+Input for settling an open folio and producing an official IRD tax invoice.
+"""
+input SettleFolioInput {
+  folioId: ID!
+  paymentMethod: PaymentMethod!
+  amountLkr: Float!
+  paymentReference: String
+  guestNicOrPassport: String
+  guestAddress: String
+}
+
+# ==============================================================================
 # GraphQL Root Types Placeholder
 # ==============================================================================
 
@@ -1551,6 +1861,29 @@ type Query {
     @aws_iam
     @aws_lambda
     @aws_api_key
+
+  """
+  Retrieves a guest or DMC ledger folio with all line items and tax breakdown.
+  """
+  getFolio(tenantId: ID!, id: ID!): Folio @aws_cognito_user_pools @aws_iam @aws_lambda @aws_api_key
+
+  """
+  Lists all folios associated with a reservation (e.g. Master DMC + Extras).
+  """
+  listFoliosForReservation(tenantId: ID!, reservationId: ID!): [Folio!]!
+    @aws_cognito_user_pools
+    @aws_iam
+    @aws_lambda
+    @aws_api_key
+
+  """
+  Retrieves an issued IRD tax invoice by identifier.
+  """
+  getFolioInvoice(tenantId: ID!, id: ID!): FolioInvoice
+    @aws_cognito_user_pools
+    @aws_iam
+    @aws_lambda
+    @aws_api_key
 }
 
 type Mutation {
@@ -1619,6 +1952,32 @@ type Mutation {
   Creates a multi-room group tour booking.
   """
   createGroupBooking(tenantId: ID!, input: CreateGroupBookingInput!): GroupBooking
+    @aws_cognito_user_pools
+    @aws_iam
+
+  """
+  Posts an F&B, minibar, laundry, or extra charge to an active folio.
+  """
+  addFolioCharge(tenantId: ID!, input: AddFolioChargeInput!): Folio @aws_cognito_user_pools @aws_iam
+
+  """
+  Managerially voids an erroneously posted folio line item with audit justification.
+  """
+  voidFolioCharge(tenantId: ID!, folioId: ID!, lineItemId: ID!, reason: String!): Folio
+    @aws_cognito_user_pools
+    @aws_iam
+
+  """
+  Settles an outstanding folio and generates a sealed IRD tax invoice.
+  """
+  settleFolio(tenantId: ID!, input: SettleFolioInput!): FolioInvoice
+    @aws_cognito_user_pools
+    @aws_iam
+
+  """
+  Configures split routing for a reservation folio.
+  """
+  createSplitFolioRouting(tenantId: ID!, input: CreateSplitFolioRoutingInput!): Folio
     @aws_cognito_user_pools
     @aws_iam
 }

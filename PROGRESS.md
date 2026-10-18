@@ -61,3 +61,4 @@ This file tracks the sequential completion of backend implementation steps defin
 - [x] Step 052: Define Multi-Tenant `HotelTenant` & `TaxConfig` GraphQL Types (`schema.graphql`)
 - [x] Step 053: Define `RoomType`, `Room`, and `DriverDormBed` GraphQL Types (`schema.graphql`)
 - [x] Step 054: Define `Reservation`, `DriverAccommodation`, and `GroupBooking` GraphQL Types (`schema.graphql`)
+- [x] Step 055: Define `Folio`, `FolioLineItem`, and `FolioInvoice` GraphQL Types (`schema.graphql`)
