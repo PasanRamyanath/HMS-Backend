@@ -36,7 +36,7 @@ This file tracks the sequential completion of backend implementation steps defin
 - [x] Step 029: Implement Small Guest House Tier Support (`createTaxPreset`)
 - [x] Step 030: Implement Reverse All-Inclusive Gross-to-Net Derivation (`calculateReverseTax`)
 - [x] Step 031: Write Exhaustive IRD/SLTDA Tax Test Vectors
-- [ ] Step 032: Implement Multi-Line Folio Tax Aggregator (`folioMath.ts`)
+- [x] Step 032: Implement Multi-Line Folio Tax Aggregator (`folioMath.ts`)
 - [ ] Step 033: Implement Foreign Currency to `LKR` Invoice Lock Converter (`currencyLock.ts`)
 - [ ] Step 034: Implement Sri Lankan NIC Parser (`nicPassport.ts`)
 - [ ] Step 035: Implement Foreign Passport & Tourist Police B-Card Validator (`nicPassport.ts`)

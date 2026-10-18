@@ -10,6 +10,7 @@ export type DomainErrorCode =
   | "QUOTA_EXCEEDED"
   | "TAX_MISMATCH"
   | "INVALID_TAX_BASE"
+  | "INVALID_FOLIO_LINE"
   | "INVALID_NIC"
   | "HMAC_EXPIRED"
   | "ROOM_CONFLICT"
