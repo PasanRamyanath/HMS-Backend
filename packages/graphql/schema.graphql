@@ -2495,6 +2495,298 @@ input CreateBanquetEventInput {
 }
 
 # ==============================================================================
+# Excursions, Safari Jeeps & Ayurveda Appointments (Phase 03.09)
+# ==============================================================================
+
+"""
+Excursion Booking covering Sri Lankan wildlife safaris, whale watching, cultural tours, and airport transfers.
+"""
+type ExcursionBooking @aws_cognito_user_pools @aws_iam @aws_lambda @aws_api_key {
+  """
+  Unique excursion booking identifier.
+  """
+  id: ID!
+  """
+  Multi-tenant property identifier.
+  """
+  tenantId: ID!
+  """
+  Sequential excursion booking reference number (e.g. 'EXC-2026-0129').
+  """
+  bookingNumber: String!
+  """
+  Category of excursion ('SAFARI_JEEP', 'WHALE_WATCHING', 'CULTURAL_TOUR', 'AIRPORT_TRANSFER', 'TEA_PLANTATION', 'BOAT_SAFARI', 'HIKING_TREK').
+  """
+  activityType: String!
+  """
+  Descriptive activity title (e.g. 'Yala National Park Afternoon Safari Jeep 4x4').
+  """
+  title: String!
+  """
+  Primary guest full name.
+  """
+  guestName: String!
+  """
+  Guest contact phone in E.164 format.
+  """
+  guestPhone: AWSPhone!
+  """
+  Optional linked hotel stay reservation identifier.
+  """
+  reservationId: ID
+  """
+  Room number if the guest is an in-house resident.
+  """
+  roomNumber: String
+  """
+  Scheduled date of the excursion.
+  """
+  excursionDate: AWSDate!
+  """
+  Scheduled departure time from the hotel lobby.
+  """
+  departureTime: AWSTime!
+  """
+  Estimated or actual return time to the hotel.
+  """
+  returnTime: AWSTime
+  """
+  Number of adult participants.
+  """
+  numberOfAdults: Int!
+  """
+  Number of child participants.
+  """
+  numberOfChildren: Int!
+  """
+  Vehicle registration number (e.g. 'WP NC-7744').
+  """
+  vehicleRegistrationNo: String
+  """
+  Name of assigned driver, naturalist, or tour guide.
+  """
+  driverOrGuideName: String
+  """
+  Contact phone number of the driver or guide.
+  """
+  driverContactPhone: AWSPhone
+  """
+  Pickup departure point.
+  """
+  pickupLocation: String!
+  """
+  Dropoff destination or return point.
+  """
+  dropoffLocation: String!
+  """
+  Net supplier / operator wholesale cost in Sri Lankan Rupees.
+  """
+  supplierCostLkr: Float!
+  """
+  Retail price charged to guest prior to statutory taxes in LKR.
+  """
+  retailRateLkr: Float!
+  """
+  Itemized 4-stage compounding statutory taxes (SC -> TDL -> SSCL -> VAT).
+  """
+  taxBreakdown: TaxBreakdown!
+  """
+  Grand gross payable amount in Sri Lankan Rupees.
+  """
+  totalGrossLkr: Float!
+  """
+  Optional room folio identifier if billed to guest room.
+  """
+  folioId: ID
+  """
+  Whether the charge has been transferred to the guest stay folio.
+  """
+  isBilledToFolio: Boolean!
+  """
+  Booking operational status ('CONFIRMED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED').
+  """
+  status: String!
+  """
+  Special guest requirements (e.g. packed breakfast box, child booster seat, wildlife lens).
+  """
+  specialRequirements: String
+  """
+  Timestamp of booking creation.
+  """
+  createdAt: AWSDateTime!
+  """
+  Timestamp of latest booking update.
+  """
+  updatedAt: AWSDateTime!
+}
+
+"""
+Ayurveda & Wellness Appointment modeling traditional Sri Lankan herbal medicine and spa treatments.
+"""
+type AyurvedaAppointment @aws_cognito_user_pools @aws_iam @aws_lambda @aws_api_key {
+  """
+  Unique appointment identifier.
+  """
+  id: ID!
+  """
+  Multi-tenant property identifier.
+  """
+  tenantId: ID!
+  """
+  Sequential appointment reference code (e.g. 'AYU-2026-0341').
+  """
+  appointmentNumber: String!
+  """
+  Therapy category ('SHIRODHARA', 'ABHYANGA_MASSAGE', 'HERBAL_STEAM_BATH', 'PINDA_SWEDA', 'CONSULTATION', 'PANCHAKARMA_PACKAGE').
+  """
+  treatmentType: String!
+  """
+  Display name of the treatment (e.g. 'Traditional Shirodhara & Herbal Oil Bath').
+  """
+  treatmentName: String!
+  """
+  Treatment duration in minutes (e.g. 60, 90, 120).
+  """
+  durationMinutes: Int!
+  """
+  Guest full name receiving therapy.
+  """
+  guestName: String!
+  """
+  Linked in-house room reservation ID.
+  """
+  reservationId: ID
+  """
+  Room number of the guest.
+  """
+  roomNumber: String
+  """
+  Scheduled therapy date.
+  """
+  appointmentDate: AWSDate!
+  """
+  Treatment start time.
+  """
+  startTime: AWSTime!
+  """
+  Treatment scheduled end time.
+  """
+  endTime: AWSTime!
+  """
+  Wellness treatment room or cabana identifier.
+  """
+  treatmentRoomId: String
+  """
+  Assigned certified Ayurvedic therapist or physician.
+  """
+  therapistName: String
+  """
+  Guest health contraindications, skin sensitivities, or medical notes.
+  """
+  healthNotesOrAllergies: String
+  """
+  List of traditional herbal oils prescribed or applied (e.g. ['Mahanarayana Taila', 'Pinda Taila']).
+  """
+  herbalOilsUsed: [String!]
+  """
+  Net treatment rate before statutory taxes in LKR.
+  """
+  rateLkr: Float!
+  """
+  Itemized 4-stage compounding statutory taxes (SC -> TDL -> SSCL -> VAT).
+  """
+  taxBreakdown: TaxBreakdown!
+  """
+  Total gross charge in Sri Lankan Rupees.
+  """
+  totalGrossLkr: Float!
+  """
+  Optional room folio identifier if billed to room.
+  """
+  folioId: ID
+  """
+  Flag indicating whether treatment was posted to guest room folio.
+  """
+  isBilledToFolio: Boolean!
+  """
+  Appointment status ('SCHEDULED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED', 'NO_SHOW').
+  """
+  status: String!
+  """
+  Timestamp of appointment booking.
+  """
+  createdAt: AWSDateTime!
+  """
+  Timestamp of latest appointment update.
+  """
+  updatedAt: AWSDateTime!
+}
+
+"""
+Input for booking an excursion, safari jeep, whale watching, or transfer tour.
+"""
+input CreateExcursionBookingInput {
+  activityType: String!
+  title: String!
+  guestName: String!
+  guestPhone: AWSPhone!
+  reservationId: ID
+  roomNumber: String
+  excursionDate: AWSDate!
+  departureTime: AWSTime!
+  returnTime: AWSTime
+  numberOfAdults: Int!
+  numberOfChildren: Int
+  vehicleRegistrationNo: String
+  driverOrGuideName: String
+  driverContactPhone: AWSPhone
+  pickupLocation: String!
+  dropoffLocation: String!
+  supplierCostLkr: Float
+  retailRateLkr: Float!
+  chargeToFolio: Boolean
+  specialRequirements: String
+}
+
+"""
+Input for scheduling an Ayurveda or indigenous wellness therapy appointment.
+"""
+input CreateAyurvedaAppointmentInput {
+  treatmentType: String!
+  treatmentName: String!
+  durationMinutes: Int!
+  guestName: String!
+  reservationId: ID
+  roomNumber: String
+  appointmentDate: AWSDate!
+  startTime: AWSTime!
+  treatmentRoomId: String
+  therapistName: String
+  healthNotesOrAllergies: String
+  herbalOilsUsed: [String!]
+  rateLkr: Float!
+  chargeToFolio: Boolean
+}
+
+"""
+Unified activity booking input covering both safari excursions and Ayurveda therapies.
+"""
+input CreateActivityBookingInput {
+  """
+  Category discriminator ('EXCURSION' or 'AYURVEDA').
+  """
+  activityCategory: String!
+  """
+  Excursion details when category is 'EXCURSION'.
+  """
+  excursionInput: CreateExcursionBookingInput
+  """
+  Ayurveda appointment details when category is 'AYURVEDA'.
+  """
+  ayurvedaInput: CreateAyurvedaAppointmentInput
+}
+
+# ==============================================================================
 # GraphQL Root Types Placeholder
 # ==============================================================================
 
@@ -2676,6 +2968,42 @@ type Query {
     @aws_iam
     @aws_lambda
     @aws_api_key
+
+  """
+  Retrieves an excursion booking by identifier.
+  """
+  getExcursionBooking(tenantId: ID!, id: ID!): ExcursionBooking
+    @aws_cognito_user_pools
+    @aws_iam
+    @aws_lambda
+    @aws_api_key
+
+  """
+  Lists excursion bookings optionally filtered by scheduled date.
+  """
+  listExcursionBookings(tenantId: ID!, excursionDate: AWSDate): [ExcursionBooking!]!
+    @aws_cognito_user_pools
+    @aws_iam
+    @aws_lambda
+    @aws_api_key
+
+  """
+  Retrieves an Ayurveda appointment by identifier.
+  """
+  getAyurvedaAppointment(tenantId: ID!, id: ID!): AyurvedaAppointment
+    @aws_cognito_user_pools
+    @aws_iam
+    @aws_lambda
+    @aws_api_key
+
+  """
+  Lists Ayurveda appointments optionally filtered by therapy date.
+  """
+  listAyurvedaAppointments(tenantId: ID!, appointmentDate: AWSDate): [AyurvedaAppointment!]!
+    @aws_cognito_user_pools
+    @aws_iam
+    @aws_lambda
+    @aws_api_key
 }
 
 type Mutation {
@@ -2827,6 +3155,42 @@ type Mutation {
   Updates the lifecycle status of a banquet event.
   """
   updateBanquetEventStatus(tenantId: ID!, id: ID!, status: String!): BanquetEvent
+    @aws_cognito_user_pools
+    @aws_iam
+
+  """
+  Creates a safari, whale watching, or cultural excursion booking.
+  """
+  createExcursionBooking(tenantId: ID!, input: CreateExcursionBookingInput!): ExcursionBooking
+    @aws_cognito_user_pools
+    @aws_iam
+
+  """
+  Schedules an Ayurveda wellness therapy or doctor consultation appointment.
+  """
+  createAyurvedaAppointment(
+    tenantId: ID!
+    input: CreateAyurvedaAppointmentInput!
+  ): AyurvedaAppointment @aws_cognito_user_pools @aws_iam
+
+  """
+  Creates a unified activity booking (excursion or Ayurveda).
+  """
+  createActivityBooking(tenantId: ID!, input: CreateActivityBookingInput!): Boolean
+    @aws_cognito_user_pools
+    @aws_iam
+
+  """
+  Updates operational status of an excursion booking.
+  """
+  updateExcursionStatus(tenantId: ID!, id: ID!, status: String!): ExcursionBooking
+    @aws_cognito_user_pools
+    @aws_iam
+
+  """
+  Updates appointment lifecycle status of an Ayurveda therapy session.
+  """
+  updateAyurvedaAppointmentStatus(tenantId: ID!, id: ID!, status: String!): AyurvedaAppointment
     @aws_cognito_user_pools
     @aws_iam
 }

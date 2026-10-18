@@ -65,3 +65,4 @@ This file tracks the sequential completion of backend implementation steps defin
 - [x] Step 056: Define DOMSpeed-Compatible `MenuCategory`, `MenuItem`, and `ModifierOption` Types (`schema.graphql`)
 - [x] Step 057: Define `ServiceOrder` & Real-Time KDS / Room Service Mutation Types (`schema.graphql`)
 - [x] Step 058: Define `BanquetEvent` (Sri Lankan Wedding / Function BEO) GraphQL Types (`schema.graphql`)
+- [x] Step 059: Define `ExcursionBooking` & `AyurvedaAppointment` GraphQL Types (`schema.graphql`)
