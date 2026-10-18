@@ -31,7 +31,12 @@ import {
   ProjectionType,
   Table,
 } from "aws-cdk-lib/aws-dynamodb";
-import { Architecture, Runtime } from "aws-cdk-lib/aws-lambda";
+import {
+  Architecture,
+  type FunctionUrl,
+  FunctionUrlAuthType,
+  Runtime,
+} from "aws-cdk-lib/aws-lambda";
 import { NodejsFunction } from "aws-cdk-lib/aws-lambda-nodejs";
 import { LogGroup, RetentionDays } from "aws-cdk-lib/aws-logs";
 import type { Construct } from "constructs";
@@ -363,6 +368,74 @@ const DIRECT_JS_RESOLVERS: readonly DirectJsResolverMapping[] = [
   },
 ] as const;
 
+interface LeanLambdaOptions {
+  readonly memorySize?: number | undefined;
+  readonly timeout?: Duration | undefined;
+  readonly environment?: Record<string, string> | undefined;
+}
+
+/**
+ * Creates an optimized ARM_64 Graviton2 Node.js 22 Lambda with 7-day log retention.
+ * Enforces strict AWS Free-Tier compute and CloudWatch log limits.
+ */
+function createLeanLambda(
+  scope: Construct,
+  id: string,
+  entry: string,
+  options: LeanLambdaOptions = {},
+): NodejsFunction {
+  const logGroup = new LogGroup(scope, `${id}LogGroup`, {
+    retention: RetentionDays.ONE_WEEK,
+    removalPolicy: RemovalPolicy.DESTROY,
+  });
+
+  return new NodejsFunction(scope, id, {
+    entry,
+    handler: "handler",
+    runtime: Runtime.NODEJS_22_X,
+    architecture: Architecture.ARM_64,
+    memorySize: options.memorySize ?? 192,
+    timeout: options.timeout ?? Duration.seconds(10),
+    logGroup,
+    bundling: {
+      minify: true,
+      sourceMap: false,
+      target: "es2022",
+    },
+    ...(options.environment ? { environment: options.environment } : {}),
+  });
+}
+
+function createCognitoUserGroups(
+  scope: Construct,
+  userPoolId: string,
+): Record<string, CfnUserPoolGroup> {
+  const groups: Record<string, CfnUserPoolGroup> = {};
+  for (const group of HMS_USER_GROUPS) {
+    groups[group.groupName] = new CfnUserPoolGroup(scope, `Group${group.groupName}`, {
+      userPoolId,
+      groupName: group.groupName,
+      description: group.description,
+      precedence: group.precedence,
+    });
+  }
+  return groups;
+}
+
+function registerDirectJsResolvers(dataSource: DynamoDbDataSource, resolversDir: string): void {
+  for (const r of DIRECT_JS_RESOLVERS) {
+    const codePath = resolve(resolversDir, r.file);
+    const rawCode = readFileSync(codePath, "utf8");
+    const adaptedCode = `${rawCode}\nexport const request = ${r.reqFn};\nexport const response = ${r.resFn};\n`;
+    dataSource.createResolver(`Resolver${r.typeName}${r.fieldName}`, {
+      typeName: r.typeName,
+      fieldName: r.fieldName,
+      code: Code.fromInline(adaptedCode),
+      runtime: FunctionRuntime.JS_1_0_0,
+    });
+  }
+}
+
 /**
  * Sri Lankan Cloud SaaS HMS Serverless Infrastructure Stack.
  * Provisions the permanent AWS Free-Tier compliant stack in ap-south-1 (Mumbai):
@@ -382,6 +455,12 @@ export class SriLankaHmsStack extends Stack {
   public readonly qrAuthorizerFn: NodejsFunction;
   public readonly api: GraphqlApi;
   public readonly dbDataSource: DynamoDbDataSource;
+  public readonly orderAndFolioTxFn: NodejsFunction;
+  public readonly reservationAndCheckInTxFn: NodejsFunction;
+  public readonly webhooksIngressFn: NodejsFunction;
+  public readonly webhooksUrl: FunctionUrl;
+  public readonly nightAuditCronFn: NodejsFunction;
+  public readonly presignMediaUploadFn: NodejsFunction;
 
   constructor(scope: Construct, id: string, props?: SriLankaHmsStackProps) {
     super(scope, id, props);
@@ -516,41 +595,21 @@ export class SriLankaHmsStack extends Stack {
 
     // 6 Cognito User Groups for Role-Based Access Control (RBAC)
     // Enforces AppSync GraphQL @aws_auth(cognito_groups: [...])
-    const groups: Record<string, CfnUserPoolGroup> = {};
-    for (const group of HMS_USER_GROUPS) {
-      groups[group.groupName] = new CfnUserPoolGroup(this, `Group${group.groupName}`, {
-        userPoolId: this.userPool.userPoolId,
-        groupName: group.groupName,
-        description: group.description,
-        precedence: group.precedence,
-      });
-    }
-    this.userGroups = groups;
+    this.userGroups = createCognitoUserGroups(this, this.userPool.userPoolId);
 
     // ARM_64 Graviton2 AppSync Custom Lambda Authorizer for zero-login guest QR ordering
-    // Log group with 7-day retention prevents CloudWatch log cost accumulation
-    const authorizerLogGroup = new LogGroup(this, "QrAuthorizerLogGroup", {
-      retention: RetentionDays.ONE_WEEK,
-      removalPolicy: RemovalPolicy.DESTROY,
-    });
-
-    this.qrAuthorizerFn = new NodejsFunction(this, "QrAuthorizerFn", {
-      entry: resolve(__dirname, "../lambdas/qrAuthorizer.ts"),
-      handler: "handler",
-      runtime: Runtime.NODEJS_22_X,
-      architecture: Architecture.ARM_64,
-      timeout: Duration.seconds(5),
-      memorySize: 128,
-      logGroup: authorizerLogGroup,
-      environment: {
-        QR_HMAC_SECRET: "sri-lanka-hms-guest-qr-secret-key-change-in-prod",
+    this.qrAuthorizerFn = createLeanLambda(
+      this,
+      "QrAuthorizerFn",
+      resolve(__dirname, "../lambdas/qrAuthorizer.ts"),
+      {
+        memorySize: 128,
+        timeout: Duration.seconds(5),
+        environment: {
+          QR_HMAC_SECRET: "sri-lanka-hms-guest-qr-secret-key-change-in-prod",
+        },
       },
-      bundling: {
-        minify: true,
-        sourceMap: false,
-        target: "es2022",
-      },
-    });
+    );
 
     // AWS AppSync Managed GraphQL API with Dual Auth (USER_POOLS + LAMBDA)
     // - Default Auth: Cognito User Pool (Staff, General Manager, POS Cashier, Super Admin)
@@ -599,17 +658,92 @@ export class SriLankaHmsStack extends Stack {
 
     // Register all 35 direct AppSync JS DynamoDB resolvers from compiled dist/resolvers
     const resolversDir = resolve(__dirname, "../../graphql/dist/resolvers");
-    for (const r of DIRECT_JS_RESOLVERS) {
-      const codePath = resolve(resolversDir, r.file);
-      const rawCode = readFileSync(codePath, "utf8");
-      const adaptedCode = `${rawCode}\nexport const request = ${r.reqFn};\nexport const response = ${r.resFn};\n`;
-      this.dbDataSource.createResolver(`Resolver${r.typeName}${r.fieldName}`, {
-        typeName: r.typeName,
-        fieldName: r.fieldName,
-        code: Code.fromInline(adaptedCode),
-        runtime: FunctionRuntime.JS_1_0_0,
-      });
-    }
+    registerDirectJsResolvers(this.dbDataSource, resolversDir);
+
+    // Common environment variable for multi-tenant DynamoDB operations
+    const lambdaEnv = {
+      TABLE_NAME: this.hmsTable.tableName,
+    };
+
+    // 1. Transactional Order & Folio Posting Lambda
+    this.orderAndFolioTxFn = createLeanLambda(
+      this,
+      "OrderAndFolioTxFn",
+      resolve(__dirname, "../lambdas/orderAndFolioTx.ts"),
+      {
+        memorySize: 192,
+        timeout: Duration.seconds(10),
+        environment: lambdaEnv,
+      },
+    );
+    this.hmsTable.grantReadWriteData(this.orderAndFolioTxFn);
+
+    // 2. Reservation, Chauffeur Driver Bed & Check-In/Check-Out Transaction Lambda
+    this.reservationAndCheckInTxFn = createLeanLambda(
+      this,
+      "ReservationAndCheckInTxFn",
+      resolve(__dirname, "../lambdas/reservationAndCheckInTx.ts"),
+      {
+        memorySize: 192,
+        timeout: Duration.seconds(10),
+        environment: {
+          ...lambdaEnv,
+          QR_HMAC_SECRET: "sri-lanka-hms-guest-qr-secret-key-change-in-prod",
+        },
+      },
+    );
+    this.hmsTable.grantReadWriteData(this.reservationAndCheckInTxFn);
+
+    // 3. Unified Webhook Ingress Lambda (PayHere, WebXPay, Channex, SMSGo) with Function URL
+    this.webhooksIngressFn = createLeanLambda(
+      this,
+      "WebhooksIngressFn",
+      resolve(__dirname, "../lambdas/webhooksIngress.ts"),
+      {
+        memorySize: 192,
+        timeout: Duration.seconds(10),
+        environment: {
+          ...lambdaEnv,
+          PAYHERE_SECRET: "sri-lanka-hms-payhere-secret-change-in-prod",
+          WEBXPAY_SECRET: "sri-lanka-hms-webxpay-secret-change-in-prod",
+          CHANNEX_SECRET: "sri-lanka-hms-channex-secret-change-in-prod",
+          SMSGO_SECRET: "sri-lanka-hms-smsgo-secret-change-in-prod",
+        },
+      },
+    );
+    this.hmsTable.grantReadWriteData(this.webhooksIngressFn);
+    this.webhooksUrl = this.webhooksIngressFn.addFunctionUrl({
+      authType: FunctionUrlAuthType.NONE,
+    });
+
+    // 4. Night Audit & CBSL Exchange Rate Rollover Lambda
+    this.nightAuditCronFn = createLeanLambda(
+      this,
+      "NightAuditCronFn",
+      resolve(__dirname, "../lambdas/nightAuditCron.ts"),
+      {
+        memorySize: 192,
+        timeout: Duration.seconds(30),
+        environment: lambdaEnv,
+      },
+    );
+    this.hmsTable.grantReadWriteData(this.nightAuditCronFn);
+
+    // 5. S3 Presigned WebP Media Upload URL Generator Lambda
+    this.presignMediaUploadFn = createLeanLambda(
+      this,
+      "PresignMediaUploadFn",
+      resolve(__dirname, "../lambdas/presignMediaUpload.ts"),
+      {
+        memorySize: 192,
+        timeout: Duration.seconds(10),
+        environment: {
+          ...lambdaEnv,
+          MEDIA_BUCKET_NAME: "hms-media-bucket",
+        },
+      },
+    );
+    this.hmsTable.grantReadWriteData(this.presignMediaUploadFn);
 
     // Stack Outputs for automated CI/CD and Frontend environment configuration
     new CfnOutput(this, "HmsTableArn", {
@@ -658,6 +792,36 @@ export class SriLankaHmsStack extends Stack {
       value: this.api.arn,
       description: "AppSync GraphQL API ARN",
       exportName: "HmsGraphQLApiArn",
+    });
+
+    new CfnOutput(this, "OrderAndFolioTxFnArn", {
+      value: this.orderAndFolioTxFn.functionArn,
+      description: "Transactional Order & Folio Posting Lambda ARN",
+      exportName: "OrderAndFolioTxFnArn",
+    });
+
+    new CfnOutput(this, "ReservationAndCheckInTxFnArn", {
+      value: this.reservationAndCheckInTxFn.functionArn,
+      description: "Reservation & Check-In/Check-Out Lambda ARN",
+      exportName: "ReservationAndCheckInTxFnArn",
+    });
+
+    new CfnOutput(this, "WebhooksIngressUrl", {
+      value: this.webhooksUrl.url,
+      description: "Unified Webhook Ingress Lambda Function URL",
+      exportName: "WebhooksIngressUrl",
+    });
+
+    new CfnOutput(this, "NightAuditCronFnArn", {
+      value: this.nightAuditCronFn.functionArn,
+      description: "Night Audit & CBSL Exchange Rate Rollover Lambda ARN",
+      exportName: "NightAuditCronFnArn",
+    });
+
+    new CfnOutput(this, "PresignMediaUploadFnArn", {
+      value: this.presignMediaUploadFn.functionArn,
+      description: "S3 Presigned WebP Media Upload Lambda ARN",
+      exportName: "PresignMediaUploadFnArn",
     });
   }
 }

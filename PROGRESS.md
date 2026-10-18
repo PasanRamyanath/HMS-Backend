@@ -97,3 +97,4 @@ This file tracks the sequential completion of backend implementation steps defin
 - [x] Step 086: Implement Unified Webhook Ingress Lambda (`packages/cdk/lambdas/webhooksIngress.ts`) for PayHere, WebXPay, Channex & SMSGo
 - [x] Step 087: Implement Night Audit & CBSL Exchange Rate Rollover Lambda (`packages/cdk/lambdas/nightAuditCron.ts`)
 - [x] Step 088: Implement S3 Presigned WebP Upload URL Generator Resolver/Lambda (`packages/cdk/lambdas/presignMediaUpload.ts`)
+- [x] Step 089: Register All 5 ARM64 Graviton2 `NodejsFunction` Constructs in `hms-stack.ts` (`packages/cdk/lib/hms-stack.ts`)

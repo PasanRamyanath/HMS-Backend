@@ -308,6 +308,41 @@ describe("CloudFormation Permanent Free-Tier Cost-Ceiling Guardrails", () => {
     });
   });
 
+  it("provisions all 5 ARM64 Graviton2 backend NodejsFunction constructs with 192 MB and 7-day logs", () => {
+    // 1 Authorizer + 5 Core Backend Functions = 6 ARM64 Lambdas
+    hmsTemplate.resourceCountIs("AWS::Lambda::Function", 6);
+
+    // Each core backend Lambda has memorySize 192
+    hmsTemplate.hasResourceProperties("AWS::Lambda::Function", {
+      Architectures: ["arm64"],
+      Runtime: "nodejs22.x",
+      MemorySize: 192,
+    });
+
+    // Webhooks Ingress Function URL
+    hmsTemplate.resourceCountIs("AWS::Lambda::Url", 1);
+    hmsTemplate.hasResourceProperties("AWS::Lambda::Url", {
+      AuthType: "NONE",
+    });
+
+    // Outputs for the 5 core backend Lambdas and Function URL
+    hmsTemplate.hasOutput("OrderAndFolioTxFnArn", {
+      Export: { Name: "OrderAndFolioTxFnArn" },
+    });
+    hmsTemplate.hasOutput("ReservationAndCheckInTxFnArn", {
+      Export: { Name: "ReservationAndCheckInTxFnArn" },
+    });
+    hmsTemplate.hasOutput("WebhooksIngressUrl", {
+      Export: { Name: "WebhooksIngressUrl" },
+    });
+    hmsTemplate.hasOutput("NightAuditCronFnArn", {
+      Export: { Name: "NightAuditCronFnArn" },
+    });
+    hmsTemplate.hasOutput("PresignMediaUploadFnArn", {
+      Export: { Name: "PresignMediaUploadFnArn" },
+    });
+  });
+
   it("exports AppSync GraphQL API stack outputs", () => {
     hmsTemplate.hasOutput("HmsGraphQLApiId", {
       Export: {

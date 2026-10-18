@@ -125,7 +125,7 @@ describe("S3 Presigned WebP Media Upload Lambda (presignMediaUpload.ts)", () => 
 
     assert.equal(res.ok, false);
     if (res.ok) return;
-    assert.equal(res.error.code, "UNAUTHORIZED_ROLE");
+    assert.equal(res.error.code, "UNAUTHORIZED");
     assert.ok(res.error.message.includes("is not authorized"));
   });
 
@@ -145,7 +145,7 @@ describe("S3 Presigned WebP Media Upload Lambda (presignMediaUpload.ts)", () => 
 
     assert.equal(res.ok, false);
     if (res.ok) return;
-    assert.equal(res.error.code, "INVALID_CONTENT_TYPE");
+    assert.equal(res.error.code, "VALIDATION_FAILED");
     assert.ok(res.error.message.includes("Only image/webp is permitted"));
   });
 
@@ -165,7 +165,7 @@ describe("S3 Presigned WebP Media Upload Lambda (presignMediaUpload.ts)", () => 
 
     assert.equal(res.ok, false);
     if (res.ok) return;
-    assert.equal(res.error.code, "FILE_SIZE_EXCEEDED");
+    assert.equal(res.error.code, "QUOTA_EXCEEDED");
     assert.ok(res.error.message.includes("153600 bytes"));
   });
 
@@ -184,7 +184,7 @@ describe("S3 Presigned WebP Media Upload Lambda (presignMediaUpload.ts)", () => 
 
     assert.equal(res.ok, false);
     if (res.ok) return;
-    assert.equal(res.error.code, "INVALID_CATEGORY");
+    assert.equal(res.error.code, "VALIDATION_FAILED");
   });
 
   it("rejects invalid tenant slug format", async () => {

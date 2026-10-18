@@ -163,14 +163,14 @@ function validateMediaParameters(
 ): Result<{ category: string; maxBytes: number; fileId: string }, DomainError> {
   const normalizedCategory = input.category.trim().toUpperCase();
   if (!VALID_CATEGORIES.has(normalizedCategory)) {
-    return domainErr("INVALID_CATEGORY", `Unsupported media category: ${input.category}`, {
+    return domainErr("VALIDATION_FAILED", `Unsupported media category: ${input.category}`, {
       category: input.category,
       supported: Array.from(VALID_CATEGORIES),
     });
   }
 
   if (input.contentType && input.contentType.trim().toLowerCase() !== "image/webp") {
-    return domainErr("INVALID_CONTENT_TYPE", "Only image/webp is permitted for upload", {
+    return domainErr("VALIDATION_FAILED", "Only image/webp is permitted for upload", {
       provided: input.contentType,
       expected: "image/webp",
     });
@@ -179,7 +179,7 @@ function validateMediaParameters(
   const maxBytes = input.maxByteSize ?? MAX_MEDIA_FILE_BYTES;
   if (maxBytes <= 0 || maxBytes > MAX_MEDIA_FILE_BYTES) {
     return domainErr(
-      "FILE_SIZE_EXCEEDED",
+      "QUOTA_EXCEEDED",
       `Upload size must be between 1 and ${MAX_MEDIA_FILE_BYTES} bytes (150 KB)`,
       { requested: maxBytes, maximumAllowed: MAX_MEDIA_FILE_BYTES },
     );
@@ -272,7 +272,7 @@ export async function generatePresignedMediaUploadUrl(
 
   if (!isRoleAuthorizedForCategory(role, category)) {
     return domainErr(
-      "UNAUTHORIZED_ROLE",
+      "UNAUTHORIZED",
       `Role '${role}' is not authorized to upload media in category '${category}'`,
       { role, category },
     );
