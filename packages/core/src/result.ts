@@ -23,7 +23,13 @@ export type DomainErrorCode =
   | "VALIDATION_FAILED"
   | "UNAUTHORIZED"
   | "NOT_FOUND"
-  | "AUDIT_CHAIN_CORRUPTED";
+  | "AUDIT_CHAIN_CORRUPTED"
+  | "TRANSACTION_FAILED"
+  | "INVALID_ORDER_ITEMS"
+  | "INVALID_RESERVATION"
+  | "RESERVATION_NOT_ACTIVE"
+  | "DATE_OVERLAP"
+  | "DRIVER_BED_UNAVAILABLE";
 
 export interface DomainError {
   readonly code: DomainErrorCode;
