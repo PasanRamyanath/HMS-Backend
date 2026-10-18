@@ -6,6 +6,7 @@ import {
   type CheckOutGuestTxInput,
   type CreateReservationTxInput,
   executeReservationAndCheckInTx,
+  handler,
 } from "../lambdas/reservationAndCheckInTx.js";
 
 const TEST_TENANT = "tenant-resort-mirissa";
@@ -479,5 +480,22 @@ describe("Transactional Reservation, Driver Bed & Check-In/Check-Out Lambda (res
         assert.equal(res.error.code, "TRANSACTION_FAILED");
       }
     });
+  });
+
+  it("validates handler entrypoint error handling on invalid action payload", async () => {
+    const invalidInput = {
+      action: "CHECK_IN_GUEST",
+      tenantId: TEST_TENANT,
+      reservationId: "stay-invalid",
+      assignedRoomId: "room-101",
+      assignedRoomNumber: "101",
+      guestNic: "INVALID_NIC",
+    } as unknown as CheckInGuestTxInput;
+
+    const res = await handler(invalidInput);
+    assert.equal(res.ok, false);
+    if (!res.ok) {
+      assert.equal(res.error.code, "INVALID_NIC");
+    }
   });
 });
