@@ -4171,6 +4171,40 @@ type Subscription {
     @aws_cognito_user_pools
     @aws_lambda
     @aws_iam
+
+  """
+  Real-time WebSocket event for kitchen expediter and guest QR order status tracking.
+  """
+  onOrderUpdated(tenantId: ID!): ServiceOrder
+    @aws_subscribe(mutations: ["updateOrderStatus"])
+    @aws_cognito_user_pools
+    @aws_lambda
+    @aws_iam
+
+  """
+  Real-time WebSocket event fired when room housekeeping status changes or room is modified.
+  """
+  onRoomStatusChanged(tenantId: ID!): Room
+    @aws_subscribe(mutations: ["updateRoomHousekeepingStatus", "upsertRoom"])
+    @aws_cognito_user_pools
+    @aws_iam
+
+  """
+  Real-time WebSocket event fired when a guest folio has new charges posted or updated.
+  """
+  onFolioUpdated(tenantId: ID!): Folio
+    @aws_subscribe(mutations: ["addFolioCharge", "voidFolioCharge", "createSplitFolioRouting"])
+    @aws_cognito_user_pools
+    @aws_lambda
+    @aws_iam
+
+  """
+  Real-time WebSocket event fired when a new reservation is booked, checked in, or checked out.
+  """
+  onReservationUpdated(tenantId: ID!): Reservation
+    @aws_subscribe(mutations: ["createReservation", "checkInGuest", "checkOutGuest"])
+    @aws_cognito_user_pools
+    @aws_iam
 }
 
 schema {
