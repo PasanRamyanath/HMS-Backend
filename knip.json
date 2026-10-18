@@ -1,0 +1,17 @@
+{
+  "$schema": "https://unpkg.com/knip@5/schema.json",
+  "workspaces": {
+    "packages/core": {
+      "entry": ["src/index.ts!"],
+      "project": ["src/**/*.ts!"]
+    },
+    "packages/graphql": {
+      "entry": ["codegen.ts!", "resolvers/**/*.js!"],
+      "project": ["resolvers/**/*.js!", "codegen.ts!"]
+    },
+    "packages/cdk": {
+      "entry": ["bin/hms.ts!", "lambdas/**/*.ts!"],
+      "project": ["bin/**/*.ts!", "lib/**/*.ts!", "lambdas/**/*.ts!"]
+    }
+  }
+}

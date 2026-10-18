@@ -1,0 +1,16 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+build/
+cdk.out/
+*.tsbuildinfo
+
+# Environment & credentials
+.env*
+cdk-outputs.json
+
+# System & Editor
+.DS_Store
+*.log

@@ -1,0 +1,15 @@
+pre-commit:
+  parallel: true
+  commands:
+    biome-check:
+      run: npx biome check --staged {staged_files}
+    typecheck:
+      run: npx tsc --noEmit
+
+pre-push:
+  parallel: true
+  commands:
+    knip:
+      run: npx knip
+    test:
+      run: npm test
