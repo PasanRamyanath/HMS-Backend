@@ -15,6 +15,7 @@ export * from "./auditChain.js";
 export * from "./config.js";
 export * from "./tax.js";
 export * from "./folioMath.js";
+export * from "./currencyLock.js";
 export {
   SRI_LANKA_TIMEZONE,
   SRI_LANKA_LOCALE,
