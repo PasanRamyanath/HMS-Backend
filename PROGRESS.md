@@ -95,3 +95,4 @@ This file tracks the sequential completion of backend implementation steps defin
 - [x] Step 084: Implement Transactional Order & Folio Posting Lambda (`packages/cdk/lambdas/orderAndFolioTx.ts`)
 - [x] Step 085: Implement Reservation, Driver Bed & Check-In/Check-Out Lambda (`packages/cdk/lambdas/reservationAndCheckInTx.ts`)
 - [x] Step 086: Implement Unified Webhook Ingress Lambda (`packages/cdk/lambdas/webhooksIngress.ts`) for PayHere, WebXPay, Channex & SMSGo
+- [x] Step 087: Implement Night Audit & CBSL Exchange Rate Rollover Lambda (`packages/cdk/lambdas/nightAuditCron.ts`)
