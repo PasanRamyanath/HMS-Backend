@@ -45,3 +45,4 @@ This file tracks the sequential completion of backend implementation steps defin
 - [x] Step 038: Implement LankaQR EMVCo MPM Payload Generator (`lankaQr.ts`)
 - [x] Step 039: Write Verification Tests for LankaQR EMVCo Vectors (`lankaQr.test.ts`)
 - [x] Step 040: Implement Room & Table QR HMAC-SHA256 Session Token Signer (`qrHmac.ts`)
+- [x] Step 041: Implement Constant-Time QR Session Token Verifier (`qrHmac.ts`)

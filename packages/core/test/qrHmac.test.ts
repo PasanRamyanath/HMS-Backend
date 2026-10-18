@@ -4,7 +4,9 @@ import { describe, it } from "node:test";
 import {
   type QrSessionPayload,
   createQrSessionTokenAuditEntry,
+  createQrSessionVerificationAuditEntry,
   signQrSessionToken,
+  verifyQrSessionToken,
 } from "../src/qrHmac.js";
 
 describe("Room & Table QR HMAC-SHA256 Session Token Signer (signQrSessionToken)", () => {
@@ -207,5 +209,177 @@ describe("Room & Table QR HMAC-SHA256 Session Token Signer (signQrSessionToken)"
     assert.equal(audit.entityType, "QrSessionToken");
     assert.equal(audit.entityId, `${TEST_LOCATION}:${TEST_STAY}`);
     assert.equal(audit.entryHash.length, 64);
+  });
+});
+
+describe("Constant-Time QR Session Token Verifier (verifyQrSessionToken)", () => {
+  const TEST_SECRET = "super-secret-hmac-key-for-bentota-beach-hotel";
+  const TEST_TENANT = "bentota-beach-hotel";
+  const TEST_LOCATION = "ROOM-302";
+  const TEST_STAY = "STAY-2026-9901";
+  const TEST_EXP = 1792345600;
+
+  it("verifies a valid QR session token and returns decoded payload", () => {
+    const tokenRes = signQrSessionToken({
+      tenantId: TEST_TENANT,
+      location: TEST_LOCATION,
+      stayId: TEST_STAY,
+      exp: TEST_EXP,
+      secret: TEST_SECRET,
+    });
+
+    assert.equal(tokenRes.ok, true);
+    if (!tokenRes.ok) return;
+
+    const verifyRes = verifyQrSessionToken(
+      tokenRes.value,
+      TEST_SECRET,
+      TEST_EXP - 100, // nowEpoch is before expiration
+    );
+
+    assert.equal(verifyRes.ok, true);
+    if (!verifyRes.ok) return;
+
+    assert.equal(verifyRes.value.tid, TEST_TENANT);
+    assert.equal(verifyRes.value.loc, TEST_LOCATION);
+    assert.equal(verifyRes.value.sty, TEST_STAY);
+    assert.equal(verifyRes.value.exp, TEST_EXP);
+  });
+
+  it("rejects forged or modified payloads via cryptographic signature mismatch", () => {
+    const tokenRes = signQrSessionToken({
+      tenantId: TEST_TENANT,
+      location: "ROOM-302",
+      stayId: TEST_STAY,
+      exp: TEST_EXP,
+      secret: TEST_SECRET,
+    });
+
+    assert.equal(tokenRes.ok, true);
+    if (!tokenRes.ok) return;
+
+    const parts = tokenRes.value.split(".");
+    // Forge payload to pretend order is from presidential suite
+    const forgedPayloadJson = JSON.stringify({
+      tid: TEST_TENANT,
+      loc: "SUITE-900-PRESIDENTIAL",
+      sty: TEST_STAY,
+      exp: TEST_EXP,
+    });
+    const forgedEncoded = Buffer.from(forgedPayloadJson, "utf8").toString("base64url");
+    const forgedToken = `${forgedEncoded}.${parts[1]}`;
+
+    const verifyRes = verifyQrSessionToken(forgedToken, TEST_SECRET, TEST_EXP - 100);
+    assert.equal(verifyRes.ok, false);
+    if (!verifyRes.ok) {
+      assert.equal(verifyRes.error.code, "INVALID_SIGNATURE");
+    }
+  });
+
+  it("rejects token verified with wrong HMAC secret", () => {
+    const tokenRes = signQrSessionToken({
+      tenantId: TEST_TENANT,
+      location: TEST_LOCATION,
+      stayId: TEST_STAY,
+      exp: TEST_EXP,
+      secret: TEST_SECRET,
+    });
+
+    assert.equal(tokenRes.ok, true);
+    if (!tokenRes.ok) return;
+
+    const verifyRes = verifyQrSessionToken(
+      tokenRes.value,
+      "wrong-secret-key-attacker",
+      TEST_EXP - 100,
+    );
+    assert.equal(verifyRes.ok, false);
+    if (!verifyRes.ok) {
+      assert.equal(verifyRes.error.code, "INVALID_SIGNATURE");
+    }
+  });
+
+  it("rejects expired QR session tokens at and past expiration epoch", () => {
+    const tokenRes = signQrSessionToken({
+      tenantId: TEST_TENANT,
+      location: TEST_LOCATION,
+      stayId: TEST_STAY,
+      exp: TEST_EXP,
+      secret: TEST_SECRET,
+    });
+
+    assert.equal(tokenRes.ok, true);
+    if (!tokenRes.ok) return;
+
+    // Boundary: exactly at expiration (nowEpoch === exp)
+    const exactExpRes = verifyQrSessionToken(tokenRes.value, TEST_SECRET, TEST_EXP);
+    assert.equal(exactExpRes.ok, false);
+    if (!exactExpRes.ok) {
+      assert.equal(exactExpRes.error.code, "HMAC_EXPIRED");
+    }
+
+    // Past expiration (nowEpoch > exp)
+    const pastExpRes = verifyQrSessionToken(tokenRes.value, TEST_SECRET, TEST_EXP + 1);
+    assert.equal(pastExpRes.ok, false);
+    if (!pastExpRes.ok) {
+      assert.equal(pastExpRes.error.code, "HMAC_EXPIRED");
+    }
+
+    // Prior to expiration (nowEpoch < exp) is valid
+    const validExpRes = verifyQrSessionToken(tokenRes.value, TEST_SECRET, TEST_EXP - 1);
+    assert.equal(validExpRes.ok, true);
+  });
+
+  it("rejects malformed token strings and missing secrets", () => {
+    // Missing secret
+    const noSecret = verifyQrSessionToken("token", "");
+    assert.equal(noSecret.ok, false);
+
+    // Missing dot delimiter
+    const noDot = verifyQrSessionToken("eyJhbGciOiJIUzI1NiJ9", TEST_SECRET);
+    assert.equal(noDot.ok, false);
+
+    // Empty components
+    const emptyParts = verifyQrSessionToken(".signature", TEST_SECRET);
+    assert.equal(emptyParts.ok, false);
+
+    // Truncated signature buffer
+    const truncatedSig = verifyQrSessionToken("eyJ0aWQiOiJ0ZXN0In0.AQID", TEST_SECRET);
+    assert.equal(truncatedSig.ok, false);
+  });
+
+  it("creates cryptographically chained audit log for session token verification", () => {
+    const successRes = createQrSessionVerificationAuditEntry(
+      TEST_TENANT,
+      "actor-pos-terminal-01",
+      TEST_LOCATION,
+      TEST_STAY,
+      true,
+      "2026-10-18T16:42:00.000Z",
+    );
+
+    assert.equal(successRes.ok, true);
+    if (!successRes.ok) return;
+
+    const audit = successRes.value;
+    assert.equal(audit.action, "VERIFY_QR_SESSION_TOKEN_SUCCESS");
+    assert.equal(audit.entityType, "QrSessionToken");
+    assert.equal(audit.entityId, `${TEST_LOCATION}:${TEST_STAY}`);
+    assert.equal(audit.entryHash.length, 64);
+
+    const failureRes = createQrSessionVerificationAuditEntry(
+      TEST_TENANT,
+      "actor-pos-terminal-01",
+      TEST_LOCATION,
+      TEST_STAY,
+      false,
+      "2026-10-18T16:42:05.000Z",
+      audit.entryHash,
+    );
+
+    assert.equal(failureRes.ok, true);
+    if (!failureRes.ok) return;
+    assert.equal(failureRes.value.action, "VERIFY_QR_SESSION_TOKEN_FAILURE");
+    assert.equal(failureRes.value.prevHash, audit.entryHash);
   });
 });
