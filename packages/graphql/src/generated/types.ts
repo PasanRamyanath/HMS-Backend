@@ -1122,6 +1122,8 @@ export type Mutation = {
   updateRoomHousekeepingStatus: Maybe<Room>;
   /** Real-time KDS transition mutation alias. */
   updateServiceOrderStatus: Maybe<ServiceOrder>;
+  /** Creates or updates a banquet event or wedding function sheet (BEO) enforcing hall and time-slot uniqueness. */
+  upsertBanquetEvent: Maybe<BanquetEvent>;
   /** Provisions or updates a banquet hall or lawn venue profile. */
   upsertBanquetHall: Maybe<BanquetHall>;
   /** Provisions or updates a chauffeur / tour driver dorm bed. */
@@ -1302,6 +1304,12 @@ export type MutationUpdateRoomHousekeepingStatusArgs = {
 
 export type MutationUpdateServiceOrderStatusArgs = {
   input: UpdateOrderStatusInput;
+  tenantId: Scalars['ID']['input'];
+};
+
+
+export type MutationUpsertBanquetEventArgs = {
+  input: UpsertBanquetEventInput;
   tenantId: Scalars['ID']['input'];
 };
 
@@ -2568,6 +2576,34 @@ export type UpdateOrderStatusInput = {
   cancelReason?: InputMaybe<Scalars['String']['input']>;
   orderId: Scalars['ID']['input'];
   status: OrderStatus;
+};
+
+/** Input for creating or updating a Banquet Event Order (BEO). */
+export type UpsertBanquetEventInput = {
+  advanceDepositPaidLkr?: InputMaybe<Scalars['Float']['input']>;
+  ashtakaChantingTime?: InputMaybe<Scalars['AWSTime']['input']>;
+  bitePlates?: InputMaybe<Array<BitePlateItemInput>>;
+  brideAndGroomNames?: InputMaybe<Scalars['String']['input']>;
+  clientEmail: Scalars['AWSEmail']['input'];
+  clientName: Scalars['String']['input'];
+  clientPhone: Scalars['AWSPhone']['input'];
+  corkageBottleCount?: InputMaybe<Scalars['Int']['input']>;
+  corkageFeeTotalLkr: Scalars['Float']['input'];
+  endTime: Scalars['AWSTime']['input'];
+  eventDate: Scalars['AWSDate']['input'];
+  eventNumber?: InputMaybe<Scalars['String']['input']>;
+  eventType: Scalars['String']['input'];
+  guaranteedGuestCount: Scalars['Int']['input'];
+  hallId: Scalars['ID']['input'];
+  hallRentalChargeLkr: Scalars['Float']['input'];
+  id?: InputMaybe<Scalars['ID']['input']>;
+  perPlateRateLkr: Scalars['Float']['input'];
+  poruwaCeremonyTime?: InputMaybe<Scalars['AWSTime']['input']>;
+  selectedMenuPackageName: Scalars['String']['input'];
+  setupNotes?: InputMaybe<Scalars['String']['input']>;
+  slot: Scalars['String']['input'];
+  startTime: Scalars['AWSTime']['input'];
+  status?: InputMaybe<Scalars['String']['input']>;
 };
 
 /** Input for managing banquet hall venues. */

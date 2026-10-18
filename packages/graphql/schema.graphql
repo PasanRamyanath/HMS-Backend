@@ -2494,6 +2494,36 @@ input CreateBanquetEventInput {
   setupNotes: String
 }
 
+"""
+Input for creating or updating a Banquet Event Order (BEO).
+"""
+input UpsertBanquetEventInput {
+  id: ID
+  eventNumber: String
+  eventType: String!
+  hallId: ID!
+  eventDate: AWSDate!
+  slot: String!
+  startTime: AWSTime!
+  endTime: AWSTime!
+  clientName: String!
+  clientPhone: AWSPhone!
+  clientEmail: AWSEmail!
+  brideAndGroomNames: String
+  poruwaCeremonyTime: AWSTime
+  ashtakaChantingTime: AWSTime
+  guaranteedGuestCount: Int!
+  perPlateRateLkr: Float!
+  selectedMenuPackageName: String!
+  bitePlates: [BitePlateItemInput!]
+  corkageFeeTotalLkr: Float!
+  corkageBottleCount: Int
+  hallRentalChargeLkr: Float!
+  advanceDepositPaidLkr: Float
+  setupNotes: String
+  status: String
+}
+
 # ==============================================================================
 # Excursions, Safari Jeeps & Ayurveda Appointments (Phase 03.09)
 # ==============================================================================
@@ -4099,6 +4129,13 @@ type Mutation {
   Creates a banquet event or wedding function sheet (BEO).
   """
   createBanquetEvent(tenantId: ID!, input: CreateBanquetEventInput!): BanquetEvent
+    @aws_cognito_user_pools
+    @aws_iam
+
+  """
+  Creates or updates a banquet event or wedding function sheet (BEO) enforcing hall and time-slot uniqueness.
+  """
+  upsertBanquetEvent(tenantId: ID!, input: UpsertBanquetEventInput!): BanquetEvent
     @aws_cognito_user_pools
     @aws_iam
 
