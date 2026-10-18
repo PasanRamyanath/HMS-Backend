@@ -19,6 +19,7 @@ export * from "./currencyLock.js";
 export * from "./nicPassport.js";
 export * from "./lankaQr.js";
 export * from "./qrHmac.js";
+export * from "./payhere.js";
 export {
   SRI_LANKA_TIMEZONE,
   SRI_LANKA_LOCALE,
