@@ -63,3 +63,4 @@ This file tracks the sequential completion of backend implementation steps defin
 - [x] Step 054: Define `Reservation`, `DriverAccommodation`, and `GroupBooking` GraphQL Types (`schema.graphql`)
 - [x] Step 055: Define `Folio`, `FolioLineItem`, and `FolioInvoice` GraphQL Types (`schema.graphql`)
 - [x] Step 056: Define DOMSpeed-Compatible `MenuCategory`, `MenuItem`, and `ModifierOption` Types (`schema.graphql`)
+- [x] Step 057: Define `ServiceOrder` & Real-Time KDS / Room Service Mutation Types (`schema.graphql`)

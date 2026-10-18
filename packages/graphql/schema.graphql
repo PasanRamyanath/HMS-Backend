@@ -2048,6 +2048,186 @@ input UpsertMenuCategoryInput {
 }
 
 # ==============================================================================
+# Contactless QR Room Service & Kitchen Display System (KDS)
+# ==============================================================================
+
+"""
+Itemized dish or beverage within a live KDS or Room Service order ticket.
+"""
+type OrderLineItem @aws_cognito_user_pools @aws_iam @aws_lambda @aws_api_key {
+  """
+  Unique line item identifier.
+  """
+  id: ID!
+  """
+  Associated menu item identifier.
+  """
+  menuItemId: ID!
+  """
+  Expanded menu item details.
+  """
+  menuItem: MenuItem
+  """
+  Stock/kitchen dish short code.
+  """
+  dishCode: String!
+  """
+  Dish title in English.
+  """
+  dishTitle: String!
+  """
+  Quantity ordered.
+  """
+  quantity: Int!
+  """
+  Unit price in LKR.
+  """
+  unitPriceLkr: Float!
+  """
+  Selected customer modifier options (e.g. ['Sri Lankan Spicy', 'Extra Papadam']).
+  """
+  selectedModifiers: [String!]
+  """
+  Kitchen prep station.
+  """
+  kitchenStation: String
+  """
+  Specific dietary or allergy preparation notes.
+  """
+  specialNotes: String
+  """
+  Individual dish line preparation status.
+  """
+  lineStatus: OrderStatus!
+}
+
+"""
+Live real-time Food & Beverage service order (Kitchen Order Ticket / Bar Order Ticket).
+Supports dual guest QR (@aws_lambda) and staff (@aws_cognito_user_pools) authorization.
+"""
+type ServiceOrder @aws_cognito_user_pools @aws_iam @aws_lambda @aws_api_key {
+  """
+  Unique service order identifier.
+  """
+  id: ID!
+  """
+  Multi-tenant property identifier.
+  """
+  tenantId: ID!
+  """
+  Sequential daily kitchen order ticket number (e.g. 'KOT-2026-00142').
+  """
+  orderNumber: String!
+  """
+  Dining channel (IN_ROOM_DINING, TABLE_SERVICE, POOL_SIDE, BEACH_CABANA).
+  """
+  diningType: DiningType!
+  """
+  Guest room or villa number if in-room dining.
+  """
+  roomNumber: String
+  """
+  Restaurant table number if dine-in table service.
+  """
+  tableNumber: String
+  """
+  Associated guest room reservation identifier.
+  """
+  reservationId: ID
+  """
+  Guest folio identifier if charged to room folio.
+  """
+  folioId: ID
+  """
+  Current order lifecycle status in kitchen / runner flow.
+  """
+  status: OrderStatus!
+  """
+  Fulfillment department (KITCHEN, BAR).
+  """
+  department: Department!
+  """
+  Ordered dish items and modifiers.
+  """
+  items: [OrderLineItem!]!
+  """
+  Subtotal amount in LKR prior to service charge and taxes.
+  """
+  subtotalLkr: Float!
+  """
+  Statutory 4-stage compounding tax itemization.
+  """
+  taxBreakdown: TaxBreakdown!
+  """
+  Gross order total in Sri Lankan Rupees.
+  """
+  totalGrossLkr: Float!
+  """
+  Customer special delivery instructions.
+  """
+  guestNotes: String
+  """
+  Timestamp when kitchen acknowledged order.
+  """
+  kitchenAcknowledgedAt: AWSDateTime
+  """
+  Timestamp when order was bumped ready for pickup by kitchen runner.
+  """
+  readyForPickupAt: AWSDateTime
+  """
+  Timestamp when order was delivered to guest.
+  """
+  deliveredAt: AWSDateTime
+  """
+  Timestamp when order was cancelled.
+  """
+  cancelledAt: AWSDateTime
+  """
+  Reason for order cancellation.
+  """
+  cancelReason: String
+  """
+  Timestamp when guest or waiter submitted order.
+  """
+  orderPlacedAt: AWSDateTime!
+  """
+  Timestamp of latest status update.
+  """
+  updatedAt: AWSDateTime!
+}
+
+"""
+Input for an individual dish within a service order.
+"""
+input OrderLineItemInput {
+  menuItemId: ID!
+  quantity: Int!
+  selectedModifiers: [String!]
+  specialNotes: String
+}
+
+"""
+Input for submitting a new contactless QR or waiter POS service order.
+"""
+input CreateServiceOrderInput {
+  diningType: DiningType!
+  roomNumber: String
+  tableNumber: String
+  reservationId: ID
+  guestNotes: String
+  items: [OrderLineItemInput!]!
+}
+
+"""
+Input for kitchen expeditor or runner updating order ticket status.
+"""
+input UpdateOrderStatusInput {
+  orderId: ID!
+  status: OrderStatus!
+  cancelReason: String
+}
+
+# ==============================================================================
 # GraphQL Root Types Placeholder
 # ==============================================================================
 
@@ -2188,6 +2368,20 @@ type Query {
     @aws_iam
     @aws_lambda
     @aws_api_key
+
+  """
+  Retrieves a live food/beverage service order ticket by identifier.
+  """
+  getServiceOrder(tenantId: ID!, id: ID!): ServiceOrder @aws_cognito_user_pools @aws_lambda @aws_iam
+
+  """
+  Queries active orders currently displayed on kitchen KDS or bar order screens.
+  """
+  listActiveServiceOrders(
+    tenantId: ID!
+    department: Department
+    diningType: DiningType
+  ): [ServiceOrder!]! @aws_cognito_user_pools @aws_lambda @aws_iam
 }
 
 type Mutation {
@@ -2305,6 +2499,21 @@ type Mutation {
   toggleMenuItemAvailability(tenantId: ID!, id: ID!, isAvailable: Boolean!): MenuItem
     @aws_cognito_user_pools
     @aws_iam
+
+  """
+  Places a contactless QR room service order or waiter table service order.
+  """
+  createServiceOrder(tenantId: ID!, input: CreateServiceOrderInput!): ServiceOrder
+    @aws_cognito_user_pools
+    @aws_lambda
+    @aws_iam
+
+  """
+  Kitchen chef or order expediter updates order status on KDS (Acknowledged, Ready, Delivered, Cancelled).
+  """
+  updateOrderStatus(tenantId: ID!, input: UpdateOrderStatusInput!): ServiceOrder
+    @aws_cognito_user_pools
+    @aws_iam
 }
 
 type Subscription {
@@ -2312,6 +2521,24 @@ type Subscription {
   Real-time health check subscription for WebSocket connectivity validation.
   """
   onPing: String @aws_subscribe(mutations: ["ping"]) @aws_cognito_user_pools @aws_iam
+
+  """
+  Real-time WebSocket event fired when a new guest QR room service order is placed.
+  """
+  onServiceOrderCreated(tenantId: ID!): ServiceOrder
+    @aws_subscribe(mutations: ["createServiceOrder"])
+    @aws_cognito_user_pools
+    @aws_lambda
+    @aws_iam
+
+  """
+  Real-time WebSocket event fired when an order lifecycle status changes on KDS.
+  """
+  onOrderStatusUpdated(tenantId: ID!): ServiceOrder
+    @aws_subscribe(mutations: ["updateOrderStatus"])
+    @aws_cognito_user_pools
+    @aws_lambda
+    @aws_iam
 }
 
 schema {
