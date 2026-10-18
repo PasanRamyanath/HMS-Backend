@@ -13,7 +13,7 @@
     "graphql",
     "esbuild"
   ],
-  "ignoreBinaries": ["biome", "knip", "tsc"],
+  "ignoreBinaries": ["biome", "knip", "tsc", "cdk"],
   "workspaces": {
     "packages/core": {
       "project": ["src/**/*.ts!"]

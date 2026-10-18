@@ -18,13 +18,13 @@ This file tracks the sequential completion of backend implementation steps defin
 - [x] Step 013: Implement SHA-256 Hash-Chained `ImmutableAuditLog` Engine
 - [x] Step 014: Scaffold `packages/graphql` for 42-Entity Schema
 - [x] Step 015: Scaffold `packages/cdk` Near-Free-Tier Stack
-- [x] Step 016: Configure Backend GitHub Actions OIDC CI/CD
-- [ ] Step 017: Configure Frontend GitHub Actions OIDC CI/CD
-- [ ] Step 018: Author `sync-contracts.sh`
-- [ ] Step 019: Author `verify-all-repos.sh`
-- [ ] Step 020: Configure AWS IAM OIDC CDK Stack
-- [ ] Step 021: Implement Multi-Tenant Entitlement Verification Engine
-- [ ] Step 022: Implement Rate Limiting & Sliding Window Quotas
-- [ ] Step 023: Implement Static Analysis Linter for Console/Debugger Ban
-- [ ] Step 024: Run Cross-Repo Verification
-- [ ] Step 025: Phase 01 Milestone Review & Audit
+- [x] Step 016: Author AWS IAM GitHub OIDC Stack (`packages/cdk/lib/github-oidc-stack.ts`)
+- [x] Step 017: Author Independent Backend GitHub Actions CI/CD Workflow (`.github/workflows/deploy-backend.yml`)
+- [ ] Step 018: Scaffold `HMS-Frontend` for React 19 + Tailwind CSS v4 + Apple HIG
+- [ ] Step 019: Author Independent Frontend GitHub Actions CI/CD Workflow (`HMS-Frontend/.github/workflows/deploy-frontend.yml`)
+- [ ] Step 020: Create Cross-Repo GraphQL Contract Sync Script (`scripts/sync-contracts.sh`)
+- [ ] Step 021: Implement Shared Sri Lankan Currency & `Asia/Colombo` Date Helpers (`format.ts`)
+- [ ] Step 022: Implement Runtime Tenant, Mobile, SLTDA & IRD Validators (`config.ts`)
+- [ ] Step 023: Write CloudFormation Permanent Free-Tier Cost-Ceiling Guardrail Test (`cost-guardrails.test.ts`)
+- [ ] Step 024: Author Master Architecture Decision Record (`docs/adr-001-codespaces-saas-apple-hig.md`)
+- [ ] Step 025: Create & Execute Master 3-Repo Verification Gate (`scripts/verify-all-repos.sh`)
