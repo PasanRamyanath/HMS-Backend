@@ -252,4 +252,24 @@ describe("CloudFormation Permanent Free-Tier Cost-Ceiling Guardrails", () => {
       },
     });
   });
+
+  it("provisions the 6 Cognito RBAC user groups for hospitality operations", () => {
+    hmsTemplate.resourceCountIs("AWS::Cognito::UserPoolGroup", 6);
+
+    const expectedGroups = [
+      { name: "SUPER_ADMIN", precedence: 1 },
+      { name: "HOTEL_ADMIN", precedence: 2 },
+      { name: "FRONT_DESK", precedence: 3 },
+      { name: "KITCHEN_KDS", precedence: 4 },
+      { name: "HOUSEKEEPING", precedence: 5 },
+      { name: "POS_CASHIER", precedence: 6 },
+    ];
+
+    for (const group of expectedGroups) {
+      hmsTemplate.hasResourceProperties("AWS::Cognito::UserPoolGroup", {
+        GroupName: group.name,
+        Precedence: group.precedence,
+      });
+    }
+  });
 });

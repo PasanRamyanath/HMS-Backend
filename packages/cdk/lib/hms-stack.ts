@@ -1,6 +1,7 @@
 import { CfnOutput, Duration, RemovalPolicy, Stack, type StackProps } from "aws-cdk-lib";
 import {
   AccountRecovery,
+  CfnUserPoolGroup,
   StringAttribute,
   UserPool,
   type UserPoolClient,
@@ -9,6 +10,49 @@ import { AttributeType, BillingMode, ProjectionType, Table } from "aws-cdk-lib/a
 import type { Construct } from "constructs";
 
 export interface SriLankaHmsStackProps extends StackProps {}
+
+interface HmsUserGroupConfig {
+  readonly groupName: string;
+  readonly description: string;
+  readonly precedence: number;
+}
+
+/**
+ * 6 Core Cognito RBAC user groups mapping directly to Sri Lankan hotel operations
+ * and GraphQL @aws_auth(cognito_groups: [...]) security boundaries.
+ */
+const HMS_USER_GROUPS: readonly HmsUserGroupConfig[] = [
+  {
+    groupName: "SUPER_ADMIN",
+    description: "Platform Super Administrator across all tenant hotels",
+    precedence: 1,
+  },
+  {
+    groupName: "HOTEL_ADMIN",
+    description: "Hotel General Manager / Owner with full property administration",
+    precedence: 2,
+  },
+  {
+    groupName: "FRONT_DESK",
+    description: "Front Desk reception, check-in, check-out, and folio cashiering",
+    precedence: 3,
+  },
+  {
+    groupName: "KITCHEN_KDS",
+    description: "Kitchen and Bar KDS display operators and station chefs",
+    precedence: 4,
+  },
+  {
+    groupName: "HOUSEKEEPING",
+    description: "Housekeeping supervisors and room attendants",
+    precedence: 5,
+  },
+  {
+    groupName: "POS_CASHIER",
+    description: "Restaurant, bar, and banquet point-of-sale cashiers",
+    precedence: 6,
+  },
+] as const;
 
 /**
  * Sri Lankan Cloud SaaS HMS Serverless Infrastructure Stack.
@@ -25,6 +69,7 @@ export class SriLankaHmsStack extends Stack {
   public readonly hmsTable: Table;
   public readonly userPool: UserPool;
   public readonly userPoolClient: UserPoolClient;
+  public readonly userGroups: Record<string, CfnUserPoolGroup>;
 
   constructor(scope: Construct, id: string, props?: SriLankaHmsStackProps) {
     super(scope, id, props);
@@ -156,6 +201,19 @@ export class SriLankaHmsStack extends Stack {
         userPassword: true,
       },
     });
+
+    // 6 Cognito User Groups for Role-Based Access Control (RBAC)
+    // Enforces AppSync GraphQL @aws_auth(cognito_groups: [...])
+    const groups: Record<string, CfnUserPoolGroup> = {};
+    for (const group of HMS_USER_GROUPS) {
+      groups[group.groupName] = new CfnUserPoolGroup(this, `Group${group.groupName}`, {
+        userPoolId: this.userPool.userPoolId,
+        groupName: group.groupName,
+        description: group.description,
+        precedence: group.precedence,
+      });
+    }
+    this.userGroups = groups;
 
     // Stack Outputs for automated CI/CD and Frontend environment configuration
     new CfnOutput(this, "HmsTableArn", {

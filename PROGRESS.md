@@ -88,3 +88,4 @@ This file tracks the sequential completion of backend implementation steps defin
 - [x] Step 077: Define Single-Table DynamoDB Construct (`HmsTable`) with Permanent Free-Tier Provisioned Capacity (`packages/cdk/lib/hms-stack.ts`)
 - [x] Step 078: Configure `GSI1` & `GSI2` Sparse Indexes on `HmsTable` (`packages/cdk/lib/hms-stack.ts`)
 - [x] Step 079: Provision Amazon Cognito User Pool (`HmsUserPool`) with Sri Lankan Phone & Tenant Claims (`packages/cdk/lib/hms-stack.ts`)
+- [x] Step 080: Provision Cognito RBAC User Groups (`SUPER_ADMIN`, `HOTEL_ADMIN`, `FRONT_DESK`, `KITCHEN_KDS`, `HOUSEKEEPING`, `POS_CASHIER`) (`packages/cdk/lib/hms-stack.ts`)
