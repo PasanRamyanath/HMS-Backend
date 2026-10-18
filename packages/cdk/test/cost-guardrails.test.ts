@@ -343,6 +343,54 @@ describe("CloudFormation Permanent Free-Tier Cost-Ceiling Guardrails", () => {
     });
   });
 
+  it("provisions single S3 bucket for Web App & tenant WebP media with 100% blocked public access", () => {
+    hmsTemplate.resourceCountIs("AWS::S3::Bucket", 1);
+    hmsTemplate.hasResourceProperties("AWS::S3::Bucket", {
+      PublicAccessBlockConfiguration: {
+        BlockPublicAcls: true,
+        BlockPublicPolicy: true,
+        IgnorePublicAcls: true,
+        RestrictPublicBuckets: true,
+      },
+      BucketEncryption: {
+        ServerSideEncryptionConfiguration: [
+          {
+            ServerSideEncryptionByDefault: {
+              SSEAlgorithm: "AES256",
+            },
+          },
+        ],
+      },
+      CorsConfiguration: {
+        CorsRules: [
+          {
+            AllowedMethods: ["GET", "HEAD", "PUT"],
+            AllowedOrigins: ["*"],
+            AllowedHeaders: ["*"],
+            MaxAge: 3000,
+          },
+        ],
+      },
+      LifecycleConfiguration: {
+        Rules: [
+          {
+            AbortIncompleteMultipartUpload: {
+              DaysAfterInitiation: 1,
+            },
+            Status: "Enabled",
+          },
+        ],
+      },
+    });
+
+    hmsTemplate.hasOutput("HmsAssetBucketName", {
+      Export: { Name: "HmsAssetBucketName" },
+    });
+    hmsTemplate.hasOutput("HmsAssetBucketArn", {
+      Export: { Name: "HmsAssetBucketArn" },
+    });
+  });
+
   it("exports AppSync GraphQL API stack outputs", () => {
     hmsTemplate.hasOutput("HmsGraphQLApiId", {
       Export: {

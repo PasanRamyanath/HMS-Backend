@@ -39,6 +39,7 @@ import {
 } from "aws-cdk-lib/aws-lambda";
 import { NodejsFunction } from "aws-cdk-lib/aws-lambda-nodejs";
 import { LogGroup, RetentionDays } from "aws-cdk-lib/aws-logs";
+import { BlockPublicAccess, Bucket, BucketEncryption, HttpMethods } from "aws-cdk-lib/aws-s3";
 import type { Construct } from "constructs";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -461,6 +462,7 @@ export class SriLankaHmsStack extends Stack {
   public readonly webhooksUrl: FunctionUrl;
   public readonly nightAuditCronFn: NodejsFunction;
   public readonly presignMediaUploadFn: NodejsFunction;
+  public readonly assetBucket: Bucket;
 
   constructor(scope: Construct, id: string, props?: SriLankaHmsStackProps) {
     super(scope, id, props);
@@ -521,6 +523,29 @@ export class SriLankaHmsStack extends Stack {
       projectionType: ProjectionType.ALL,
       readCapacity: 5,
       writeCapacity: 5,
+    });
+
+    // Single S3 Bucket for React 19 SPA static assets and tenant WebP media
+    // Rung 4: 100% blocked public access (served through CloudFront OAC in Step 091)
+    // S3-managed encryption avoids KMS key hourly charges in Free Tier
+    this.assetBucket = new Bucket(this, "HmsAssetBucket", {
+      blockPublicAccess: BlockPublicAccess.BLOCK_ALL,
+      encryption: BucketEncryption.S3_MANAGED,
+      enforceSSL: true,
+      removalPolicy: RemovalPolicy.RETAIN,
+      cors: [
+        {
+          allowedMethods: [HttpMethods.GET, HttpMethods.HEAD, HttpMethods.PUT],
+          allowedOrigins: ["*"],
+          allowedHeaders: ["*"],
+          maxAge: 3000,
+        },
+      ],
+      lifecycleRules: [
+        {
+          abortIncompleteMultipartUploadAfter: Duration.days(1),
+        },
+      ],
     });
 
     // Cognito User Pool for multi-tenant hotel staff & super-admins
@@ -739,11 +764,13 @@ export class SriLankaHmsStack extends Stack {
         timeout: Duration.seconds(10),
         environment: {
           ...lambdaEnv,
-          MEDIA_BUCKET_NAME: "hms-media-bucket",
+          MEDIA_BUCKET_NAME: this.assetBucket.bucketName,
         },
       },
     );
     this.hmsTable.grantReadWriteData(this.presignMediaUploadFn);
+    this.assetBucket.grantPut(this.presignMediaUploadFn);
+    this.assetBucket.grantRead(this.presignMediaUploadFn);
 
     // Stack Outputs for automated CI/CD and Frontend environment configuration
     new CfnOutput(this, "HmsTableArn", {
@@ -756,6 +783,18 @@ export class SriLankaHmsStack extends Stack {
       value: this.hmsTable.tableName,
       description: "DynamoDB Single-Table Name",
       exportName: "HmsTableName",
+    });
+
+    new CfnOutput(this, "HmsAssetBucketName", {
+      value: this.assetBucket.bucketName,
+      description: "S3 Asset & Tenant WebP Media Bucket Name",
+      exportName: "HmsAssetBucketName",
+    });
+
+    new CfnOutput(this, "HmsAssetBucketArn", {
+      value: this.assetBucket.bucketArn,
+      description: "S3 Asset & Tenant WebP Media Bucket ARN",
+      exportName: "HmsAssetBucketArn",
     });
 
     new CfnOutput(this, "HmsUserPoolId", {
