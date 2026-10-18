@@ -2,19 +2,25 @@
   "$schema": "https://unpkg.com/knip@5/schema.json",
   "biome": true,
   "lefthook": true,
-  "ignoreDependencies": ["@biomejs/biome", "lefthook", "tsx"],
+  "ignoreDependencies": [
+    "@biomejs/biome",
+    "lefthook",
+    "tsx",
+    "@aws-appsync/utils",
+    "@graphql-codegen/cli",
+    "@graphql-codegen/typescript",
+    "@graphql-codegen/typescript-operations",
+    "graphql"
+  ],
   "ignoreBinaries": ["biome", "knip", "tsc"],
   "workspaces": {
     "packages/core": {
-      "entry": ["src/index.ts!"],
       "project": ["src/**/*.ts!"]
     },
     "packages/graphql": {
-      "entry": ["codegen.ts!", "resolvers/**/*.js!"],
-      "project": ["resolvers/**/*.js!", "codegen.ts!"]
+      "project": ["src/**/*.ts!"]
     },
     "packages/cdk": {
-      "entry": ["bin/hms.ts!", "lambdas/**/*.ts!"],
       "project": ["bin/**/*.ts!", "lib/**/*.ts!", "lambdas/**/*.ts!"]
     }
   }

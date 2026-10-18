@@ -16,7 +16,7 @@ This file tracks the sequential completion of backend implementation steps defin
 - [x] Step 011: Scaffold `packages/core` Pure Domain Package
 - [x] Step 012: Implement Explicit `Result<T, E>` & Error Catalog
 - [x] Step 013: Implement SHA-256 Hash-Chained `ImmutableAuditLog` Engine
-- [ ] Step 014: Scaffold `packages/graphql` for 42-Entity Schema
+- [x] Step 014: Scaffold `packages/graphql` for 42-Entity Schema
 - [ ] Step 015: Scaffold `packages/cdk` Near-Free-Tier Stack
 - [ ] Step 016: Configure Backend GitHub Actions OIDC CI/CD
 - [ ] Step 017: Configure Frontend GitHub Actions OIDC CI/CD
