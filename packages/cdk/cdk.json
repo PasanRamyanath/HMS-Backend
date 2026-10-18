@@ -13,7 +13,6 @@
     ]
   },
   "context": {
-    "@aws-cdk/core:enableStackNameDuplicates": "true",
     "aws-cdk:enableDiffNoFail": "true",
     "@aws-cdk/core:stackRelativeExports": "true",
     "region": "ap-south-1"
