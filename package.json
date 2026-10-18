@@ -10,6 +10,7 @@
     "knip": "knip",
     "test": "npm run test --workspaces --if-present",
     "build": "npm run build --workspaces --if-present",
+    "codegen": "npm run codegen --workspace=@hms/graphql",
     "synth": "npm run synth --workspace=@hms/cdk"
   },
   "devDependencies": {

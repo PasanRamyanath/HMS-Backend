@@ -5,3 +5,5 @@
 
 export const GRAPHQL_PACKAGE_NAME = "@hms/graphql";
 export const APPSYNC_RUNTIME_VERSION = "APPSYNC_JS_1_0_0";
+
+export * from "./generated/types.js";
