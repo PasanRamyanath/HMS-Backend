@@ -435,6 +435,42 @@ describe("CloudFormation Permanent Free-Tier Cost-Ceiling Guardrails", () => {
     });
   });
 
+  it("provisions AWS Budgets zero-spend $1.00 monthly cost alert with actual and forecasted notifications", () => {
+    hmsTemplate.resourceCountIs("AWS::Budgets::Budget", 1);
+    hmsTemplate.hasResourceProperties("AWS::Budgets::Budget", {
+      Budget: {
+        BudgetLimit: {
+          Amount: 1,
+          Unit: "USD",
+        },
+        BudgetType: "COST",
+        TimeUnit: "MONTHLY",
+      },
+      NotificationsWithSubscribers: Match.arrayWith([
+        Match.objectLike({
+          Notification: {
+            ComparisonOperator: "GREATER_THAN",
+            NotificationType: "ACTUAL",
+            Threshold: 80,
+            ThresholdType: "PERCENTAGE",
+          },
+        }),
+        Match.objectLike({
+          Notification: {
+            ComparisonOperator: "GREATER_THAN",
+            NotificationType: "FORECASTED",
+            Threshold: 100,
+            ThresholdType: "PERCENTAGE",
+          },
+        }),
+      ]),
+    });
+
+    hmsTemplate.hasOutput("HmsBudgetId", {
+      Export: { Name: "HmsBudgetId" },
+    });
+  });
+
   it("exports AppSync GraphQL API stack outputs", () => {
     hmsTemplate.hasOutput("HmsGraphQLApiId", {
       Export: {

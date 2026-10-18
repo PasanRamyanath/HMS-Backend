@@ -17,6 +17,7 @@ import {
   FunctionRuntime,
   GraphqlApi,
 } from "aws-cdk-lib/aws-appsync";
+import { CfnBudget } from "aws-cdk-lib/aws-budgets";
 import {
   CachePolicy,
   Distribution,
@@ -60,7 +61,9 @@ import type { Construct } from "constructs";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-export interface SriLankaHmsStackProps extends StackProps {}
+export interface SriLankaHmsStackProps extends StackProps {
+  readonly budgetAlertEmail?: string;
+}
 
 interface HmsUserGroupConfig {
   readonly groupName: string;
@@ -480,6 +483,7 @@ export class SriLankaHmsStack extends Stack {
   public readonly presignMediaUploadFn: NodejsFunction;
   public readonly assetBucket: Bucket;
   public readonly distribution: Distribution;
+  public readonly costBudget: CfnBudget;
 
   constructor(scope: Construct, id: string, props?: SriLankaHmsStackProps) {
     super(scope, id, props);
@@ -839,6 +843,50 @@ export class SriLankaHmsStack extends Stack {
     this.assetBucket.grantPut(this.presignMediaUploadFn);
     this.assetBucket.grantRead(this.presignMediaUploadFn);
 
+    // AWS Budgets $1.00 Monthly Zero-Spend Cost Guardrail Alert
+    const budgetAlertEmail = props?.budgetAlertEmail ?? "alerts@srilanka-hms.local";
+    this.costBudget = new CfnBudget(this, "HmsZeroSpendBudget", {
+      budget: {
+        budgetName: "HmsPermanentFreeTierBudget",
+        budgetType: "COST",
+        timeUnit: "MONTHLY",
+        budgetLimit: {
+          amount: 1,
+          unit: "USD",
+        },
+      },
+      notificationsWithSubscribers: [
+        {
+          notification: {
+            comparisonOperator: "GREATER_THAN",
+            notificationType: "ACTUAL",
+            threshold: 80,
+            thresholdType: "PERCENTAGE",
+          },
+          subscribers: [
+            {
+              subscriptionType: "EMAIL",
+              address: budgetAlertEmail,
+            },
+          ],
+        },
+        {
+          notification: {
+            comparisonOperator: "GREATER_THAN",
+            notificationType: "FORECASTED",
+            threshold: 100,
+            thresholdType: "PERCENTAGE",
+          },
+          subscribers: [
+            {
+              subscriptionType: "EMAIL",
+              address: budgetAlertEmail,
+            },
+          ],
+        },
+      ],
+    });
+
     // Stack Outputs for automated CI/CD and Frontend environment configuration
     new CfnOutput(this, "HmsTableArn", {
       value: this.hmsTable.tableArn,
@@ -952,6 +1000,12 @@ export class SriLankaHmsStack extends Stack {
       value: `https://${this.distribution.distributionDomainName}`,
       description: "CloudFront Distribution Web URL",
       exportName: "HmsCloudFrontUrl",
+    });
+
+    new CfnOutput(this, "HmsBudgetId", {
+      value: this.costBudget.ref,
+      description: "AWS Budgets Zero-Spend $1.00 Cost Alert ID",
+      exportName: "HmsBudgetId",
     });
   }
 }
