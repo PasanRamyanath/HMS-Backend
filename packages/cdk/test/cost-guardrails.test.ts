@@ -272,4 +272,59 @@ describe("CloudFormation Permanent Free-Tier Cost-Ceiling Guardrails", () => {
       });
     }
   });
+
+  it("provisions AppSync GraphQL API with Dual Auth and X-Ray disabled", () => {
+    hmsTemplate.hasResourceProperties("AWS::AppSync::GraphQLApi", {
+      Name: "HmsGraphQLApi",
+      AuthenticationType: "AMAZON_COGNITO_USER_POOLS",
+      XrayEnabled: false,
+      AdditionalAuthenticationProviders: Match.arrayWith([
+        Match.objectLike({
+          AuthenticationType: "AWS_LAMBDA",
+          LambdaAuthorizerConfig: Match.objectLike({
+            AuthorizerResultTtlInSeconds: 300,
+          }),
+        }),
+        Match.objectLike({
+          AuthenticationType: "AWS_IAM",
+        }),
+        Match.objectLike({
+          AuthenticationType: "API_KEY",
+        }),
+      ]),
+    });
+  });
+
+  it("provisions ARM64 Graviton2 qrAuthorizer Lambda with 7-day log retention", () => {
+    hmsTemplate.hasResourceProperties("AWS::Lambda::Function", {
+      Architectures: ["arm64"],
+      Runtime: "nodejs22.x",
+      Timeout: 5,
+      MemorySize: 128,
+    });
+
+    hmsTemplate.hasResourceProperties("AWS::Logs::LogGroup", {
+      RetentionInDays: 7,
+    });
+  });
+
+  it("exports AppSync GraphQL API stack outputs", () => {
+    hmsTemplate.hasOutput("HmsGraphQLApiId", {
+      Export: {
+        Name: "HmsGraphQLApiId",
+      },
+    });
+
+    hmsTemplate.hasOutput("HmsGraphQLApiUrl", {
+      Export: {
+        Name: "HmsGraphQLApiUrl",
+      },
+    });
+
+    hmsTemplate.hasOutput("HmsGraphQLApiArn", {
+      Export: {
+        Name: "HmsGraphQLApiArn",
+      },
+    });
+  });
 });

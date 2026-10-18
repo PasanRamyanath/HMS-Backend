@@ -1,4 +1,14 @@
-import { CfnOutput, Duration, RemovalPolicy, Stack, type StackProps } from "aws-cdk-lib";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+import {
+  CfnOutput,
+  Duration,
+  Expiration,
+  RemovalPolicy,
+  Stack,
+  type StackProps,
+} from "aws-cdk-lib";
+import { AuthorizationType, Definition, GraphqlApi } from "aws-cdk-lib/aws-appsync";
 import {
   AccountRecovery,
   CfnUserPoolGroup,
@@ -7,7 +17,13 @@ import {
   type UserPoolClient,
 } from "aws-cdk-lib/aws-cognito";
 import { AttributeType, BillingMode, ProjectionType, Table } from "aws-cdk-lib/aws-dynamodb";
+import { Architecture, Runtime } from "aws-cdk-lib/aws-lambda";
+import { NodejsFunction } from "aws-cdk-lib/aws-lambda-nodejs";
+import { LogGroup, RetentionDays } from "aws-cdk-lib/aws-logs";
 import type { Construct } from "constructs";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 export interface SriLankaHmsStackProps extends StackProps {}
 
@@ -70,6 +86,8 @@ export class SriLankaHmsStack extends Stack {
   public readonly userPool: UserPool;
   public readonly userPoolClient: UserPoolClient;
   public readonly userGroups: Record<string, CfnUserPoolGroup>;
+  public readonly qrAuthorizerFn: NodejsFunction;
+  public readonly api: GraphqlApi;
 
   constructor(scope: Construct, id: string, props?: SriLankaHmsStackProps) {
     super(scope, id, props);
@@ -215,6 +233,70 @@ export class SriLankaHmsStack extends Stack {
     }
     this.userGroups = groups;
 
+    // ARM_64 Graviton2 AppSync Custom Lambda Authorizer for zero-login guest QR ordering
+    // Log group with 7-day retention prevents CloudWatch log cost accumulation
+    const authorizerLogGroup = new LogGroup(this, "QrAuthorizerLogGroup", {
+      retention: RetentionDays.ONE_WEEK,
+      removalPolicy: RemovalPolicy.DESTROY,
+    });
+
+    this.qrAuthorizerFn = new NodejsFunction(this, "QrAuthorizerFn", {
+      entry: resolve(__dirname, "../lambdas/qrAuthorizer.ts"),
+      handler: "handler",
+      runtime: Runtime.NODEJS_22_X,
+      architecture: Architecture.ARM_64,
+      timeout: Duration.seconds(5),
+      memorySize: 128,
+      logGroup: authorizerLogGroup,
+      environment: {
+        QR_HMAC_SECRET: "sri-lanka-hms-guest-qr-secret-key-change-in-prod",
+      },
+      bundling: {
+        minify: true,
+        sourceMap: false,
+        target: "es2022",
+      },
+    });
+
+    // AWS AppSync Managed GraphQL API with Dual Auth (USER_POOLS + LAMBDA)
+    // - Default Auth: Cognito User Pool (Staff, General Manager, POS Cashier, Super Admin)
+    // - Additional Auth 1: Lambda Authorizer (Contactless Guest QR session tokens)
+    // - Additional Auth 2: AWS IAM (Backend transactional Lambdas & event processors)
+    // - Additional Auth 3: API Key (Public metadata & health checks)
+    // - Verbose logging and X-Ray tracing disabled to preserve AWS Free Tier
+    this.api = new GraphqlApi(this, "HmsApi", {
+      name: "HmsGraphQLApi",
+      definition: Definition.fromFile(resolve(__dirname, "../../graphql/schema.graphql")),
+      authorizationConfig: {
+        defaultAuthorization: {
+          authorizationType: AuthorizationType.USER_POOL,
+          userPoolConfig: {
+            userPool: this.userPool,
+          },
+        },
+        additionalAuthorizationModes: [
+          {
+            authorizationType: AuthorizationType.LAMBDA,
+            lambdaAuthorizerConfig: {
+              handler: this.qrAuthorizerFn,
+              resultsCacheTtl: Duration.minutes(5),
+            },
+          },
+          {
+            authorizationType: AuthorizationType.IAM,
+          },
+          {
+            authorizationType: AuthorizationType.API_KEY,
+            apiKeyConfig: {
+              expires: Expiration.after(Duration.days(365)),
+              description: "Public Guest API Key",
+            },
+          },
+        ],
+      },
+      xrayEnabled: false,
+    });
+
     // Stack Outputs for automated CI/CD and Frontend environment configuration
     new CfnOutput(this, "HmsTableArn", {
       value: this.hmsTable.tableArn,
@@ -244,6 +326,24 @@ export class SriLankaHmsStack extends Stack {
       value: this.userPoolClient.userPoolClientId,
       description: "Cognito User Pool Web Client ID for Sri Lanka HMS",
       exportName: "HmsUserPoolClientId",
+    });
+
+    new CfnOutput(this, "HmsGraphQLApiId", {
+      value: this.api.apiId,
+      description: "AppSync GraphQL API ID for Sri Lanka HMS",
+      exportName: "HmsGraphQLApiId",
+    });
+
+    new CfnOutput(this, "HmsGraphQLApiUrl", {
+      value: this.api.graphqlUrl,
+      description: "AppSync GraphQL API Endpoint URL",
+      exportName: "HmsGraphQLApiUrl",
+    });
+
+    new CfnOutput(this, "HmsGraphQLApiArn", {
+      value: this.api.arn,
+      description: "AppSync GraphQL API ARN",
+      exportName: "HmsGraphQLApiArn",
     });
   }
 }
