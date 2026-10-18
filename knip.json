@@ -10,7 +10,8 @@
     "@graphql-codegen/cli",
     "@graphql-codegen/typescript",
     "@graphql-codegen/typescript-operations",
-    "graphql"
+    "graphql",
+    "esbuild"
   ],
   "ignoreBinaries": ["biome", "knip", "tsc"],
   "workspaces": {
@@ -21,7 +22,7 @@
       "project": ["src/**/*.ts!"]
     },
     "packages/cdk": {
-      "project": ["bin/**/*.ts!", "lib/**/*.ts!", "lambdas/**/*.ts!"]
+      "project": ["bin/**/*.ts!", "lib/**/*.ts!"]
     }
   }
 }
