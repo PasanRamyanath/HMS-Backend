@@ -1593,6 +1593,8 @@ export type Query = {
   getStockItem: Maybe<StockItem>;
   /** Retrieves an IRD / SLTDA Tourism Development Levy quarterly summary. */
   getTdlQuarterlySummary: Maybe<TdlQuarterlySummary>;
+  /** Queries active orders currently displayed on kitchen KDS or bar order screens by department. */
+  listActiveOrdersByDepartment: Array<ServiceOrder>;
   /** Queries active orders currently displayed on kitchen KDS or bar order screens. */
   listActiveServiceOrders: Array<ServiceOrder>;
   /** Lists Ayurveda appointments optionally filtered by therapy date. */
@@ -1742,6 +1744,12 @@ export type QueryGetStockItemArgs = {
 export type QueryGetTdlQuarterlySummaryArgs = {
   quarter: Scalars['Int']['input'];
   taxYear: Scalars['Int']['input'];
+  tenantId: Scalars['ID']['input'];
+};
+
+
+export type QueryListActiveOrdersByDepartmentArgs = {
+  department: Department;
   tenantId: Scalars['ID']['input'];
 };
 

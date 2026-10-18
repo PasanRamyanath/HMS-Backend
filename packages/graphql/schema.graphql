@@ -3754,6 +3754,14 @@ type Query {
   getServiceOrder(tenantId: ID!, id: ID!): ServiceOrder @aws_cognito_user_pools @aws_lambda @aws_iam
 
   """
+  Queries active orders currently displayed on kitchen KDS or bar order screens by department.
+  """
+  listActiveOrdersByDepartment(tenantId: ID!, department: Department!): [ServiceOrder!]!
+    @aws_cognito_user_pools
+    @aws_lambda
+    @aws_iam
+
+  """
   Queries active orders currently displayed on kitchen KDS or bar order screens.
   """
   listActiveServiceOrders(
