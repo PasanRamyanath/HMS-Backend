@@ -50,3 +50,4 @@ This file tracks the sequential completion of backend implementation steps defin
 - [x] Step 043: Implement PayHere `notify_url` Webhook Signature Verifier (`payhere.ts`)
 - [x] Step 044: Implement WebXPay Subscription & Payment Callback Verifier (`webxpay.ts`)
 - [x] Step 045: Implement Channex.io Raw-Body HMAC-SHA256 Webhook Verifier (`channex.ts`)
+- [x] Step 046: Implement SMSGo.lk Webhook Signature Verifier & Phone Normalizer (`sms.ts`)

@@ -22,6 +22,7 @@ export * from "./qrHmac.js";
 export * from "./payhere.js";
 export * from "./webxpay.js";
 export * from "./channex.js";
+export * from "./sms.js";
 export {
   SRI_LANKA_TIMEZONE,
   SRI_LANKA_LOCALE,
