@@ -9,6 +9,7 @@
  */
 
 import { type AuditLogEntry, createAuditEntry } from "./auditChain.js";
+import { validateTenantId } from "./config.js";
 import { type DomainError, type Result, domainErr, ok } from "./result.js";
 
 export type SriLankanGender = "MALE" | "FEMALE";
@@ -213,6 +214,165 @@ export function createNicVerificationAuditEntry(
     tenantId,
     actorUserId,
     action: "VERIFY_GUEST_NIC",
+    entityType: "Guest",
+    entityId: guestId,
+    isoTs,
+    afterJson,
+    prevHash,
+  });
+}
+
+export interface ForeignPassportInput {
+  readonly passportNo: string;
+  readonly countryCode: string;
+  readonly visaExpiryDate: string;
+  readonly arrivalDate: string;
+  readonly hasResidentVisa?: boolean | undefined;
+  readonly tenantId?: string | undefined;
+  readonly guestId?: string | undefined;
+}
+
+export interface ValidatedForeignPassport {
+  readonly canonicalPassportNo: string;
+  readonly canonicalCountryCode: string;
+  readonly arrivalDate: string;
+  readonly visaExpiryDate: string;
+  readonly isVisaValid: boolean;
+  readonly hasResidentVisa: boolean;
+  readonly residencyTier: ResidencyTier;
+  readonly touristPoliceBCardStatus: "COMPLIANT" | "FLAGGED_VISA_EXPIRED";
+  readonly tenantId?: string | undefined;
+  readonly guestId?: string | undefined;
+}
+
+const PASSPORT_REGEX = /^[A-Z0-9]{6,15}$/i;
+const ISO_COUNTRY_REGEX = /^[A-Z]{2,3}$/i;
+const ISO_DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
+
+function validatePassportNumber(raw: unknown): Result<string, DomainError> {
+  if (typeof raw !== "string" || raw.trim() === "") {
+    return domainErr("INVALID_PASSPORT", "Passport number must be a non-empty string");
+  }
+  const canonical = raw.trim().toUpperCase();
+  if (!PASSPORT_REGEX.test(canonical)) {
+    return domainErr("INVALID_PASSPORT", "Passport number must be 6-15 alphanumeric characters", {
+      passportNo: raw,
+    });
+  }
+  return ok(canonical);
+}
+
+function validateCountryCode(raw: unknown): Result<string, DomainError> {
+  if (typeof raw !== "string" || raw.trim() === "") {
+    return domainErr("INVALID_PASSPORT", "Country code must be a non-empty string");
+  }
+  const canonical = raw.trim().toUpperCase();
+  if (!ISO_COUNTRY_REGEX.test(canonical)) {
+    return domainErr(
+      "INVALID_PASSPORT",
+      "Country code must be a 2 or 3 letter ISO code (e.g. 'GB', 'USA')",
+      { countryCode: raw },
+    );
+  }
+  return ok(canonical);
+}
+
+function validateIsoDates(
+  arrivalDate: unknown,
+  visaExpiryDate: unknown,
+): Result<void, DomainError> {
+  if (typeof arrivalDate !== "string" || !ISO_DATE_REGEX.test(arrivalDate)) {
+    return domainErr("VALIDATION_FAILED", "Arrival date must be in YYYY-MM-DD format", {
+      arrivalDate,
+    });
+  }
+  if (typeof visaExpiryDate !== "string" || !ISO_DATE_REGEX.test(visaExpiryDate)) {
+    return domainErr("VALIDATION_FAILED", "Visa expiry date must be in YYYY-MM-DD format", {
+      visaExpiryDate,
+    });
+  }
+  return ok(undefined);
+}
+
+/**
+ * Validates a foreign passport and generates Sri Lankan Tourist Police B-Card compliance status.
+ *
+ * Requirements:
+ * - Foreign passport number: 6-15 alphanumeric characters
+ * - ISO 3166-1 alpha-2 or alpha-3 country code
+ * - Arrival date & visa expiry date in YYYY-MM-DD format
+ * - Returns residencyTier = 'FOREIGN_USD_LOCKED' (unless hasResidentVisa: true => 'RESIDENT_LKR')
+ * - Flags expired tourist visas for Tourist Police B-Card reporting
+ */
+export function validateForeignPassport(
+  input: ForeignPassportInput,
+): Result<ValidatedForeignPassport, DomainError> {
+  const passportRes = validatePassportNumber(input.passportNo);
+  if (!passportRes.ok) {
+    return passportRes;
+  }
+  const countryRes = validateCountryCode(input.countryCode);
+  if (!countryRes.ok) {
+    return countryRes;
+  }
+  const datesRes = validateIsoDates(input.arrivalDate, input.visaExpiryDate);
+  if (!datesRes.ok) {
+    return datesRes;
+  }
+
+  let validatedTenantId: string | undefined;
+  if (input.tenantId !== undefined) {
+    const tenantRes = validateTenantId(input.tenantId);
+    if (!tenantRes.ok) {
+      return tenantRes;
+    }
+    validatedTenantId = tenantRes.value;
+  }
+
+  const hasResidentVisa = Boolean(input.hasResidentVisa);
+  const isVisaExpired = !hasResidentVisa && input.visaExpiryDate < input.arrivalDate;
+  const isVisaValid = !isVisaExpired;
+  const residencyTier: ResidencyTier = hasResidentVisa ? "RESIDENT_LKR" : "FOREIGN_USD_LOCKED";
+  const touristPoliceBCardStatus = isVisaExpired ? "FLAGGED_VISA_EXPIRED" : "COMPLIANT";
+
+  return ok({
+    canonicalPassportNo: passportRes.value,
+    canonicalCountryCode: countryRes.value,
+    arrivalDate: input.arrivalDate,
+    visaExpiryDate: input.visaExpiryDate,
+    isVisaValid,
+    hasResidentVisa,
+    residencyTier,
+    touristPoliceBCardStatus,
+    tenantId: validatedTenantId,
+    guestId: input.guestId,
+  });
+}
+
+/**
+ * Creates an immutable SHA-256 hash-chained audit log entry for Foreign Passport & Tourist Police B-Card.
+ */
+export function createPassportVerificationAuditEntry(
+  tenantId: string,
+  actorUserId: string,
+  guestId: string,
+  passport: ValidatedForeignPassport,
+  isoTs: string,
+  prevHash?: string | undefined,
+): Result<AuditLogEntry, DomainError> {
+  const afterJson = JSON.stringify({
+    guestId,
+    canonicalPassportNo: passport.canonicalPassportNo,
+    countryCode: passport.canonicalCountryCode,
+    residencyTier: passport.residencyTier,
+    touristPoliceBCardStatus: passport.touristPoliceBCardStatus,
+    hasResidentVisa: passport.hasResidentVisa,
+  });
+
+  return createAuditEntry({
+    tenantId,
+    actorUserId,
+    action: "VERIFY_FOREIGN_PASSPORT_B_CARD",
     entityType: "Guest",
     entityId: guestId,
     isoTs,

@@ -1,6 +1,11 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { createNicVerificationAuditEntry, parseSriLankaNic } from "../src/nicPassport.js";
+import {
+  createNicVerificationAuditEntry,
+  createPassportVerificationAuditEntry,
+  parseSriLankaNic,
+  validateForeignPassport,
+} from "../src/nicPassport.js";
 
 describe("Sri Lankan NIC Parser (parseSriLankaNic)", () => {
   describe("Old 9-digit + V/X Format", () => {
@@ -142,6 +147,115 @@ describe("Sri Lankan NIC Parser (parseSriLankaNic)", () => {
       assert.equal(auditRes.value.tenantId, "heritance-kandalama");
       assert.equal(auditRes.value.action, "VERIFY_GUEST_NIC");
       assert.equal(auditRes.value.entityType, "Guest");
+      assert.equal(auditRes.value.entryHash.length, 64);
+    });
+  });
+
+  describe("Foreign Passport & Tourist Police B-Card Validator (validateForeignPassport)", () => {
+    it("validates standard foreign tourist passport with FOREIGN_USD_LOCKED tier", () => {
+      const result = validateForeignPassport({
+        passportNo: "GB12345678",
+        countryCode: "GBR",
+        arrivalDate: "2026-10-18",
+        visaExpiryDate: "2026-11-18",
+        tenantId: "jetwing-lighthouse",
+        guestId: "GUEST-UK-01",
+      });
+
+      assert.equal(result.ok, true);
+      if (!result.ok) return;
+
+      const p = result.value;
+      assert.equal(p.canonicalPassportNo, "GB12345678");
+      assert.equal(p.canonicalCountryCode, "GBR");
+      assert.equal(p.isVisaValid, true);
+      assert.equal(p.hasResidentVisa, false);
+      assert.equal(p.residencyTier, "FOREIGN_USD_LOCKED");
+      assert.equal(p.touristPoliceBCardStatus, "COMPLIANT");
+      assert.equal(p.tenantId, "jetwing-lighthouse");
+      assert.equal(p.guestId, "GUEST-UK-01");
+    });
+
+    it("allocates RESIDENT_LKR tier when guest holds resident visa", () => {
+      const result = validateForeignPassport({
+        passportNo: "US98765432",
+        countryCode: "USA",
+        arrivalDate: "2026-01-15",
+        visaExpiryDate: "2027-01-15",
+        hasResidentVisa: true,
+      });
+
+      assert.equal(result.ok, true);
+      if (!result.ok) return;
+
+      assert.equal(result.value.hasResidentVisa, true);
+      assert.equal(result.value.residencyTier, "RESIDENT_LKR");
+      assert.equal(result.value.touristPoliceBCardStatus, "COMPLIANT");
+    });
+
+    it("flags expired tourist visa for Tourist Police B-Card reporting", () => {
+      const result = validateForeignPassport({
+        passportNo: "FR99887766",
+        countryCode: "FRA",
+        arrivalDate: "2026-10-18",
+        visaExpiryDate: "2026-10-10", // expired prior to arrival
+        hasResidentVisa: false,
+      });
+
+      assert.equal(result.ok, true);
+      if (!result.ok) return;
+
+      assert.equal(result.value.isVisaValid, false);
+      assert.equal(result.value.touristPoliceBCardStatus, "FLAGGED_VISA_EXPIRED");
+    });
+
+    it("rejects invalid passport format or invalid country code", () => {
+      const invalidPassport = validateForeignPassport({
+        passportNo: "AB", // too short
+        countryCode: "USA",
+        arrivalDate: "2026-10-18",
+        visaExpiryDate: "2026-11-18",
+      });
+      assert.equal(invalidPassport.ok, false);
+      if (!invalidPassport.ok) {
+        assert.equal(invalidPassport.error.code, "INVALID_PASSPORT");
+      }
+
+      const invalidCountry = validateForeignPassport({
+        passportNo: "GB12345678",
+        countryCode: "UNITED_STATES", // too long for ISO code
+        arrivalDate: "2026-10-18",
+        visaExpiryDate: "2026-11-18",
+      });
+      assert.equal(invalidCountry.ok, false);
+      if (!invalidCountry.ok) {
+        assert.equal(invalidCountry.error.code, "INVALID_PASSPORT");
+      }
+    });
+
+    it("creates tamper-proof SHA-256 audit entry for foreign passport verification", () => {
+      const pRes = validateForeignPassport({
+        passportNo: "DE12345678",
+        countryCode: "DEU",
+        arrivalDate: "2026-10-18",
+        visaExpiryDate: "2026-11-18",
+      });
+      assert.equal(pRes.ok, true);
+      if (!pRes.ok) return;
+
+      const auditRes = createPassportVerificationAuditEntry(
+        "cape-weligama",
+        "actor-frontdesk-02",
+        "GUEST-DE-99",
+        pRes.value,
+        "2026-10-18T16:00:00.000Z",
+      );
+
+      assert.equal(auditRes.ok, true);
+      if (!auditRes.ok) return;
+
+      assert.equal(auditRes.value.tenantId, "cape-weligama");
+      assert.equal(auditRes.value.action, "VERIFY_FOREIGN_PASSPORT_B_CARD");
       assert.equal(auditRes.value.entryHash.length, 64);
     });
   });
