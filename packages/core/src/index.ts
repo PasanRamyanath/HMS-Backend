@@ -24,6 +24,7 @@ export * from "./webxpay.js";
 export * from "./channex.js";
 export * from "./sms.js";
 export * from "./payroll.js";
+export * from "./inventoryMath.js";
 export {
   SRI_LANKA_TIMEZONE,
   SRI_LANKA_LOCALE,
