@@ -102,3 +102,4 @@ This file tracks the sequential completion of backend implementation steps defin
 - [x] Step 091: Provision CloudFront Distribution (`HmsCloudFront`) Using Permanent 1 TB/Month Free Tier (`packages/cdk/lib/hms-stack.ts`)
 - [x] Step 092: Provision EventBridge Daily Rule for `23:59` Sri Lanka Standard Time Night Audit (`packages/cdk/lib/hms-stack.ts`)
 - [x] Step 093: Provision AWS Budgets Zero-Spend / $1.00 Monthly Cost Alert (`CfnBudget`) (`packages/cdk/lib/hms-stack.ts`)
+- [x] Step 094: Emit CDK `CfnOutput` Values & Auto-Generate Frontend `.env.production` Script (`packages/cdk/scripts/export-outputs.mjs`)
