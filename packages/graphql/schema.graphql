@@ -1771,6 +1771,283 @@ input SettleFolioInput {
 }
 
 # ==============================================================================
+# Trilingual F&B Menus, Modifiers, KDS Routing & Recipe BOMs
+# ==============================================================================
+
+"""
+Trilingual text representation supporting English, Sinhala, and Tamil for Sri Lankan hospitality menus.
+"""
+type TrilingualText @aws_cognito_user_pools @aws_iam @aws_lambda @aws_api_key {
+  """
+  English text.
+  """
+  en: String!
+  """
+  Sinhala translation (e.g. 'දෙවල් ඉස්සෝ').
+  """
+  si: String
+  """
+  Tamil translation (e.g. 'டெவில்ட் இறால்').
+  """
+  ta: String
+}
+
+"""
+Bill of Materials recipe ingredient linking menu dishes to FIFO kitchen store batches.
+"""
+type RecipeBomIngredient @aws_cognito_user_pools @aws_iam @aws_lambda @aws_api_key {
+  """
+  Stock inventory item identifier.
+  """
+  stockItemId: ID!
+  """
+  Stock item display name (e.g. 'Jumbo Tiger Prawns Grade A', 'Coconut Milk 1L').
+  """
+  stockItemName: String!
+  """
+  Quantity consumed per portion.
+  """
+  quantityRequired: Float!
+  """
+  Unit of measure (KG, L, PORTION, G).
+  """
+  unitOfMeasure: String!
+  """
+  Estimated replacement cost per unit in LKR for live food costing.
+  """
+  costPerUnitLkr: Float!
+}
+
+"""
+Dish customization modifier (e.g. Spice level, Rice type, Salad dressing, Add-ons).
+"""
+type ModifierOption @aws_cognito_user_pools @aws_iam @aws_lambda @aws_api_key {
+  """
+  Unique modifier identifier.
+  """
+  id: ID!
+  """
+  Trilingual modifier option name.
+  """
+  name: TrilingualText!
+  """
+  Price surcharge in LKR (0.00 for no charge).
+  """
+  priceAdjustmentLkr: Float!
+  """
+  Whether selected by default in QR ordering.
+  """
+  isDefault: Boolean!
+}
+
+"""
+Individual food, beverage, or room service menu item.
+"""
+type MenuItem @aws_cognito_user_pools @aws_iam @aws_lambda @aws_api_key {
+  """
+  Unique menu item identifier.
+  """
+  id: ID!
+  """
+  Multi-tenant property identifier.
+  """
+  tenantId: ID!
+  """
+  Parent menu category identifier.
+  """
+  categoryId: ID!
+  """
+  Stock keeping or POS dish short code (e.g. 'KOT-402').
+  """
+  code: String!
+  """
+  Trilingual dish title.
+  """
+  title: TrilingualText!
+  """
+  Trilingual culinary description.
+  """
+  description: TrilingualText!
+  """
+  High-resolution square 1:1 image URL for Apple HIG guest QR ordering.
+  """
+  imageUrl: AWSURL
+  """
+  Menu selling price in Sri Lankan Rupees prior to service charge and statutory tax.
+  """
+  priceLkr: Float!
+  """
+  Target department for BOT / KDS order routing (KITCHEN, BAR).
+  """
+  department: Department!
+  """
+  Physical kitchen station (e.g. 'Hot Wok', 'Pantry', 'Curry Station', 'Grill').
+  """
+  kitchenStation: String
+  """
+  Dietary classification: Vegetarian.
+  """
+  isVegetarian: Boolean!
+  """
+  Dietary classification: Vegan.
+  """
+  isVegan: Boolean!
+  """
+  Dietary classification: Halal certified.
+  """
+  isHalal: Boolean!
+  """
+  Dietary classification: Gluten-free.
+  """
+  isGlutenFree: Boolean!
+  """
+  Sri Lankan spice heat rating (0 = Mild, 1 = Medium, 2 = Hot, 3 = Sri Lankan Extra Hot).
+  """
+  spicyLevel: Int!
+  """
+  Whether item is currently in stock and available on QR ordering.
+  """
+  isAvailable: Boolean!
+  """
+  Customization modifier groups.
+  """
+  modifiers: [ModifierOption!]
+  """
+  Recipe Bill of Materials ingredients for automatic FIFO inventory depletion.
+  """
+  recipeBom: [RecipeBomIngredient!]
+  """
+  Display sort sequence.
+  """
+  displayOrder: Int!
+  """
+  Timestamp of creation.
+  """
+  createdAt: AWSDateTime!
+  """
+  Timestamp of latest update.
+  """
+  updatedAt: AWSDateTime!
+}
+
+"""
+Menu section grouping (e.g. 'Traditional Sri Lankan Curries', 'Ceylon Seafood', 'Desserts').
+"""
+type MenuCategory @aws_cognito_user_pools @aws_iam @aws_lambda @aws_api_key {
+  """
+  Unique category identifier.
+  """
+  id: ID!
+  """
+  Multi-tenant property identifier.
+  """
+  tenantId: ID!
+  """
+  Trilingual category title.
+  """
+  name: TrilingualText!
+  """
+  Trilingual section description.
+  """
+  description: TrilingualText
+  """
+  Target department (KITCHEN, BAR).
+  """
+  department: Department!
+  """
+  Applicable dining channels for this category.
+  """
+  diningTypes: [DiningType!]!
+  """
+  Display sort sequence.
+  """
+  displayOrder: Int!
+  """
+  Whether category is visible on guest menu.
+  """
+  isActive: Boolean!
+  """
+  Child menu items under this category.
+  """
+  items: [MenuItem!]
+  """
+  Timestamp of creation.
+  """
+  createdAt: AWSDateTime!
+  """
+  Timestamp of latest update.
+  """
+  updatedAt: AWSDateTime!
+}
+
+"""
+Input for trilingual text fields.
+"""
+input TrilingualTextInput {
+  en: String!
+  si: String
+  ta: String
+}
+
+"""
+Input for recipe Bill of Materials ingredient.
+"""
+input RecipeBomIngredientInput {
+  stockItemId: ID!
+  stockItemName: String!
+  quantityRequired: Float!
+  unitOfMeasure: String!
+  costPerUnitLkr: Float!
+}
+
+"""
+Input for dish modifier option.
+"""
+input ModifierOptionInput {
+  id: ID
+  name: TrilingualTextInput!
+  priceAdjustmentLkr: Float!
+  isDefault: Boolean!
+}
+
+"""
+Input for creating or updating a menu item.
+"""
+input UpsertMenuItemInput {
+  id: ID
+  categoryId: ID!
+  code: String!
+  title: TrilingualTextInput!
+  description: TrilingualTextInput!
+  imageUrl: AWSURL
+  priceLkr: Float!
+  department: Department!
+  kitchenStation: String
+  isVegetarian: Boolean!
+  isVegan: Boolean!
+  isHalal: Boolean!
+  isGlutenFree: Boolean!
+  spicyLevel: Int!
+  isAvailable: Boolean!
+  modifiers: [ModifierOptionInput!]
+  recipeBom: [RecipeBomIngredientInput!]
+  displayOrder: Int!
+}
+
+"""
+Input for creating or updating a menu category.
+"""
+input UpsertMenuCategoryInput {
+  id: ID
+  name: TrilingualTextInput!
+  description: TrilingualTextInput
+  department: Department!
+  diningTypes: [DiningType!]!
+  displayOrder: Int!
+  isActive: Boolean!
+}
+
+# ==============================================================================
 # GraphQL Root Types Placeholder
 # ==============================================================================
 
@@ -1884,6 +2161,33 @@ type Query {
     @aws_iam
     @aws_lambda
     @aws_api_key
+
+  """
+  Lists active F&B menu categories with trilingual titles and dining channels.
+  """
+  listMenuCategories(tenantId: ID!, department: Department): [MenuCategory!]!
+    @aws_cognito_user_pools
+    @aws_iam
+    @aws_lambda
+    @aws_api_key
+
+  """
+  Lists menu items under a category or property with pricing, allergens, and dietary badges.
+  """
+  listMenuItems(tenantId: ID!, categoryId: ID): [MenuItem!]!
+    @aws_cognito_user_pools
+    @aws_iam
+    @aws_lambda
+    @aws_api_key
+
+  """
+  Retrieves a single dish or beverage menu item by identifier.
+  """
+  getMenuItem(tenantId: ID!, id: ID!): MenuItem
+    @aws_cognito_user_pools
+    @aws_iam
+    @aws_lambda
+    @aws_api_key
 }
 
 type Mutation {
@@ -1978,6 +2282,27 @@ type Mutation {
   Configures split routing for a reservation folio.
   """
   createSplitFolioRouting(tenantId: ID!, input: CreateSplitFolioRoutingInput!): Folio
+    @aws_cognito_user_pools
+    @aws_iam
+
+  """
+  Creates or updates a trilingual menu category.
+  """
+  upsertMenuCategory(tenantId: ID!, input: UpsertMenuCategoryInput!): MenuCategory
+    @aws_cognito_user_pools
+    @aws_iam
+
+  """
+  Creates or updates a dish or beverage item with BOM costing and modifier options.
+  """
+  upsertMenuItem(tenantId: ID!, input: UpsertMenuItemInput!): MenuItem
+    @aws_cognito_user_pools
+    @aws_iam
+
+  """
+  Quickly toggles item 86/out-of-stock availability from kitchen runner screen.
+  """
+  toggleMenuItemAvailability(tenantId: ID!, id: ID!, isAvailable: Boolean!): MenuItem
     @aws_cognito_user_pools
     @aws_iam
 }
