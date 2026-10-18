@@ -38,6 +38,8 @@ import {
   ProjectionType,
   Table,
 } from "aws-cdk-lib/aws-dynamodb";
+import { Rule, Schedule } from "aws-cdk-lib/aws-events";
+import { LambdaFunction } from "aws-cdk-lib/aws-events-targets";
 import {
   Architecture,
   type FunctionUrl,
@@ -474,6 +476,7 @@ export class SriLankaHmsStack extends Stack {
   public readonly webhooksIngressFn: NodejsFunction;
   public readonly webhooksUrl: FunctionUrl;
   public readonly nightAuditCronFn: NodejsFunction;
+  public readonly nightAuditRule: Rule;
   public readonly presignMediaUploadFn: NodejsFunction;
   public readonly assetBucket: Bucket;
   public readonly distribution: Distribution;
@@ -811,6 +814,13 @@ export class SriLankaHmsStack extends Stack {
     );
     this.hmsTable.grantReadWriteData(this.nightAuditCronFn);
 
+    // EventBridge Daily Scheduled Rule at 23:59 Sri Lanka Standard Time (18:29 UTC)
+    this.nightAuditRule = new Rule(this, "NightAuditRule", {
+      schedule: Schedule.cron({ minute: "29", hour: "18" }),
+      description: "Triggers Sri Lanka HMS Night Audit daily at 23:59 Asia/Colombo (18:29 UTC)",
+      targets: [new LambdaFunction(this.nightAuditCronFn)],
+    });
+
     // 5. S3 Presigned WebP Media Upload URL Generator Lambda
     this.presignMediaUploadFn = createLeanLambda(
       this,
@@ -912,6 +922,12 @@ export class SriLankaHmsStack extends Stack {
       value: this.nightAuditCronFn.functionArn,
       description: "Night Audit & CBSL Exchange Rate Rollover Lambda ARN",
       exportName: "NightAuditCronFnArn",
+    });
+
+    new CfnOutput(this, "NightAuditRuleArn", {
+      value: this.nightAuditRule.ruleArn,
+      description: "EventBridge Night Audit Daily Scheduled Rule ARN",
+      exportName: "NightAuditRuleArn",
     });
 
     new CfnOutput(this, "PresignMediaUploadFnArn", {

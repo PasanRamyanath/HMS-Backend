@@ -423,6 +423,18 @@ describe("CloudFormation Permanent Free-Tier Cost-Ceiling Guardrails", () => {
     });
   });
 
+  it("provisions EventBridge daily scheduled rule at 23:59 Sri Lanka Standard Time (18:29 UTC)", () => {
+    hmsTemplate.resourceCountIs("AWS::Events::Rule", 1);
+    hmsTemplate.hasResourceProperties("AWS::Events::Rule", {
+      ScheduleExpression: "cron(29 18 * * ? *)",
+      State: "ENABLED",
+    });
+
+    hmsTemplate.hasOutput("NightAuditRuleArn", {
+      Export: { Name: "NightAuditRuleArn" },
+    });
+  });
+
   it("exports AppSync GraphQL API stack outputs", () => {
     hmsTemplate.hasOutput("HmsGraphQLApiId", {
       Export: {
