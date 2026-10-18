@@ -713,6 +713,307 @@ input UpsertHotelTenantInput {
 }
 
 # ==============================================================================
+# Room Inventory, Dual-Tier Rates & Driver Accommodation Types
+# ==============================================================================
+
+"""
+Seasonal pricing window with dual-tier rates (Sri Lankan Resident LKR vs Foreign Non-Resident USD).
+"""
+type SeasonalRateBand @aws_cognito_user_pools @aws_iam @aws_lambda @aws_api_key {
+  """
+  Unique seasonal band identifier.
+  """
+  id: ID!
+  """
+  Season label (e.g. 'Peak Winter Season', 'Kandy Esala Perahera', 'Shoulder Season').
+  """
+  name: String!
+  """
+  Start date of the seasonal rate window (inclusive).
+  """
+  startDate: AWSDate!
+  """
+  End date of the seasonal rate window (inclusive).
+  """
+  endDate: AWSDate!
+  """
+  Nightly room rate in Sri Lankan Rupees for domestic residents (NIC verified).
+  """
+  residentRateLkr: Float!
+  """
+  Nightly room rate in US Dollars for international tourists.
+  """
+  foreignRateUsd: Float!
+  """
+  Minimum stay duration in nights during this seasonal period.
+  """
+  minimumStayNights: Int!
+}
+
+"""
+Room category classification modeling capacity, amenities, base pricing, and seasonal bands.
+"""
+type RoomType @aws_cognito_user_pools @aws_iam @aws_lambda @aws_api_key {
+  """
+  Unique room type identifier.
+  """
+  id: ID!
+  """
+  Multi-tenant property identifier.
+  """
+  tenantId: ID!
+  """
+  Property-unique short code (e.g. 'DLX-OCN', 'VIL-POOL', 'STE-PRES').
+  """
+  code: String!
+  """
+  Marketing display name (e.g. 'Deluxe Ocean View Villa', 'Heritage Tea Suite').
+  """
+  name: String!
+  """
+  Detailed descriptive summary of the room category.
+  """
+  description: String!
+  """
+  Maximum adult guest capacity.
+  """
+  maxOccupancyAdults: Int!
+  """
+  Maximum child guest capacity.
+  """
+  maxOccupancyChildren: Int!
+  """
+  Default standard night rate in LKR for Sri Lankan residents.
+  """
+  baseRateResidentLkr: Float!
+  """
+  Default standard night rate in USD for international guests.
+  """
+  baseRateForeignUsd: Float!
+  """
+  Configured seasonal pricing bands overriding base rate during special periods.
+  """
+  rateBands: [SeasonalRateBand!]!
+  """
+  List of room features and amenities (e.g. 'Private Plunge Pool', 'Ceylon Tea Bar').
+  """
+  amenities: [String!]!
+  """
+  Gallery photos for guest booking engine and room QR showcase.
+  """
+  photos: [AWSURL!]!
+  """
+  Total count of physical rooms belonging to this category.
+  """
+  totalRoomCount: Int!
+  """
+  Whether this room category is currently bookable.
+  """
+  isActive: Boolean!
+  """
+  Timestamp of creation.
+  """
+  createdAt: AWSDateTime!
+  """
+  Timestamp of latest update.
+  """
+  updatedAt: AWSDateTime!
+}
+
+"""
+Physical room or standalone villa within the property with live housekeeping and occupancy status.
+"""
+type Room @aws_cognito_user_pools @aws_iam @aws_lambda @aws_api_key {
+  """
+  Unique physical room identifier.
+  """
+  id: ID!
+  """
+  Multi-tenant property identifier.
+  """
+  tenantId: ID!
+  """
+  Human-readable room or villa number (e.g. '101', 'Villa 4', 'Tea Cottage 2').
+  """
+  roomNumber: String!
+  """
+  Associated room category identifier.
+  """
+  roomTypeId: ID!
+  """
+  Expanded room type details.
+  """
+  roomType: RoomType
+  """
+  Floor number or level within the building.
+  """
+  floor: String
+  """
+  Building wing, block name, or garden sector.
+  """
+  building: String
+  """
+  Current housekeeping and cleanliness inspection status.
+  """
+  housekeepingStatus: HousekeepingStatus!
+  """
+  Whether a guest is currently checked in to this room.
+  """
+  isOccupied: Boolean!
+  """
+  Identifier of active checked-in reservation folio.
+  """
+  currentReservationId: ID
+  """
+  Cryptographic secret salt for contactless guest room QR tokens.
+  """
+  qrTokenSecret: String
+  """
+  Internal front desk or housekeeping maintenance notes.
+  """
+  notes: String
+  """
+  Timestamp of creation.
+  """
+  createdAt: AWSDateTime!
+  """
+  Timestamp of latest update.
+  """
+  updatedAt: AWSDateTime!
+}
+
+"""
+Dedicated chauffeur accommodation bed in staff/driver quarters.
+Essential for Sri Lankan round-trip DMC and private guide logistics.
+"""
+type DriverDormBed @aws_cognito_user_pools @aws_iam @aws_lambda @aws_api_key {
+  """
+  Unique dorm bed identifier.
+  """
+  id: ID!
+  """
+  Multi-tenant property identifier.
+  """
+  tenantId: ID!
+  """
+  Physical bed / cubicle number (e.g. 'DORM-01', 'CHAUFFEUR-B4').
+  """
+  bedNumber: String!
+  """
+  Dormitory wing or building section.
+  """
+  dormSection: String!
+  """
+  Nightly bed charge in LKR (or 0.00 if complimentary under DMC agreement).
+  """
+  ratePerNightLkr: Float!
+  """
+  Whether driver accommodation is provided complimentary.
+  """
+  isComplimentary: Boolean!
+  """
+  Whether this dorm bed is currently occupied.
+  """
+  isOccupied: Boolean!
+  """
+  Full name of the currently staying driver / chauffeur.
+  """
+  currentDriverName: String
+  """
+  Contact mobile number of the staying chauffeur.
+  """
+  currentDriverPhone: AWSPhone
+  """
+  National Identity Card (NIC) number of the staying chauffeur.
+  """
+  currentDriverNic: String
+  """
+  Associated tour operator or DMC account identifier.
+  """
+  currentTourOperatorId: ID
+  """
+  Room number of the tourist guest the driver is escorting.
+  """
+  associatedGuestRoomNumber: String
+  """
+  Special notes (e.g. early safari departure, meal preferences).
+  """
+  notes: String
+  """
+  Timestamp of creation.
+  """
+  createdAt: AWSDateTime!
+  """
+  Timestamp of latest update.
+  """
+  updatedAt: AWSDateTime!
+}
+
+"""
+Input for seasonal pricing window configuration.
+"""
+input SeasonalRateBandInput {
+  id: ID
+  name: String!
+  startDate: AWSDate!
+  endDate: AWSDate!
+  residentRateLkr: Float!
+  foreignRateUsd: Float!
+  minimumStayNights: Int!
+}
+
+"""
+Input for creating or updating a room category.
+"""
+input UpsertRoomTypeInput {
+  id: ID
+  code: String!
+  name: String!
+  description: String!
+  maxOccupancyAdults: Int!
+  maxOccupancyChildren: Int!
+  baseRateResidentLkr: Float!
+  baseRateForeignUsd: Float!
+  rateBands: [SeasonalRateBandInput!]
+  amenities: [String!]
+  photos: [AWSURL!]
+  totalRoomCount: Int!
+  isActive: Boolean!
+}
+
+"""
+Input for configuring a physical room.
+"""
+input UpsertRoomInput {
+  id: ID
+  roomNumber: String!
+  roomTypeId: ID!
+  floor: String
+  building: String
+  housekeepingStatus: HousekeepingStatus
+  isOccupied: Boolean
+  notes: String
+}
+
+"""
+Input for managing driver dorm bed inventory.
+"""
+input UpsertDriverDormBedInput {
+  id: ID
+  bedNumber: String!
+  dormSection: String!
+  ratePerNightLkr: Float!
+  isComplimentary: Boolean!
+  isOccupied: Boolean
+  currentDriverName: String
+  currentDriverPhone: AWSPhone
+  currentDriverNic: String
+  currentTourOperatorId: ID
+  associatedGuestRoomNumber: String
+  notes: String
+}
+
+# ==============================================================================
 # GraphQL Root Types Placeholder
 # ==============================================================================
 
@@ -730,6 +1031,43 @@ type Query {
     @aws_iam
     @aws_lambda
     @aws_api_key
+
+  """
+  Lists all room types configured for a tenant property.
+  """
+  listRoomTypes(tenantId: ID!): [RoomType!]!
+    @aws_cognito_user_pools
+    @aws_iam
+    @aws_lambda
+    @aws_api_key
+
+  """
+  Retrieves a specific room type by its identifier.
+  """
+  getRoomType(tenantId: ID!, id: ID!): RoomType
+    @aws_cognito_user_pools
+    @aws_iam
+    @aws_lambda
+    @aws_api_key
+
+  """
+  Lists all physical rooms and live tape-chart statuses for a property.
+  """
+  listRooms(tenantId: ID!): [Room!]! @aws_cognito_user_pools @aws_iam @aws_lambda @aws_api_key
+
+  """
+  Retrieves a single physical room by identifier.
+  """
+  getRoom(tenantId: ID!, id: ID!): Room @aws_cognito_user_pools @aws_iam @aws_lambda @aws_api_key
+
+  """
+  Lists all driver and chauffeur dorm beds for a property.
+  """
+  listDriverDormBeds(tenantId: ID!): [DriverDormBed!]!
+    @aws_cognito_user_pools
+    @aws_iam
+    @aws_lambda
+    @aws_api_key
 }
 
 type Mutation {
@@ -742,6 +1080,32 @@ type Mutation {
   Provisions or updates a hotel tenant profile, SLTDA registrations, and tax presets.
   """
   upsertHotelTenant(input: UpsertHotelTenantInput!): HotelTenant @aws_cognito_user_pools @aws_iam
+
+  """
+  Creates or updates a room type and its seasonal rate bands.
+  """
+  upsertRoomType(tenantId: ID!, input: UpsertRoomTypeInput!): RoomType
+    @aws_cognito_user_pools
+    @aws_iam
+
+  """
+  Creates or updates a physical room's metadata and inventory allocation.
+  """
+  upsertRoom(tenantId: ID!, input: UpsertRoomInput!): Room @aws_cognito_user_pools @aws_iam
+
+  """
+  Updates room housekeeping cleanliness state from staff runner tablet.
+  """
+  updateRoomHousekeepingStatus(tenantId: ID!, roomId: ID!, status: HousekeepingStatus!): Room
+    @aws_cognito_user_pools
+    @aws_iam
+
+  """
+  Provisions or updates a chauffeur / tour driver dorm bed.
+  """
+  upsertDriverDormBed(tenantId: ID!, input: UpsertDriverDormBedInput!): DriverDormBed
+    @aws_cognito_user_pools
+    @aws_iam
 }
 
 type Subscription {
