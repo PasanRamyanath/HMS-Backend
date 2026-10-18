@@ -1629,6 +1629,8 @@ export type Query = {
   listPurchaseOrders: Array<PurchaseOrder>;
   /** Queries reservations with optional status and arrival date filtering. */
   listReservations: Array<Reservation>;
+  /** Fetches all reservations overlapping a Tape Chart date window using GSI1 date range. */
+  listReservationsByDateRange: Array<Reservation>;
   /** Lists all room types configured for a tenant property. */
   listRoomTypes: Array<RoomType>;
   /** Lists all physical rooms and live tape-chart statuses for a property. */
@@ -1837,6 +1839,13 @@ export type QueryListPurchaseOrdersArgs = {
 export type QueryListReservationsArgs = {
   checkInDate?: InputMaybe<Scalars['AWSDate']['input']>;
   status?: InputMaybe<ReservationStatus>;
+  tenantId: Scalars['ID']['input'];
+};
+
+
+export type QueryListReservationsByDateRangeArgs = {
+  endDate: Scalars['AWSDate']['input'];
+  startDate: Scalars['AWSDate']['input'];
   tenantId: Scalars['ID']['input'];
 };
 

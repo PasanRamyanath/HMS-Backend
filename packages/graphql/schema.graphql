@@ -3672,6 +3672,15 @@ type Query {
     @aws_api_key
 
   """
+  Fetches all reservations overlapping a Tape Chart date window using GSI1 date range.
+  """
+  listReservationsByDateRange(
+    tenantId: ID!
+    startDate: AWSDate!
+    endDate: AWSDate!
+  ): [Reservation!]! @aws_cognito_user_pools @aws_iam @aws_lambda @aws_api_key
+
+  """
   Lists all Tour Operator / DMC credit contracts for a property.
   """
   listTourOperatorContracts(tenantId: ID!): [TourOperatorContract!]!
