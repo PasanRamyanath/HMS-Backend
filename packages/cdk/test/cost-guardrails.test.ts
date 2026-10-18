@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { App } from "aws-cdk-lib";
-import { Template } from "aws-cdk-lib/assertions";
+import { Match, Template } from "aws-cdk-lib/assertions";
 import { GitHubOidcStack } from "../lib/github-oidc-stack.js";
 import { SriLankaHmsStack } from "../lib/hms-stack.js";
 
@@ -176,6 +176,79 @@ describe("CloudFormation Permanent Free-Tier Cost-Ceiling Guardrails", () => {
     oidcTemplate.hasOutput("HmsFrontendDeployRoleArn", {
       Export: {
         Name: "HmsFrontendDeployRoleArn",
+      },
+    });
+  });
+
+  it("provisions Cognito User Pool supporting email & phone login with custom tenant claims", () => {
+    hmsTemplate.hasResourceProperties("AWS::Cognito::UserPool", {
+      UserPoolName: "HmsUserPool",
+      AutoVerifiedAttributes: ["email", "phone_number"],
+      UsernameAttributes: ["email", "phone_number"],
+      Policies: {
+        PasswordPolicy: {
+          MinimumLength: 8,
+          RequireLowercase: true,
+          RequireNumbers: true,
+          RequireUppercase: true,
+          RequireSymbols: false,
+        },
+      },
+      Schema: Match.arrayWith([
+        Match.objectLike({
+          AttributeDataType: "String",
+          Mutable: false,
+          Name: "tenantId",
+        }),
+        Match.objectLike({
+          AttributeDataType: "String",
+          Mutable: true,
+          Name: "department",
+        }),
+        Match.objectLike({
+          AttributeDataType: "String",
+          Mutable: true,
+          Name: "role",
+        }),
+      ]),
+    });
+  });
+
+  it("provisions Cognito User Pool Web Client without client secret for browser authentication", () => {
+    hmsTemplate.hasResourceProperties("AWS::Cognito::UserPoolClient", {
+      ClientName: "HmsWebClient",
+      GenerateSecret: false,
+    });
+  });
+
+  it("exports Cognito User Pool and Table stack outputs for frontend & CI/CD", () => {
+    hmsTemplate.hasOutput("HmsTableArn", {
+      Export: {
+        Name: "HmsTableArn",
+      },
+    });
+
+    hmsTemplate.hasOutput("HmsTableName", {
+      Export: {
+        Name: "HmsTableName",
+      },
+    });
+
+    hmsTemplate.hasOutput("HmsUserPoolId", {
+      Export: {
+        Name: "HmsUserPoolId",
+      },
+    });
+
+    hmsTemplate.hasOutput("HmsUserPoolArn", {
+      Export: {
+        Name: "HmsUserPoolArn",
+      },
+    });
+
+    hmsTemplate.hasOutput("HmsUserPoolClientId", {
+      Export: {
+        Name: "HmsUserPoolClientId",
       },
     });
   });

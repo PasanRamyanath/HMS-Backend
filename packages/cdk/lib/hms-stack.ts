@@ -1,4 +1,10 @@
-import { RemovalPolicy, Stack, type StackProps } from "aws-cdk-lib";
+import { CfnOutput, Duration, RemovalPolicy, Stack, type StackProps } from "aws-cdk-lib";
+import {
+  AccountRecovery,
+  StringAttribute,
+  UserPool,
+  type UserPoolClient,
+} from "aws-cdk-lib/aws-cognito";
 import { AttributeType, BillingMode, ProjectionType, Table } from "aws-cdk-lib/aws-dynamodb";
 import type { Construct } from "constructs";
 
@@ -17,6 +23,8 @@ export interface SriLankaHmsStackProps extends StackProps {}
 export class SriLankaHmsStack extends Stack {
   public readonly deploymentRegion: string;
   public readonly hmsTable: Table;
+  public readonly userPool: UserPool;
+  public readonly userPoolClient: UserPoolClient;
 
   constructor(scope: Construct, id: string, props?: SriLankaHmsStackProps) {
     super(scope, id, props);
@@ -77,6 +85,107 @@ export class SriLankaHmsStack extends Stack {
       projectionType: ProjectionType.ALL,
       readCapacity: 5,
       writeCapacity: 5,
+    });
+
+    // Cognito User Pool for multi-tenant hotel staff & super-admins
+    // Free Tier allows 50,000 MAUs per month with Cognito Essentials/Lite
+    this.userPool = new UserPool(this, "HmsUserPool", {
+      userPoolName: "HmsUserPool",
+      selfSignUpEnabled: true,
+      signInAliases: {
+        email: true,
+        phone: true,
+      },
+      autoVerify: {
+        email: true,
+        phone: true,
+      },
+      standardAttributes: {
+        email: {
+          required: true,
+          mutable: true,
+        },
+        phoneNumber: {
+          required: false,
+          mutable: true,
+        },
+        givenName: {
+          required: false,
+          mutable: true,
+        },
+        familyName: {
+          required: false,
+          mutable: true,
+        },
+      },
+      customAttributes: {
+        tenantId: new StringAttribute({
+          minLen: 1,
+          maxLen: 128,
+          mutable: false,
+        }),
+        department: new StringAttribute({
+          minLen: 1,
+          maxLen: 64,
+          mutable: true,
+        }),
+        role: new StringAttribute({
+          minLen: 1,
+          maxLen: 64,
+          mutable: true,
+        }),
+      },
+      passwordPolicy: {
+        minLength: 8,
+        requireLowercase: true,
+        requireUppercase: true,
+        requireDigits: true,
+        requireSymbols: false,
+        tempPasswordValidity: Duration.days(7),
+      },
+      accountRecovery: AccountRecovery.EMAIL_AND_PHONE_WITHOUT_MFA,
+      removalPolicy: RemovalPolicy.RETAIN,
+    });
+
+    // Web / PWA client without client secret for browser authentication
+    this.userPoolClient = this.userPool.addClient("HmsWebClient", {
+      userPoolClientName: "HmsWebClient",
+      generateSecret: false,
+      authFlows: {
+        userSrp: true,
+        userPassword: true,
+      },
+    });
+
+    // Stack Outputs for automated CI/CD and Frontend environment configuration
+    new CfnOutput(this, "HmsTableArn", {
+      value: this.hmsTable.tableArn,
+      description: "DynamoDB Single-Table ARN",
+      exportName: "HmsTableArn",
+    });
+
+    new CfnOutput(this, "HmsTableName", {
+      value: this.hmsTable.tableName,
+      description: "DynamoDB Single-Table Name",
+      exportName: "HmsTableName",
+    });
+
+    new CfnOutput(this, "HmsUserPoolId", {
+      value: this.userPool.userPoolId,
+      description: "Cognito User Pool ID for Sri Lanka HMS",
+      exportName: "HmsUserPoolId",
+    });
+
+    new CfnOutput(this, "HmsUserPoolArn", {
+      value: this.userPool.userPoolArn,
+      description: "Cognito User Pool ARN for Sri Lanka HMS",
+      exportName: "HmsUserPoolArn",
+    });
+
+    new CfnOutput(this, "HmsUserPoolClientId", {
+      value: this.userPoolClient.userPoolClientId,
+      description: "Cognito User Pool Web Client ID for Sri Lanka HMS",
+      exportName: "HmsUserPoolClientId",
     });
   }
 }
