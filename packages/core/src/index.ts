@@ -11,3 +11,4 @@
 export const CORE_VERSION = "1.0.0";
 
 export * from "./result.js";
+export * from "./auditChain.js";

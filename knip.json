@@ -2,7 +2,7 @@
   "$schema": "https://unpkg.com/knip@5/schema.json",
   "biome": true,
   "lefthook": true,
-  "ignoreDependencies": ["@biomejs/biome", "lefthook"],
+  "ignoreDependencies": ["@biomejs/biome", "lefthook", "tsx"],
   "ignoreBinaries": ["biome", "knip", "tsc"],
   "workspaces": {
     "packages/core": {

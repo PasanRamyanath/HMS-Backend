@@ -12,7 +12,7 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "test": "node --test test/**/*.test.ts"
+    "test": "node --import tsx --test test/**/*.test.ts"
   },
   "devDependencies": {
     "typescript": "^5.7.3"

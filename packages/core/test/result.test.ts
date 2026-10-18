@@ -8,7 +8,7 @@ import {
   mapResult,
   ok,
   unwrapOr,
-} from "../src/result.ts";
+} from "../src/result.js";
 
 describe("Result<T, E> Pattern & DomainError Catalog", () => {
   it("creates successful Result with ok()", () => {
