@@ -73,3 +73,4 @@ This file tracks the sequential completion of backend implementation steps defin
 - [x] Step 064: Create Shared AppSync JS Tenant Isolation Helper (`resolvers/tenantGuard.ts`)
 - [x] Step 065: Implement AppSync JS Resolver: `Query.getHotelTenant` & `Mutation.upsertHotelTenant` (`resolvers/hotelTenant.ts`)
 - [x] Step 066: Implement AppSync JS Resolver: `Query.listRooms` & `Mutation.updateRoomHousekeepingStatus` (`resolvers/rooms.ts`)
+- [x] Step 067: Implement AppSync JS Resolver: `Query.listMenuCatalog` (Categories + Items in 1 Query) (`resolvers/menuCatalog.ts`)
