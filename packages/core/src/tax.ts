@@ -146,3 +146,72 @@ export function calculateForwardTax(
     isVatRegistered: config.enableVAT,
   });
 }
+
+/**
+ * Standard Sri Lankan statutory tax profile presets.
+ */
+export type SriLankaTaxPreset =
+  | "LUXURY_VAT_HOTEL"
+  | "BOUTIQUE_NON_VAT"
+  | "SMALL_GUESTHOUSE_05_TDL"
+  | "TAX_EXEMPT";
+
+/**
+ * Generates an immutable SriLankaTaxConfig based on standard statutory profiles.
+ *
+ * - LUXURY_VAT_HOTEL: Full 4-stage compounding (10% SC, 1% TDL, 2.5% SSCL, 18% VAT).
+ * - BOUTIQUE_NON_VAT: Below IRD VAT threshold (10% SC, 1% TDL, zero SSCL/VAT).
+ * - SMALL_GUESTHOUSE_05_TDL: SLTDA small operator under LKR 12M annual turnover (0.5% TDL, zero SC/SSCL/VAT).
+ * - TAX_EXEMPT: Zero taxes and zero service charges across all stages.
+ *
+ * @param preset Statutory preset profile name
+ * @returns SriLankaTaxConfig configured to official statutory rates
+ */
+export function createTaxPreset(preset: SriLankaTaxPreset): SriLankaTaxConfig {
+  switch (preset) {
+    case "LUXURY_VAT_HOTEL":
+      return {
+        enableSC: true,
+        scRate: 0.1,
+        enableTDL: true,
+        tdlRate: 0.01,
+        enableSSCL: true,
+        ssclRate: 0.025,
+        enableVAT: true,
+        vatRate: 0.18,
+      };
+    case "BOUTIQUE_NON_VAT":
+      return {
+        enableSC: true,
+        scRate: 0.1,
+        enableTDL: true,
+        tdlRate: 0.01,
+        enableSSCL: false,
+        ssclRate: 0,
+        enableVAT: false,
+        vatRate: 0,
+      };
+    case "SMALL_GUESTHOUSE_05_TDL":
+      return {
+        enableSC: false,
+        scRate: 0,
+        enableTDL: true,
+        tdlRate: 0.005,
+        enableSSCL: false,
+        ssclRate: 0,
+        enableVAT: false,
+        vatRate: 0,
+      };
+    case "TAX_EXEMPT":
+      return {
+        enableSC: false,
+        scRate: 0,
+        enableTDL: false,
+        tdlRate: 0,
+        enableSSCL: false,
+        ssclRate: 0,
+        enableVAT: false,
+        vatRate: 0,
+      };
+  }
+}

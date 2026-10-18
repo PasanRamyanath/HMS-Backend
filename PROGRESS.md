@@ -33,6 +33,6 @@ This file tracks the sequential completion of backend implementation steps defin
 - [x] Step 026: Define Tax Configuration & Breakdown Types (`tax.ts`)
 - [x] Step 027: Implement Exact Half-Up Rupee & Cent Rounding Helper `roundLkr`
 - [x] Step 028: Implement Forward 4-Stage Compounding Tax Calculation (`calculateForwardTax`)
-- [ ] Step 029: Implement Small Guest House Tier Support (`createTaxPreset`)
+- [x] Step 029: Implement Small Guest House Tier Support (`createTaxPreset`)
 - [ ] Step 030: Implement Reverse All-Inclusive Gross-to-Net Derivation (`calculateReverseTax`)
 - [ ] Step 031: Write Exhaustive IRD/SLTDA Tax Test Vectors

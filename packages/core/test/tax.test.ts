@@ -1,6 +1,11 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { DEFAULT_SRI_LANKA_TAX_CONFIG, calculateForwardTax, roundLkr } from "../src/tax.js";
+import {
+  DEFAULT_SRI_LANKA_TAX_CONFIG,
+  calculateForwardTax,
+  createTaxPreset,
+  roundLkr,
+} from "../src/tax.js";
 
 describe("Sri Lankan Statutory Tax Engine - Rounding & Configuration", () => {
   it("exports default full-service hotel tax rates", () => {
@@ -81,5 +86,62 @@ describe("Sri Lankan Statutory Tax Engine - Rounding & Configuration", () => {
     assert.equal(nanRes.ok, false);
     if (nanRes.ok) return;
     assert.equal(nanRes.error.code, "INVALID_TAX_BASE");
+  });
+
+  describe("createTaxPreset factory", () => {
+    it("creates LUXURY_VAT_HOTEL preset", () => {
+      const cfg = createTaxPreset("LUXURY_VAT_HOTEL");
+      assert.equal(cfg.enableSC, true);
+      assert.equal(cfg.scRate, 0.1);
+      assert.equal(cfg.enableTDL, true);
+      assert.equal(cfg.tdlRate, 0.01);
+      assert.equal(cfg.enableSSCL, true);
+      assert.equal(cfg.ssclRate, 0.025);
+      assert.equal(cfg.enableVAT, true);
+      assert.equal(cfg.vatRate, 0.18);
+    });
+
+    it("creates BOUTIQUE_NON_VAT preset", () => {
+      const cfg = createTaxPreset("BOUTIQUE_NON_VAT");
+      assert.equal(cfg.enableSC, true);
+      assert.equal(cfg.scRate, 0.1);
+      assert.equal(cfg.enableTDL, true);
+      assert.equal(cfg.tdlRate, 0.01);
+      assert.equal(cfg.enableSSCL, false);
+      assert.equal(cfg.enableVAT, false);
+    });
+
+    it("creates SMALL_GUESTHOUSE_05_TDL preset for properties under LKR 12M", () => {
+      const cfg = createTaxPreset("SMALL_GUESTHOUSE_05_TDL");
+      assert.equal(cfg.enableSC, false);
+      assert.equal(cfg.enableTDL, true);
+      assert.equal(cfg.tdlRate, 0.005);
+      assert.equal(cfg.enableSSCL, false);
+      assert.equal(cfg.enableVAT, false);
+
+      // Verify calculation on LKR 10,000 base
+      const res = calculateForwardTax(10000, cfg);
+      assert.equal(res.ok, true);
+      if (!res.ok) return;
+      assert.equal(res.value.scLkr, 0);
+      assert.equal(res.value.tdlLkr, 50); // 0.5% of 10,000
+      assert.equal(res.value.ssclLkr, 0);
+      assert.equal(res.value.vatLkr, 0);
+      assert.equal(res.value.grandTotalLkr, 10050);
+    });
+
+    it("creates TAX_EXEMPT preset", () => {
+      const cfg = createTaxPreset("TAX_EXEMPT");
+      assert.equal(cfg.enableSC, false);
+      assert.equal(cfg.enableTDL, false);
+      assert.equal(cfg.enableSSCL, false);
+      assert.equal(cfg.enableVAT, false);
+
+      const res = calculateForwardTax(50000, cfg);
+      assert.equal(res.ok, true);
+      if (!res.ok) return;
+      assert.equal(res.value.grandTotalLkr, 50000);
+      assert.equal(res.value.effectiveTaxRate, 0);
+    });
   });
 });
