@@ -249,3 +249,166 @@ export function createServiceChargePoolAuditEntry(
     prevHash,
   });
 }
+
+export const SRI_LANKA_EPF_EMPLOYEE_RATE = 0.08;
+export const SRI_LANKA_EPF_EMPLOYER_RATE = 0.12;
+export const SRI_LANKA_ETF_EMPLOYER_RATE = 0.03;
+
+export interface SriLankaEpfEtfInput {
+  readonly basicSalaryLkr: number;
+  readonly budgetaryReliefAllowanceLkr?: number | undefined;
+  readonly netServiceChargeShareLkr?: number | undefined;
+  readonly tenantId?: string | undefined;
+  readonly employeeId?: string | undefined;
+}
+
+export interface SriLankaEpfEtfResult {
+  readonly basicSalaryLkr: number;
+  readonly budgetaryReliefAllowanceLkr: number;
+  readonly netServiceChargeShareLkr: number;
+  readonly epfEligibleEarningsLkr: number;
+  readonly employeeEpfLkr: number;
+  readonly employerEpfLkr: number;
+  readonly totalEpfRemittanceLkr: number;
+  readonly employerEtfLkr: number;
+  readonly totalStatutoryContributionLkr: number;
+  readonly grossEarningsLkr: number;
+  readonly netTakeHomePayLkr: number;
+  readonly tenantId?: string | undefined;
+  readonly employeeId?: string | undefined;
+}
+
+function validateEpfInput(input: SriLankaEpfEtfInput): Result<void, DomainError> {
+  if (
+    typeof input.basicSalaryLkr !== "number" ||
+    !Number.isFinite(input.basicSalaryLkr) ||
+    input.basicSalaryLkr < 0
+  ) {
+    return domainErr("VALIDATION_FAILED", "Basic salary must be a non-negative number", {
+      basicSalaryLkr: input.basicSalaryLkr,
+    });
+  }
+
+  if (input.budgetaryReliefAllowanceLkr !== undefined) {
+    if (
+      typeof input.budgetaryReliefAllowanceLkr !== "number" ||
+      !Number.isFinite(input.budgetaryReliefAllowanceLkr) ||
+      input.budgetaryReliefAllowanceLkr < 0
+    ) {
+      return domainErr(
+        "VALIDATION_FAILED",
+        "Budgetary relief allowance must be a non-negative number",
+        { budgetaryReliefAllowanceLkr: input.budgetaryReliefAllowanceLkr },
+      );
+    }
+  }
+
+  if (input.netServiceChargeShareLkr !== undefined) {
+    if (
+      typeof input.netServiceChargeShareLkr !== "number" ||
+      !Number.isFinite(input.netServiceChargeShareLkr) ||
+      input.netServiceChargeShareLkr < 0
+    ) {
+      return domainErr(
+        "VALIDATION_FAILED",
+        "Net service charge share must be a non-negative number",
+        { netServiceChargeShareLkr: input.netServiceChargeShareLkr },
+      );
+    }
+  }
+
+  return ok(undefined);
+}
+
+/**
+ * Computes statutory Sri Lankan EPF (8% Employee / 12% Employer) and ETF (3% Employer) deductions.
+ *
+ * Governed by:
+ * - Employees' Provident Fund Act No. 15 of 1958
+ * - Employees' Trust Fund Act No. 46 of 1980
+ * - Budgetary Relief Allowance of Workers Acts (2005 & 2016)
+ *
+ * Note: Under standard Sri Lankan hospitality labor law, Service Charge is a variable pool distribution
+ * and is not included in base earnings for EPF/ETF calculation, but contributes to gross take-home pay.
+ */
+export function calculateSriLankaEpfEtf(
+  input: SriLankaEpfEtfInput,
+): Result<SriLankaEpfEtfResult, DomainError> {
+  const valRes = validateEpfInput(input);
+  if (!valRes.ok) {
+    return valRes;
+  }
+
+  let validatedTenantId: string | undefined;
+  if (input.tenantId !== undefined) {
+    const tenantRes = validateTenantId(input.tenantId);
+    if (!tenantRes.ok) {
+      return tenantRes;
+    }
+    validatedTenantId = tenantRes.value;
+  }
+
+  const basicSalaryLkr = roundLkr(input.basicSalaryLkr);
+  const braLkr = roundLkr(input.budgetaryReliefAllowanceLkr ?? 0);
+  const scShareLkr = roundLkr(input.netServiceChargeShareLkr ?? 0);
+
+  const epfEligibleEarningsLkr = roundLkr(basicSalaryLkr + braLkr);
+  const employeeEpfLkr = roundLkr(epfEligibleEarningsLkr * SRI_LANKA_EPF_EMPLOYEE_RATE);
+  const employerEpfLkr = roundLkr(epfEligibleEarningsLkr * SRI_LANKA_EPF_EMPLOYER_RATE);
+  const totalEpfRemittanceLkr = roundLkr(employeeEpfLkr + employerEpfLkr);
+  const employerEtfLkr = roundLkr(epfEligibleEarningsLkr * SRI_LANKA_ETF_EMPLOYER_RATE);
+  const totalStatutoryContributionLkr = roundLkr(totalEpfRemittanceLkr + employerEtfLkr);
+
+  const grossEarningsLkr = roundLkr(epfEligibleEarningsLkr + scShareLkr);
+  const netTakeHomePayLkr = roundLkr(grossEarningsLkr - employeeEpfLkr);
+
+  return ok({
+    basicSalaryLkr,
+    budgetaryReliefAllowanceLkr: braLkr,
+    netServiceChargeShareLkr: scShareLkr,
+    epfEligibleEarningsLkr,
+    employeeEpfLkr,
+    employerEpfLkr,
+    totalEpfRemittanceLkr,
+    employerEtfLkr,
+    totalStatutoryContributionLkr,
+    grossEarningsLkr,
+    netTakeHomePayLkr,
+    tenantId: validatedTenantId,
+    employeeId: input.employeeId?.trim(),
+  });
+}
+
+/**
+ * Creates an immutable SHA-256 hash-chained audit log entry for employee EPF/ETF statutory calculations.
+ */
+export function createEpfEtfAuditEntry(
+  tenantId: string,
+  actorUserId: string,
+  employeeId: string,
+  billingPeriod: string,
+  epfEtf: SriLankaEpfEtfResult,
+  isoTs: string,
+  prevHash?: string | undefined,
+): Result<AuditLogEntry, DomainError> {
+  const afterJson = JSON.stringify({
+    employeeId,
+    billingPeriod,
+    epfEligibleEarningsLkr: epfEtf.epfEligibleEarningsLkr,
+    employeeEpfLkr: epfEtf.employeeEpfLkr,
+    employerEpfLkr: epfEtf.employerEpfLkr,
+    employerEtfLkr: epfEtf.employerEtfLkr,
+    netTakeHomePayLkr: epfEtf.netTakeHomePayLkr,
+  });
+
+  return createAuditEntry({
+    tenantId,
+    actorUserId,
+    action: "CALCULATE_SRI_LANKA_EPF_ETF",
+    entityType: "PayrollPayslip",
+    entityId: `${billingPeriod}:${employeeId}`,
+    isoTs,
+    afterJson,
+    prevHash,
+  });
+}

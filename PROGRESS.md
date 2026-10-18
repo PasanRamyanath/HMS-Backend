@@ -52,3 +52,4 @@ This file tracks the sequential completion of backend implementation steps defin
 - [x] Step 045: Implement Channex.io Raw-Body HMAC-SHA256 Webhook Verifier (`channex.ts`)
 - [x] Step 046: Implement SMSGo.lk Webhook Signature Verifier & Phone Normalizer (`sms.ts`)
 - [x] Step 047: Implement Sri Lankan 10% Service Charge Pool & Breakage Deduction Engine (`payroll.ts`)
+- [x] Step 048: Implement Sri Lankan EPF (`8%` Employee / `12%` Employer) & ETF (`3%` Employer) Calculator (`payroll.ts`)
