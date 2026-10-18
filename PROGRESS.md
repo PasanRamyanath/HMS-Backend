@@ -27,4 +27,4 @@ This file tracks the sequential completion of backend implementation steps defin
 - [x] Step 022: Implement Runtime Tenant, Mobile, SLTDA & IRD Validators (`config.ts`)
 - [x] Step 023: Write CloudFormation Permanent Free-Tier Cost-Ceiling Guardrail Test (`cost-guardrails.test.ts`)
 - [x] Step 024: Author Master Architecture Decision Record (`docs/adr-001-codespaces-saas-apple-hig.md`)
-- [ ] Step 025: Create & Execute Master 3-Repo Verification Gate (`scripts/verify-all-repos.sh`)
+- [x] Step 025: Create & Execute Master 3-Repo Verification Gate (`scripts/verify-all-repos.sh`)
