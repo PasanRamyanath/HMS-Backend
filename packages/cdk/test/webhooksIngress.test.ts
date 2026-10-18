@@ -3,7 +3,11 @@ import { createHash, createHmac } from "node:crypto";
 import { describe, it } from "node:test";
 import type { DynamoDBDocumentClient } from "@aws-sdk/lib-dynamodb";
 import { encodeWebXPayCustomFields } from "@hms/core";
-import { type LambdaFunctionUrlEvent, executeWebhooksIngress } from "../lambdas/webhooksIngress.js";
+import {
+  type LambdaFunctionUrlEvent,
+  executeWebhooksIngress,
+  handler,
+} from "../lambdas/webhooksIngress.js";
 
 const TEST_NOW = "2026-10-18T19:00:00.000Z";
 const TEST_PAYHERE_SECRET = "test-payhere-secret-abc";
@@ -389,6 +393,50 @@ describe("Unified Webhook Ingress Lambda (webhooksIngress.ts)", () => {
 
       const res = await executeWebhooksIngress(event);
       assert.equal(res.statusCode, 404);
+    });
+  });
+
+  describe("Lambda Handler Entrypoint & Base64 Payload Support", () => {
+    it("handles base64-encoded request bodies correctly", async () => {
+      const bodyObj = {
+        merchant_id: "MERCHANT_001",
+        order_id: "order-b64",
+        payment_id: "payhere-tx-b64",
+        payhere_amount: "1000.00",
+        payhere_currency: "LKR",
+        status_code: "2",
+        md5sig: "FORGED_SIGNATURE",
+      };
+      const rawBody = JSON.stringify(bodyObj);
+      const b64Body = Buffer.from(rawBody, "utf8").toString("base64");
+
+      const event: LambdaFunctionUrlEvent = {
+        rawPath: "/webhooks/payhere",
+        requestContext: {
+          http: { method: "POST", path: "/webhooks/payhere" },
+        },
+        isBase64Encoded: true,
+        body: b64Body,
+      };
+
+      const res = await executeWebhooksIngress(event, {
+        payHereSecret: TEST_PAYHERE_SECRET,
+      });
+      assert.equal(res.statusCode, 400);
+      const parsed = JSON.parse(res.body);
+      assert.equal(parsed.code, "INVALID_SIGNATURE");
+    });
+
+    it("verifies handler entrypoint returns 405 on non-POST event", async () => {
+      const event: LambdaFunctionUrlEvent = {
+        rawPath: "/webhooks/payhere",
+        requestContext: {
+          http: { method: "GET", path: "/webhooks/payhere" },
+        },
+      };
+
+      const res = await handler(event);
+      assert.equal(res.statusCode, 405);
     });
   });
 });
