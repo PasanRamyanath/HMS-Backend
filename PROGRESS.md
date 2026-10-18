@@ -80,3 +80,4 @@ This file tracks the sequential completion of backend implementation steps defin
 - [x] Step 071: Implement AppSync JS Resolver: `Query.listReservationsByDateRange` (Tape Chart Query) (`resolvers/reservationsQuery.ts`)
 - [x] Step 072: Implement AppSync JS Resolver: `Query.getFolioWithLines` (Single-Query Folio Fetch) (`resolvers/folioQuery.ts`)
 - [x] Step 073: Implement AppSync JS Resolver: `Query.listBanquetEvents` & `Mutation.upsertBanquetEvent` (`resolvers/banquets.ts`)
+- [x] Step 074: Implement AppSync JS Resolver: `Query.listStockItems` & `Query.listSltdaMonthlyReports` (`resolvers/reportsAndStock.ts`)
