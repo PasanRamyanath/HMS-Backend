@@ -93,3 +93,4 @@ This file tracks the sequential completion of backend implementation steps defin
 - [x] Step 082: Provision AWS AppSync GraphQL API (`HmsApi`) with Dual Auth (`USER_POOL` + `AWS_LAMBDA`) (`packages/cdk/lib/hms-stack.ts`)
 - [x] Step 083: Wire `HmsTable` as AppSync DynamoDB Data Source & Register Direct JS Resolvers (`packages/cdk/lib/hms-stack.ts`)
 - [x] Step 084: Implement Transactional Order & Folio Posting Lambda (`packages/cdk/lambdas/orderAndFolioTx.ts`)
+- [x] Step 085: Implement Reservation, Driver Bed & Check-In/Check-Out Lambda (`packages/cdk/lambdas/reservationAndCheckInTx.ts`)
