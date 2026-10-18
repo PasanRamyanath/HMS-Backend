@@ -1014,6 +1014,453 @@ input UpsertDriverDormBedInput {
 }
 
 # ==============================================================================
+# DMC Tour Contracts, Chauffeurs, Groups & Guest Reservations
+# ==============================================================================
+
+"""
+Destination Management Company (DMC) or Tour Operator wholesale credit agreement.
+Supports major Sri Lankan inbound operators (Aitken Spence, Walkers Tours, Jetwing, etc.).
+"""
+type TourOperatorContract @aws_cognito_user_pools @aws_iam @aws_lambda @aws_api_key {
+  """
+  Unique DMC contract identifier.
+  """
+  id: ID!
+  """
+  Multi-tenant property identifier.
+  """
+  tenantId: ID!
+  """
+  Corporate legal name of the tour company.
+  """
+  companyName: String!
+  """
+  Property-assigned contract code (e.g. 'DMC-AITKEN-2026', 'DMC-WALKERS').
+  """
+  contractCode: String!
+  """
+  Approved credit limit in Sri Lankan Rupees for City Ledger charging.
+  """
+  creditLimitLkr: Float!
+  """
+  Agreed payment terms window in days (typically 30, 45, or 60 days).
+  """
+  creditDays: Int!
+  """
+  Primary account manager contact person.
+  """
+  contactPerson: String!
+  """
+  Official billing and voucher submission email.
+  """
+  contactEmail: AWSEmail!
+  """
+  Primary telephone number for operations dispatch.
+  """
+  contactPhone: AWSPhone!
+  """
+  Contracted wholesale discount percentage off standard rates.
+  """
+  discountPercent: Float!
+  """
+  Whether the credit contract is in active good standing.
+  """
+  isActive: Boolean!
+  """
+  Timestamp of contract creation.
+  """
+  createdAt: AWSDateTime!
+  """
+  Timestamp of latest modification.
+  """
+  updatedAt: AWSDateTime!
+}
+
+"""
+Chauffeur / Tour Driver accommodation record linked to a guest reservation or group tour.
+"""
+type DriverAccommodation @aws_cognito_user_pools @aws_iam @aws_lambda @aws_api_key {
+  """
+  Unique driver accommodation assignment identifier.
+  """
+  id: ID!
+  """
+  Multi-tenant property identifier.
+  """
+  tenantId: ID!
+  """
+  Parent guest reservation identifier.
+  """
+  reservationId: ID!
+  """
+  Assigned driver dorm bed identifier.
+  """
+  driverDormBedId: ID!
+  """
+  Expanded dorm bed details.
+  """
+  driverDormBed: DriverDormBed
+  """
+  Full name of the chauffeur / tour guide.
+  """
+  driverName: String!
+  """
+  Contact phone number for emergency concierge dispatch.
+  """
+  driverPhone: AWSPhone!
+  """
+  Sri Lankan National Identity Card (NIC) number.
+  """
+  driverNic: String!
+  """
+  Vehicle registration number (e.g. 'WP-CAD-8921').
+  """
+  vehicleNumber: String!
+  """
+  Check-in date for driver quarters.
+  """
+  checkInDate: AWSDate!
+  """
+  Check-out date for driver quarters.
+  """
+  checkOutDate: AWSDate!
+  """
+  Meal arrangement provided for driver (e.g. BB or FB).
+  """
+  mealEntitlement: MealPlan
+  """
+  Whether accommodation is complimentary under DMC contract.
+  """
+  isComplimentary: Boolean!
+  """
+  Nightly fee in LKR (0.00 if complimentary).
+  """
+  costPerNightLkr: Float!
+  """
+  Timestamp of check-in.
+  """
+  createdAt: AWSDateTime!
+  """
+  Timestamp of latest update.
+  """
+  updatedAt: AWSDateTime!
+}
+
+"""
+Multi-room group reservation or DMC coach tour series.
+"""
+type GroupBooking @aws_cognito_user_pools @aws_iam @aws_lambda @aws_api_key {
+  """
+  Unique group booking identifier.
+  """
+  id: ID!
+  """
+  Multi-tenant property identifier.
+  """
+  tenantId: ID!
+  """
+  Group tour reference name (e.g. 'German Photographic Tour - Oct 2026').
+  """
+  groupName: String!
+  """
+  Associated tour operator contract if booked via DMC.
+  """
+  tourOperatorContractId: ID
+  """
+  Expanded tour operator contract details.
+  """
+  tourOperatorContract: TourOperatorContract
+  """
+  Lead tour leader / organizer name.
+  """
+  primaryContactName: String!
+  """
+  Organizer contact email.
+  """
+  primaryContactEmail: AWSEmail!
+  """
+  Organizer contact phone number.
+  """
+  primaryContactPhone: AWSPhone!
+  """
+  Total count of allocated rooms across room types.
+  """
+  totalRoomsBooked: Int!
+  """
+  Total adult and child guests in group party.
+  """
+  totalGuests: Int!
+  """
+  Group arrival date.
+  """
+  checkInDate: AWSDate!
+  """
+  Group departure date.
+  """
+  checkOutDate: AWSDate!
+  """
+  Master group folio identifier for consolidated charges.
+  """
+  masterFolioId: ID
+  """
+  Special banquet, meal, or baggage handling instructions.
+  """
+  notes: String
+  """
+  Timestamp of creation.
+  """
+  createdAt: AWSDateTime!
+  """
+  Timestamp of latest update.
+  """
+  updatedAt: AWSDateTime!
+}
+
+"""
+Primary guest room reservation record tracking lifecycle, rates, guests, and folios.
+"""
+type Reservation @aws_cognito_user_pools @aws_iam @aws_lambda @aws_api_key {
+  """
+  Unique reservation identifier.
+  """
+  id: ID!
+  """
+  Multi-tenant property identifier.
+  """
+  tenantId: ID!
+  """
+  Human-friendly reservation confirmation code (e.g. 'RES-58192').
+  """
+  confirmationCode: String!
+  """
+  Current reservation lifecycle status.
+  """
+  status: ReservationStatus!
+  """
+  Sri Lankan Resident (LKR) or Foreign Non-Resident (USD) rate category.
+  """
+  rateTier: ResidencyRateTier!
+  """
+  Contracted meal plan arrangement.
+  """
+  mealPlan: MealPlan!
+  """
+  Scheduled arrival date.
+  """
+  checkInDate: AWSDate!
+  """
+  Scheduled departure date.
+  """
+  checkOutDate: AWSDate!
+  """
+  Actual front desk check-in timestamp.
+  """
+  actualCheckInTime: AWSDateTime
+  """
+  Actual front desk check-out timestamp.
+  """
+  actualCheckOutTime: AWSDateTime
+  """
+  Number of adult guests staying.
+  """
+  adultsCount: Int!
+  """
+  Number of child guests staying.
+  """
+  childrenCount: Int!
+  """
+  Booked room type identifier.
+  """
+  roomTypeId: ID!
+  """
+  Expanded room type details.
+  """
+  roomType: RoomType
+  """
+  Physically allocated room identifier (set at check-in or pre-allocated).
+  """
+  assignedRoomId: ID
+  """
+  Expanded allocated room details.
+  """
+  assignedRoom: Room
+  """
+  Primary guest display name.
+  """
+  guestName: String!
+  """
+  Guest notification email.
+  """
+  guestEmail: AWSEmail!
+  """
+  Guest contact phone.
+  """
+  guestPhone: AWSPhone!
+  """
+  National Identity Card (NIC) number for Sri Lankan residents.
+  """
+  guestNic: String
+  """
+  Passport number for foreign non-resident tourists.
+  """
+  guestPassportNumber: String
+  """
+  Guest nationality country string.
+  """
+  guestNationality: String
+  """
+  Sri Lanka Tourist Police B-Card registration serial number.
+  """
+  touristPoliceBCardNumber: String
+  """
+  Associated tour operator / DMC contract if agency booking.
+  """
+  tourOperatorContractId: ID
+  """
+  Expanded tour operator contract.
+  """
+  tourOperatorContract: TourOperatorContract
+  """
+  Physical tour voucher number issued by the DMC.
+  """
+  tourVoucherNumber: String
+  """
+  Parent group booking identifier if part of tour series.
+  """
+  groupBookingId: ID
+  """
+  Expanded group booking.
+  """
+  groupBooking: GroupBooking
+  """
+  Associated chauffeur accommodation details.
+  """
+  driverAccommodation: DriverAccommodation
+  """
+  Quoted total base rate amount.
+  """
+  quotedRateAmount: Float!
+  """
+  Quoted currency ('LKR' for residents, 'USD' for foreign tourists).
+  """
+  quotedRateCurrency: String!
+  """
+  Locked CBSL USD-to-LKR buying exchange rate at booking creation.
+  """
+  lockedExchangeRate: Float
+  """
+  Special dietary, honeymoon, or accessibility requests.
+  """
+  specialRequests: String
+  """
+  Inbound flight number and estimated arrival time.
+  """
+  flightDetails: String
+  """
+  Contactless room QR session HMAC token.
+  """
+  qrSessionToken: String
+  """
+  Timestamp of creation.
+  """
+  createdAt: AWSDateTime!
+  """
+  Timestamp of latest update.
+  """
+  updatedAt: AWSDateTime!
+}
+
+"""
+Input for chauffeur accommodation assignment.
+"""
+input DriverAccommodationInput {
+  driverDormBedId: ID!
+  driverName: String!
+  driverPhone: AWSPhone!
+  driverNic: String!
+  vehicleNumber: String!
+  checkInDate: AWSDate!
+  checkOutDate: AWSDate!
+  mealEntitlement: MealPlan
+  isComplimentary: Boolean!
+  costPerNightLkr: Float
+}
+
+"""
+Input for creating a new individual or tour reservation.
+"""
+input CreateReservationInput {
+  rateTier: ResidencyRateTier!
+  mealPlan: MealPlan!
+  checkInDate: AWSDate!
+  checkOutDate: AWSDate!
+  adultsCount: Int!
+  childrenCount: Int!
+  roomTypeId: ID!
+  assignedRoomId: ID
+  guestName: String!
+  guestEmail: AWSEmail!
+  guestPhone: AWSPhone!
+  guestNic: String
+  guestPassportNumber: String
+  guestNationality: String
+  tourOperatorContractId: ID
+  tourVoucherNumber: String
+  groupBookingId: ID
+  driverAccommodation: DriverAccommodationInput
+  quotedRateAmount: Float!
+  quotedRateCurrency: String!
+  specialRequests: String
+  flightDetails: String
+}
+
+"""
+Input for front desk guest check-in with statutory identity verification.
+"""
+input CheckInGuestInput {
+  tenantId: ID!
+  reservationId: ID!
+  assignedRoomId: ID!
+  guestNic: String
+  guestPassportNumber: String
+  guestNationality: String
+  touristPoliceBCardNumber: String
+  driverAccommodation: DriverAccommodationInput
+}
+
+"""
+Input for registering or updating a Tour Operator / DMC credit agreement.
+"""
+input UpsertTourOperatorContractInput {
+  id: ID
+  companyName: String!
+  contractCode: String!
+  creditLimitLkr: Float!
+  creditDays: Int!
+  contactPerson: String!
+  contactEmail: AWSEmail!
+  contactPhone: AWSPhone!
+  discountPercent: Float!
+  isActive: Boolean!
+}
+
+"""
+Input for creating a multi-room group tour booking.
+"""
+input CreateGroupBookingInput {
+  groupName: String!
+  tourOperatorContractId: ID
+  primaryContactName: String!
+  primaryContactEmail: AWSEmail!
+  primaryContactPhone: AWSPhone!
+  totalRoomsBooked: Int!
+  totalGuests: Int!
+  checkInDate: AWSDate!
+  checkOutDate: AWSDate!
+  notes: String
+}
+
+# ==============================================================================
 # GraphQL Root Types Placeholder
 # ==============================================================================
 
@@ -1068,6 +1515,42 @@ type Query {
     @aws_iam
     @aws_lambda
     @aws_api_key
+
+  """
+  Retrieves a reservation by identifier.
+  """
+  getReservation(tenantId: ID!, id: ID!): Reservation
+    @aws_cognito_user_pools
+    @aws_iam
+    @aws_lambda
+    @aws_api_key
+
+  """
+  Queries reservations with optional status and arrival date filtering.
+  """
+  listReservations(tenantId: ID!, status: ReservationStatus, checkInDate: AWSDate): [Reservation!]!
+    @aws_cognito_user_pools
+    @aws_iam
+    @aws_lambda
+    @aws_api_key
+
+  """
+  Lists all Tour Operator / DMC credit contracts for a property.
+  """
+  listTourOperatorContracts(tenantId: ID!): [TourOperatorContract!]!
+    @aws_cognito_user_pools
+    @aws_iam
+    @aws_lambda
+    @aws_api_key
+
+  """
+  Retrieves a single group booking by identifier.
+  """
+  getGroupBooking(tenantId: ID!, id: ID!): GroupBooking
+    @aws_cognito_user_pools
+    @aws_iam
+    @aws_lambda
+    @aws_api_key
 }
 
 type Mutation {
@@ -1104,6 +1587,38 @@ type Mutation {
   Provisions or updates a chauffeur / tour driver dorm bed.
   """
   upsertDriverDormBed(tenantId: ID!, input: UpsertDriverDormBedInput!): DriverDormBed
+    @aws_cognito_user_pools
+    @aws_iam
+
+  """
+  Creates a new guest room reservation.
+  """
+  createReservation(tenantId: ID!, input: CreateReservationInput!): Reservation
+    @aws_cognito_user_pools
+    @aws_iam
+
+  """
+  Checks in a guest with room allocation and statutory identity records (NIC / Tourist Police B-Card).
+  """
+  checkInGuest(input: CheckInGuestInput!): Reservation @aws_cognito_user_pools @aws_iam
+
+  """
+  Checks out a guest and vacates the room.
+  """
+  checkOutGuest(tenantId: ID!, reservationId: ID!): Reservation @aws_cognito_user_pools @aws_iam
+
+  """
+  Creates or updates a Tour Operator / DMC credit contract.
+  """
+  upsertTourOperatorContract(
+    tenantId: ID!
+    input: UpsertTourOperatorContractInput!
+  ): TourOperatorContract @aws_cognito_user_pools @aws_iam
+
+  """
+  Creates a multi-room group tour booking.
+  """
+  createGroupBooking(tenantId: ID!, input: CreateGroupBookingInput!): GroupBooking
     @aws_cognito_user_pools
     @aws_iam
 }

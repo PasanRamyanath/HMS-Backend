@@ -60,3 +60,4 @@ This file tracks the sequential completion of backend implementation steps defin
 - [x] Step 051: Author Base Scalars, Directives & Enums in `packages/graphql/schema.graphql`
 - [x] Step 052: Define Multi-Tenant `HotelTenant` & `TaxConfig` GraphQL Types (`schema.graphql`)
 - [x] Step 053: Define `RoomType`, `Room`, and `DriverDormBed` GraphQL Types (`schema.graphql`)
+- [x] Step 054: Define `Reservation`, `DriverAccommodation`, and `GroupBooking` GraphQL Types (`schema.graphql`)
