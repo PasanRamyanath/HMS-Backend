@@ -4064,6 +4064,13 @@ type Mutation {
     @aws_iam
 
   """
+  Real-time KDS transition mutation alias.
+  """
+  updateServiceOrderStatus(tenantId: ID!, input: UpdateOrderStatusInput!): ServiceOrder
+    @aws_cognito_user_pools
+    @aws_iam
+
+  """
   Provisions or updates a banquet hall or lawn venue profile.
   """
   upsertBanquetHall(tenantId: ID!, input: UpsertBanquetHallInput!): BanquetHall
@@ -4200,7 +4207,7 @@ type Subscription {
   Real-time WebSocket event for kitchen expediter and guest QR order status tracking.
   """
   onOrderUpdated(tenantId: ID!): ServiceOrder
-    @aws_subscribe(mutations: ["updateOrderStatus"])
+    @aws_subscribe(mutations: ["updateOrderStatus", "updateServiceOrderStatus"])
     @aws_cognito_user_pools
     @aws_lambda
     @aws_iam

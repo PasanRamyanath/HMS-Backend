@@ -13,3 +13,4 @@ export * from "../resolvers/rooms.js";
 export * from "../resolvers/menuCatalog.js";
 export * from "../resolvers/menuMutations.js";
 export * from "../resolvers/kdsOrders.js";
+export * from "../resolvers/updateOrderStatus.js";

@@ -1120,6 +1120,8 @@ export type Mutation = {
   updateOrderStatus: Maybe<ServiceOrder>;
   /** Updates room housekeeping cleanliness state from staff runner tablet. */
   updateRoomHousekeepingStatus: Maybe<Room>;
+  /** Real-time KDS transition mutation alias. */
+  updateServiceOrderStatus: Maybe<ServiceOrder>;
   /** Provisions or updates a banquet hall or lawn venue profile. */
   upsertBanquetHall: Maybe<BanquetHall>;
   /** Provisions or updates a chauffeur / tour driver dorm bed. */
@@ -1294,6 +1296,12 @@ export type MutationUpdateOrderStatusArgs = {
 export type MutationUpdateRoomHousekeepingStatusArgs = {
   roomId: Scalars['ID']['input'];
   status: HousekeepingStatus;
+  tenantId: Scalars['ID']['input'];
+};
+
+
+export type MutationUpdateServiceOrderStatusArgs = {
+  input: UpdateOrderStatusInput;
   tenantId: Scalars['ID']['input'];
 };
 
