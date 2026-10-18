@@ -63,13 +63,17 @@ function resolveLambdaTenant(
  * @param explicitTenantId Optional override tenantId (defaults to ctx.args.tenantId or ctx.args.input?.tenantId)
  * @returns The validated tenantId string
  */
-export function tenantGuard<
-  TArgs extends { tenantId?: string; input?: { tenantId?: string } } = {
-    tenantId?: string;
-    input?: { tenantId?: string };
-  },
->(ctx: Context<TArgs>, explicitTenantId?: string): string {
-  const targetTenantId = explicitTenantId || ctx.args?.tenantId || ctx.args?.input?.tenantId;
+export function tenantGuard<TArgs = Record<string, unknown>>(
+  ctx: Context<TArgs>,
+  explicitTenantId?: string,
+): string {
+  const args = ctx.args as Record<string, unknown> | undefined;
+  const input = args?.input as Record<string, unknown> | undefined;
+  const targetTenantId =
+    explicitTenantId ||
+    (typeof args?.tenantId === "string" ? args.tenantId : undefined) ||
+    (typeof input?.tenantId === "string" ? input.tenantId : undefined) ||
+    (typeof input?.id === "string" ? input.id : undefined);
 
   if (!targetTenantId || targetTenantId.trim().length === 0) {
     util.error("Missing mandatory tenantId in operation arguments.", "BadRequest");
