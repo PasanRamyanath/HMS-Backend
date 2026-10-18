@@ -1600,6 +1600,8 @@ export type Query = {
   listFoliosForReservation: Array<Folio>;
   /** Lists inventory vouchers filtered by type and date range. */
   listInventoryVouchers: Array<InventoryVoucher>;
+  /** Single-query menu catalog fetching all categories with nested menu items in 1 RRU read. */
+  listMenuCatalog: Array<MenuCategory>;
   /** Lists active F&B menu categories with trilingual titles and dining channels. */
   listMenuCategories: Array<MenuCategory>;
   /** Lists menu items under a category or property with pricing, allergens, and dietary badges. */
@@ -1781,6 +1783,11 @@ export type QueryListInventoryVouchersArgs = {
   tenantId: Scalars['ID']['input'];
   toDate?: InputMaybe<Scalars['AWSDate']['input']>;
   voucherType?: InputMaybe<Scalars['String']['input']>;
+};
+
+
+export type QueryListMenuCatalogArgs = {
+  tenantId: Scalars['ID']['input'];
 };
 
 

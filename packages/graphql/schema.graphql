@@ -3713,6 +3713,15 @@ type Query {
     @aws_api_key
 
   """
+  Single-query menu catalog fetching all categories with nested menu items in 1 RRU read.
+  """
+  listMenuCatalog(tenantId: ID!): [MenuCategory!]!
+    @aws_cognito_user_pools
+    @aws_iam
+    @aws_lambda
+    @aws_api_key
+
+  """
   Lists active F&B menu categories with trilingual titles and dining channels.
   """
   listMenuCategories(tenantId: ID!, department: Department): [MenuCategory!]!
