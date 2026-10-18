@@ -74,3 +74,4 @@ This file tracks the sequential completion of backend implementation steps defin
 - [x] Step 065: Implement AppSync JS Resolver: `Query.getHotelTenant` & `Mutation.upsertHotelTenant` (`resolvers/hotelTenant.ts`)
 - [x] Step 066: Implement AppSync JS Resolver: `Query.listRooms` & `Mutation.updateRoomHousekeepingStatus` (`resolvers/rooms.ts`)
 - [x] Step 067: Implement AppSync JS Resolver: `Query.listMenuCatalog` (Categories + Items in 1 Query) (`resolvers/menuCatalog.ts`)
+- [x] Step 068: Implement AppSync JS Resolver: `Mutation.upsertMenuItem` & `Mutation.toggleMenuItemStock` (`resolvers/menuMutations.ts`)
