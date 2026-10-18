@@ -17,6 +17,7 @@ export * from "./tax.js";
 export * from "./folioMath.js";
 export * from "./currencyLock.js";
 export * from "./nicPassport.js";
+export * from "./lankaQr.js";
 export {
   SRI_LANKA_TIMEZONE,
   SRI_LANKA_LOCALE,
