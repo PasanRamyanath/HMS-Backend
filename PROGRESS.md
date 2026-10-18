@@ -82,3 +82,6 @@ This file tracks the sequential completion of backend implementation steps defin
 - [x] Step 073: Implement AppSync JS Resolver: `Query.listBanquetEvents` & `Mutation.upsertBanquetEvent` (`resolvers/banquets.ts`)
 - [x] Step 074: Implement AppSync JS Resolver: `Query.listStockItems` & `Query.listSltdaMonthlyReports` (`resolvers/reportsAndStock.ts`)
 - [x] Step 075: Compile All AppSync JS Resolvers with `esbuild` & Run Phase 3 Ponytail Check (`build-resolvers.mjs`)
+
+## Phase 04: AWS CDK v2 Near-Free-Tier Cloud Infrastructure (`packages/cdk`)
+- [x] Step 076: Create CDK App Entrypoint Configured for `ap-south-1` (Mumbai) (`bin/hms.ts`)
