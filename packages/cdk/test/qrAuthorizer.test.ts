@@ -179,4 +179,30 @@ describe("AppSync Custom Lambda Authorizer for Zero-Login Guest QR Access (qrAut
     assert.equal(result.isAuthorized, false);
     assert.equal(result.ttlOverride, 0);
   });
+
+  it("denies access for malformed token strings without separator", async () => {
+    const result = await handler({ authorizationToken: "invalidTokenWithoutDotSeparator" });
+
+    assert.equal(result.isAuthorized, false);
+    assert.equal(result.ttlOverride, 0);
+  });
+
+  it("denies access when QR_HMAC_SECRET is only whitespace", async () => {
+    process.env.QR_HMAC_SECRET = "   ";
+
+    const exp = Math.floor(Date.now() / 1000) + 3600;
+    const signRes = signQrSessionToken({
+      tenantId: TEST_TENANT,
+      location: TEST_LOCATION,
+      stayId: TEST_STAY,
+      exp,
+      secret: TEST_SECRET,
+    });
+    assert.ok(signRes.ok);
+
+    const result = await handler({ authorizationToken: signRes.value });
+
+    assert.equal(result.isAuthorized, false);
+    assert.equal(result.ttlOverride, 0);
+  });
 });
