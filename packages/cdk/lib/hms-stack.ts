@@ -18,6 +18,13 @@ import {
   GraphqlApi,
 } from "aws-cdk-lib/aws-appsync";
 import {
+  CachePolicy,
+  Distribution,
+  PriceClass,
+  ViewerProtocolPolicy,
+} from "aws-cdk-lib/aws-cloudfront";
+import { S3BucketOrigin } from "aws-cdk-lib/aws-cloudfront-origins";
+import {
   AccountRecovery,
   CfnUserPoolGroup,
   StringAttribute,
@@ -39,7 +46,13 @@ import {
 } from "aws-cdk-lib/aws-lambda";
 import { NodejsFunction } from "aws-cdk-lib/aws-lambda-nodejs";
 import { LogGroup, RetentionDays } from "aws-cdk-lib/aws-logs";
-import { BlockPublicAccess, Bucket, BucketEncryption, HttpMethods } from "aws-cdk-lib/aws-s3";
+import {
+  BlockPublicAccess,
+  Bucket,
+  BucketEncryption,
+  HttpMethods,
+  type IBucket,
+} from "aws-cdk-lib/aws-s3";
 import type { Construct } from "constructs";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -463,6 +476,7 @@ export class SriLankaHmsStack extends Stack {
   public readonly nightAuditCronFn: NodejsFunction;
   public readonly presignMediaUploadFn: NodejsFunction;
   public readonly assetBucket: Bucket;
+  public readonly distribution: Distribution;
 
   constructor(scope: Construct, id: string, props?: SriLankaHmsStackProps) {
     super(scope, id, props);
@@ -546,6 +560,49 @@ export class SriLankaHmsStack extends Stack {
           abortIncompleteMultipartUploadAfter: Duration.days(1),
         },
       ],
+    });
+
+    // CloudFront Distribution using permanent 1 TB/month Always Free tier
+    // - Origin Access Control (OAC) to HmsAssetBucket (100% blocked public access)
+    // - PriceClass.PRICE_CLASS_ALL includes Mumbai, Chennai, and Colombo edge POPs
+    // - SPA fallback: HTTP 403 & 404 rewrite to /index.html with HTTP 200 OK
+    // - CachingOptimized policy for /assets/* and /media/*
+    const s3Origin = S3BucketOrigin.withOriginAccessControl(this.assetBucket as unknown as IBucket);
+
+    this.distribution = new Distribution(this, "HmsCloudFront", {
+      defaultBehavior: {
+        origin: s3Origin,
+        viewerProtocolPolicy: ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+        cachePolicy: CachePolicy.CACHING_OPTIMIZED,
+      },
+      defaultRootObject: "index.html",
+      priceClass: PriceClass.PRICE_CLASS_ALL,
+      errorResponses: [
+        {
+          httpStatus: 403,
+          responseHttpStatus: 200,
+          responsePagePath: "/index.html",
+          ttl: Duration.seconds(0),
+        },
+        {
+          httpStatus: 404,
+          responseHttpStatus: 200,
+          responsePagePath: "/index.html",
+          ttl: Duration.seconds(0),
+        },
+      ],
+      additionalBehaviors: {
+        "/assets/*": {
+          origin: s3Origin,
+          viewerProtocolPolicy: ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+          cachePolicy: CachePolicy.CACHING_OPTIMIZED,
+        },
+        "/media/*": {
+          origin: s3Origin,
+          viewerProtocolPolicy: ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+          cachePolicy: CachePolicy.CACHING_OPTIMIZED,
+        },
+      },
     });
 
     // Cognito User Pool for multi-tenant hotel staff & super-admins
@@ -861,6 +918,24 @@ export class SriLankaHmsStack extends Stack {
       value: this.presignMediaUploadFn.functionArn,
       description: "S3 Presigned WebP Media Upload Lambda ARN",
       exportName: "PresignMediaUploadFnArn",
+    });
+
+    new CfnOutput(this, "HmsDistributionId", {
+      value: this.distribution.distributionId,
+      description: "CloudFront Distribution ID for Sri Lanka HMS",
+      exportName: "HmsDistributionId",
+    });
+
+    new CfnOutput(this, "HmsDistributionDomainName", {
+      value: this.distribution.distributionDomainName,
+      description: "CloudFront Distribution Domain Name",
+      exportName: "HmsDistributionDomainName",
+    });
+
+    new CfnOutput(this, "HmsCloudFrontUrl", {
+      value: `https://${this.distribution.distributionDomainName}`,
+      description: "CloudFront Distribution Web URL",
+      exportName: "HmsCloudFrontUrl",
     });
   }
 }

@@ -391,6 +391,38 @@ describe("CloudFormation Permanent Free-Tier Cost-Ceiling Guardrails", () => {
     });
   });
 
+  it("provisions CloudFront distribution using 1 TB/month Free Tier with OAC and SPA fallback", () => {
+    hmsTemplate.resourceCountIs("AWS::CloudFront::Distribution", 1);
+    hmsTemplate.hasResourceProperties("AWS::CloudFront::Distribution", {
+      DistributionConfig: {
+        DefaultRootObject: "index.html",
+        PriceClass: "PriceClass_All",
+        CustomErrorResponses: [
+          {
+            ErrorCode: 403,
+            ResponseCode: 200,
+            ResponsePagePath: "/index.html",
+          },
+          {
+            ErrorCode: 404,
+            ResponseCode: 200,
+            ResponsePagePath: "/index.html",
+          },
+        ],
+      },
+    });
+
+    hmsTemplate.hasOutput("HmsDistributionId", {
+      Export: { Name: "HmsDistributionId" },
+    });
+    hmsTemplate.hasOutput("HmsDistributionDomainName", {
+      Export: { Name: "HmsDistributionDomainName" },
+    });
+    hmsTemplate.hasOutput("HmsCloudFrontUrl", {
+      Export: { Name: "HmsCloudFrontUrl" },
+    });
+  });
+
   it("exports AppSync GraphQL API stack outputs", () => {
     hmsTemplate.hasOutput("HmsGraphQLApiId", {
       Export: {

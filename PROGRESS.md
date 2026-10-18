@@ -99,3 +99,4 @@ This file tracks the sequential completion of backend implementation steps defin
 - [x] Step 088: Implement S3 Presigned WebP Upload URL Generator Resolver/Lambda (`packages/cdk/lambdas/presignMediaUpload.ts`)
 - [x] Step 089: Register All 5 ARM64 Graviton2 `NodejsFunction` Constructs in `hms-stack.ts` (`packages/cdk/lib/hms-stack.ts`)
 - [x] Step 090: Provision Single S3 Bucket (`HmsAssetBucket`) for Web App & Tenant WebP Media (`packages/cdk/lib/hms-stack.ts`)
+- [x] Step 091: Provision CloudFront Distribution (`HmsCloudFront`) Using Permanent 1 TB/Month Free Tier (`packages/cdk/lib/hms-stack.ts`)
