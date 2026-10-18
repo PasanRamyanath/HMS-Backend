@@ -12,6 +12,14 @@ export const CORE_VERSION = "1.0.0";
 
 export * from "./result.js";
 export * from "./auditChain.js";
-export * from "./format.js";
 export * from "./config.js";
 export * from "./tax.js";
+export {
+  SRI_LANKA_TIMEZONE,
+  SRI_LANKA_LOCALE,
+  formatLkr,
+  formatUsd,
+  formatSlDate,
+  formatSlDateTime,
+  formatSlIsoDate,
+} from "./format.js";

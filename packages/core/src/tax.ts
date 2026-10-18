@@ -81,3 +81,17 @@ export const DEFAULT_SRI_LANKA_TAX_CONFIG: SriLankaTaxConfig = {
   enableVAT: true,
   vatRate: 0.18,
 };
+
+/**
+ * Exact half-up rounding helper to two decimal places (integer cents)
+ * using Number.EPSILON to eliminate IEEE 754 floating-point precision drift.
+ *
+ * @param value Number in Sri Lankan Rupees
+ * @returns Rounded number with exactly 2 decimal precision
+ */
+export function roundLkr(value: number): number {
+  if (!Number.isFinite(value)) {
+    return 0;
+  }
+  return Math.round((value + Number.EPSILON) * 100) / 100;
+}

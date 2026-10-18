@@ -9,16 +9,9 @@
 export const SRI_LANKA_TIMEZONE = "Asia/Colombo";
 export const SRI_LANKA_LOCALE = "en-LK";
 
-/**
- * Rounds a currency amount to exactly 2 decimal places (integer cents)
- * using the standard round-half-up formula with Number.EPSILON guard.
- */
-export function roundLkr(amount: number): number {
-  if (!Number.isFinite(amount)) {
-    return 0;
-  }
-  return Math.round((amount + Number.EPSILON) * 100) / 100;
-}
+import { roundLkr } from "./tax.js";
+
+export { roundLkr };
 
 const lkrFormatter = new Intl.NumberFormat(SRI_LANKA_LOCALE, {
   style: "currency",
