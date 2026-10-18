@@ -1,4 +1,5 @@
-import { Stack, type StackProps } from "aws-cdk-lib";
+import { RemovalPolicy, Stack, type StackProps } from "aws-cdk-lib";
+import { AttributeType, BillingMode, Table } from "aws-cdk-lib/aws-dynamodb";
 import type { Construct } from "constructs";
 
 export interface SriLankaHmsStackProps extends StackProps {}
@@ -15,10 +16,32 @@ export interface SriLankaHmsStackProps extends StackProps {}
  */
 export class SriLankaHmsStack extends Stack {
   public readonly deploymentRegion: string;
+  public readonly hmsTable: Table;
 
   constructor(scope: Construct, id: string, props?: SriLankaHmsStackProps) {
     super(scope, id, props);
 
     this.deploymentRegion = this.region;
+
+    // Single-table DynamoDB for all 42 multi-tenant SaaS entities
+    this.hmsTable = new Table(this, "HmsTable", {
+      tableName: "HmsSingleTable",
+      partitionKey: {
+        name: "PK",
+        type: AttributeType.STRING,
+      },
+      sortKey: {
+        name: "SK",
+        type: AttributeType.STRING,
+      },
+      billingMode: BillingMode.PROVISIONED,
+      readCapacity: 10,
+      writeCapacity: 10,
+      timeToLiveAttribute: "ttl",
+      removalPolicy: RemovalPolicy.RETAIN,
+      pointInTimeRecoverySpecification: {
+        pointInTimeRecoveryEnabled: false,
+      },
+    });
   }
 }
