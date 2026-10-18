@@ -2228,6 +2228,273 @@ input UpdateOrderStatusInput {
 }
 
 # ==============================================================================
+# Banquet Functions, Weddings (BEO) & Event Hall Scheduling
+# ==============================================================================
+
+"""
+Cocktail finger food / bite plate item for Sri Lankan banquet and wedding functions.
+"""
+type BitePlateItem @aws_cognito_user_pools @aws_iam @aws_lambda @aws_api_key {
+  """
+  Unique bite plate identifier.
+  """
+  id: ID!
+  """
+  Display name of bite dish (e.g. 'Hot Butter Cuttlefish', 'Devilled Cashew & Chicken').
+  """
+  name: String!
+  """
+  Quantity ordered in Kilograms or Plates.
+  """
+  quantityKgOrPlates: Float!
+  """
+  Unit of measurement ('KG', 'PORTIONS', 'PLATES').
+  """
+  unitOfMeasure: String!
+  """
+  Agreed rate per unit in LKR.
+  """
+  ratePerUnitLkr: Float!
+  """
+  Total amount in LKR for this item.
+  """
+  totalAmountLkr: Float!
+}
+
+"""
+Banquet hall, ballroom, or garden function venue with slot management.
+"""
+type BanquetHall @aws_cognito_user_pools @aws_iam @aws_lambda @aws_api_key {
+  """
+  Unique banquet venue identifier.
+  """
+  id: ID!
+  """
+  Multi-tenant property identifier.
+  """
+  tenantId: ID!
+  """
+  Venue hall name (e.g. 'Grand Ballroom', 'Lotus Pavilion', 'Beachfront Lawn').
+  """
+  name: String!
+  """
+  Maximum seated dining capacity.
+  """
+  maxSeatingCapacity: Int!
+  """
+  Standard rental rate per function slot in Sri Lankan Rupees.
+  """
+  rentalRateLkr: Float!
+  """
+  Venue facilities and AV features.
+  """
+  features: [String!]!
+  """
+  Whether venue is active and bookable.
+  """
+  isActive: Boolean!
+  """
+  Timestamp of creation.
+  """
+  createdAt: AWSDateTime!
+  """
+  Timestamp of latest update.
+  """
+  updatedAt: AWSDateTime!
+}
+
+"""
+Banquet Event Order (BEO) modeling Sri Lankan traditional weddings, homecomings, and galas.
+Captures auspicious times (Poruwa/Ashtaka Nekath), corkage fees, and bite plates.
+"""
+type BanquetEvent @aws_cognito_user_pools @aws_iam @aws_lambda @aws_api_key {
+  """
+  Unique BEO identifier.
+  """
+  id: ID!
+  """
+  Multi-tenant property identifier.
+  """
+  tenantId: ID!
+  """
+  Sequential event serial number (e.g. 'BEO-2026-0048').
+  """
+  eventNumber: String!
+  """
+  Event category ('TRADITIONAL_SINHALA_WEDDING', 'HINDU_WEDDING', 'HOMECOMING', 'CORPORATE_GALA').
+  """
+  eventType: String!
+  """
+  Assigned banquet hall identifier.
+  """
+  hallId: ID!
+  """
+  Expanded hall venue details.
+  """
+  hall: BanquetHall
+  """
+  Date of the banquet function.
+  """
+  eventDate: AWSDate!
+  """
+  Function timing slot ('DAY_SLOT', 'NIGHT_SLOT', 'FULL_DAY').
+  """
+  slot: String!
+  """
+  Scheduled start time.
+  """
+  startTime: AWSTime!
+  """
+  Scheduled end time.
+  """
+  endTime: AWSTime!
+  """
+  Primary booking client name.
+  """
+  clientName: String!
+  """
+  Client contact phone.
+  """
+  clientPhone: AWSPhone!
+  """
+  Client contact email.
+  """
+  clientEmail: AWSEmail!
+  """
+  Bride and groom names for wedding functions.
+  """
+  brideAndGroomNames: String
+  """
+  Auspicious time for traditional Poruwa ceremony (Nekatha).
+  """
+  poruwaCeremonyTime: AWSTime
+  """
+  Auspicious time for Jayamangala Gatha / Ashtaka chanting.
+  """
+  ashtakaChantingTime: AWSTime
+  """
+  Guaranteed minimum guest covers.
+  """
+  guaranteedGuestCount: Int!
+  """
+  Actual attendees on the event day.
+  """
+  actualGuestCount: Int
+  """
+  Agreed per-plate catering rate in Sri Lankan Rupees.
+  """
+  perPlateRateLkr: Float!
+  """
+  Selected wedding buffet menu package name.
+  """
+  selectedMenuPackageName: String!
+  """
+  Finger food and bites itemized list.
+  """
+  bitePlates: [BitePlateItem!]
+  """
+  Total corkage charge for outside liquor / wine bottles.
+  """
+  corkageFeeTotalLkr: Float!
+  """
+  Number of outside alcohol bottles brought.
+  """
+  corkageBottleCount: Int
+  """
+  Hall rental venue hire charge in LKR.
+  """
+  hallRentalChargeLkr: Float!
+  """
+  Net function subtotal prior to service charge and statutory taxes.
+  """
+  subtotalLkr: Float!
+  """
+  Full 4-stage tax compounding itemization (SC -> TDL -> SSCL -> VAT).
+  """
+  taxBreakdown: TaxBreakdown!
+  """
+  Grand gross payable amount for event order in LKR.
+  """
+  totalGrossLkr: Float!
+  """
+  Total advance deposit collected.
+  """
+  advanceDepositPaidLkr: Float!
+  """
+  Remaining balance due.
+  """
+  balanceDueLkr: Float!
+  """
+  Master function folio identifier.
+  """
+  folioId: ID
+  """
+  Function status ('TENTATIVE', 'CONFIRMED', 'IN_PROGRESS', 'CONCLUDED', 'CANCELLED').
+  """
+  status: String!
+  """
+  Table decor, floral Poruwa setup, and DJ audio instructions.
+  """
+  setupNotes: String
+  """
+  Timestamp of creation.
+  """
+  createdAt: AWSDateTime!
+  """
+  Timestamp of latest update.
+  """
+  updatedAt: AWSDateTime!
+}
+
+"""
+Input for cocktail bite plate items.
+"""
+input BitePlateItemInput {
+  name: String!
+  quantityKgOrPlates: Float!
+  unitOfMeasure: String!
+  ratePerUnitLkr: Float!
+}
+
+"""
+Input for managing banquet hall venues.
+"""
+input UpsertBanquetHallInput {
+  id: ID
+  name: String!
+  maxSeatingCapacity: Int!
+  rentalRateLkr: Float!
+  features: [String!]!
+  isActive: Boolean!
+}
+
+"""
+Input for creating a Banquet Event Order (BEO).
+"""
+input CreateBanquetEventInput {
+  eventType: String!
+  hallId: ID!
+  eventDate: AWSDate!
+  slot: String!
+  startTime: AWSTime!
+  endTime: AWSTime!
+  clientName: String!
+  clientPhone: AWSPhone!
+  clientEmail: AWSEmail!
+  brideAndGroomNames: String
+  poruwaCeremonyTime: AWSTime
+  ashtakaChantingTime: AWSTime
+  guaranteedGuestCount: Int!
+  perPlateRateLkr: Float!
+  selectedMenuPackageName: String!
+  bitePlates: [BitePlateItemInput!]
+  corkageFeeTotalLkr: Float!
+  corkageBottleCount: Int
+  hallRentalChargeLkr: Float!
+  setupNotes: String
+}
+
+# ==============================================================================
 # GraphQL Root Types Placeholder
 # ==============================================================================
 
@@ -2382,6 +2649,33 @@ type Query {
     department: Department
     diningType: DiningType
   ): [ServiceOrder!]! @aws_cognito_user_pools @aws_lambda @aws_iam
+
+  """
+  Lists banquet halls and outdoor lawn venues with guest capacities.
+  """
+  listBanquetHalls(tenantId: ID!): [BanquetHall!]!
+    @aws_cognito_user_pools
+    @aws_iam
+    @aws_lambda
+    @aws_api_key
+
+  """
+  Retrieves a banquet event function sheet (BEO) by identifier.
+  """
+  getBanquetEvent(tenantId: ID!, id: ID!): BanquetEvent
+    @aws_cognito_user_pools
+    @aws_iam
+    @aws_lambda
+    @aws_api_key
+
+  """
+  Lists banquet events and weddings filtered optionally by event date.
+  """
+  listBanquetEvents(tenantId: ID!, eventDate: AWSDate): [BanquetEvent!]!
+    @aws_cognito_user_pools
+    @aws_iam
+    @aws_lambda
+    @aws_api_key
 }
 
 type Mutation {
@@ -2512,6 +2806,27 @@ type Mutation {
   Kitchen chef or order expediter updates order status on KDS (Acknowledged, Ready, Delivered, Cancelled).
   """
   updateOrderStatus(tenantId: ID!, input: UpdateOrderStatusInput!): ServiceOrder
+    @aws_cognito_user_pools
+    @aws_iam
+
+  """
+  Provisions or updates a banquet hall or lawn venue profile.
+  """
+  upsertBanquetHall(tenantId: ID!, input: UpsertBanquetHallInput!): BanquetHall
+    @aws_cognito_user_pools
+    @aws_iam
+
+  """
+  Creates a banquet event or wedding function sheet (BEO).
+  """
+  createBanquetEvent(tenantId: ID!, input: CreateBanquetEventInput!): BanquetEvent
+    @aws_cognito_user_pools
+    @aws_iam
+
+  """
+  Updates the lifecycle status of a banquet event.
+  """
+  updateBanquetEventStatus(tenantId: ID!, id: ID!, status: String!): BanquetEvent
     @aws_cognito_user_pools
     @aws_iam
 }
