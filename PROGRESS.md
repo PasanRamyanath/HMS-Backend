@@ -42,4 +42,4 @@ This file tracks the sequential completion of backend implementation steps defin
 - [x] Step 035: Implement Foreign Passport & Tourist Police B-Card Validator (`nicPassport.ts`)
 - [x] Step 036: Write Unit Tests for Sri Lankan NIC & Passport Extraction (`nicPassport.test.ts`)
 - [x] Step 037: Implement CRC-16/CCITT-FALSE Checksum Function for LankaQR (`lankaQr.ts`)
-- [ ] Step 038: Implement LankaQR EMVCo MPM Payload Generator (`lankaQr.ts`)
+- [x] Step 038: Implement LankaQR EMVCo MPM Payload Generator (`lankaQr.ts`)

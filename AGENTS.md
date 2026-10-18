@@ -7,10 +7,12 @@
 
 ## 2. Anti-Noise & Code Quality Standards
 - No arbitrary LOC caps: Write expressive, human-readable code.
+- Ponytail Anti-Bloat: Eliminate speculative abstractions, unused wrappers, and single-use classes while preserving 100% of Sri Lankan tax and domain logic.
 - Zero `console.log`, `console.error`, `console.warn`, or `debugger` statements (`suspicious.noConsole: "error"` in Biome).
 - Use explicit typed `Result<T, DomainError>` values (`packages/core/src/result.ts`).
 - Enforce `npx knip` to verify zero dead exports, unused types, or unneeded dependencies.
 - Cognitive complexity must stay <= 12 per function.
+
 
 ## 3. Step Protocol & Git Push Gate
 - Each backend step corresponds to `plan.md` in root and `PROGRESS.md` in this repository.

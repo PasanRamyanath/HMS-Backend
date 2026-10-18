@@ -15,6 +15,7 @@ export type DomainErrorCode =
   | "INVALID_CURRENCY"
   | "INVALID_NIC"
   | "INVALID_PASSPORT"
+  | "INVALID_LANKA_QR"
   | "HMAC_EXPIRED"
   | "ROOM_CONFLICT"
   | "VALIDATION_FAILED"
