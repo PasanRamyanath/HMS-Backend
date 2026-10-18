@@ -3704,6 +3704,15 @@ type Query {
   getFolio(tenantId: ID!, id: ID!): Folio @aws_cognito_user_pools @aws_iam @aws_lambda @aws_api_key
 
   """
+  Single-query fetch returning master folio and all line items in one DynamoDB query.
+  """
+  getFolioWithLines(tenantId: ID!, folioId: ID!): Folio
+    @aws_cognito_user_pools
+    @aws_iam
+    @aws_lambda
+    @aws_api_key
+
+  """
   Lists all folios associated with a reservation (e.g. Master DMC + Extras).
   """
   listFoliosForReservation(tenantId: ID!, reservationId: ID!): [Folio!]!

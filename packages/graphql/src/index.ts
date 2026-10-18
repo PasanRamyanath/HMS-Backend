@@ -15,3 +15,4 @@ export * from "../resolvers/menuMutations.js";
 export * from "../resolvers/kdsOrders.js";
 export * from "../resolvers/updateOrderStatus.js";
 export * from "../resolvers/reservationsQuery.js";
+export * from "../resolvers/folioQuery.js";

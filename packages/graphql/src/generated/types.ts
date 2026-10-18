@@ -1573,6 +1573,8 @@ export type Query = {
   getFolio: Maybe<Folio>;
   /** Retrieves an issued IRD tax invoice by identifier. */
   getFolioInvoice: Maybe<FolioInvoice>;
+  /** Single-query fetch returning master folio and all line items in one DynamoDB query. */
+  getFolioWithLines: Maybe<Folio>;
   /** Retrieves a single group booking by identifier. */
   getGroupBooking: Maybe<GroupBooking>;
   /** Retrieves a hotel tenant configuration by its unique tenantId. */
@@ -1668,6 +1670,12 @@ export type QueryGetFolioArgs = {
 
 export type QueryGetFolioInvoiceArgs = {
   id: Scalars['ID']['input'];
+  tenantId: Scalars['ID']['input'];
+};
+
+
+export type QueryGetFolioWithLinesArgs = {
+  folioId: Scalars['ID']['input'];
   tenantId: Scalars['ID']['input'];
 };
 
