@@ -8,3 +8,8 @@ export {
   GitHubOidcStack,
   type GitHubOidcStackProps,
 } from "./github-oidc-stack.js";
+
+export {
+  SriLankaHmsStack,
+  type SriLankaHmsStackProps,
+} from "./hms-stack.js";
