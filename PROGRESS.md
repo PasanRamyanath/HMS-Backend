@@ -8,7 +8,7 @@ This file tracks the sequential completion of backend implementation steps defin
 - [x] Step 003: Install Ponytail & Addy Osmani's agent-skills plugins in AGY CLI
 - [x] Step 004: Install Apple HIG & UI/UX skills in AGY CLI
 - [x] Step 005: Author `.antigravity/rules.md` & `AGENTS.md`
-- [ ] Step 006: Initialize Live Step Checkbox Trackers (`PROGRESS.md`) & `.gitignore`
+- [x] Step 006: Initialize Live Step Checkbox Trackers (`PROGRESS.md`) & `.gitignore`
 - [ ] Step 007: Configure Strict Anti-Noise `biome.json`
 - [ ] Step 008: Configure `knip.json` Pruner
 - [ ] Step 009: Configure `lefthook.yml` Quality Gates
