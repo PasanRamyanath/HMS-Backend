@@ -38,7 +38,7 @@ This file tracks the sequential completion of backend implementation steps defin
 - [x] Step 031: Write Exhaustive IRD/SLTDA Tax Test Vectors
 - [x] Step 032: Implement Multi-Line Folio Tax Aggregator (`folioMath.ts`)
 - [x] Step 033: Implement Foreign Currency to `LKR` Invoice Lock Converter (`currencyLock.ts`)
-- [ ] Step 034: Implement Sri Lankan NIC Parser (`nicPassport.ts`)
+- [x] Step 034: Implement Sri Lankan NIC Parser (`nicPassport.ts`)
 - [ ] Step 035: Implement Foreign Passport & Tourist Police B-Card Validator (`nicPassport.ts`)
 - [ ] Step 036: Write Unit Tests for Sri Lankan NIC & Passport Extraction (`nicPassport.test.ts`)
 - [ ] Step 037: Implement CRC-16/CCITT-FALSE Checksum Function for LankaQR (`lankaQr.ts`)
