@@ -4,6 +4,7 @@ import type { DynamoDBDocumentClient } from "@aws-sdk/lib-dynamodb";
 import {
   type CreateOrderAndFolioTxInput,
   executeOrderAndFolioTx,
+  handler,
 } from "../lambdas/orderAndFolioTx.js";
 
 interface MockSentCommand {
@@ -294,6 +295,55 @@ describe("Transactional Order & Folio Posting Lambda (orderAndFolioTx.ts)", () =
     assert.equal(res.ok, false);
     if (!res.ok) {
       assert.equal(res.error.code, "TRANSACTION_FAILED");
+    }
+  });
+
+  it("verifies accurate 4-stage tax math for a standard menu item order", async () => {
+    const { mockClient } = createMockDocClient();
+
+    const input: CreateOrderAndFolioTxInput = {
+      tenantId: TEST_TENANT,
+      locationId: "TABLE-01",
+      department: "RESTAURANT",
+      paymentMethod: "CASH",
+      items: [
+        {
+          itemId: "item-breakfast",
+          itemName: "Sri Lankan Hoppers Set",
+          unitPriceLkr: 2000,
+          quantity: 1,
+        },
+      ],
+    };
+
+    const res = await executeOrderAndFolioTx(input, {
+      docClient: mockClient,
+      nowIsoFn: () => TEST_TIME,
+    });
+
+    assert.ok(res.ok);
+    const output = res.value;
+    assert.equal(output.taxBreakdown.baseLkr, 2000);
+    assert.equal(output.taxBreakdown.scLkr, 200);
+    assert.equal(output.taxBreakdown.tdlLkr, 22);
+    assert.equal(output.taxBreakdown.ssclLkr, 55);
+    assert.equal(output.taxBreakdown.vatLkr, 409.86);
+    assert.equal(output.taxBreakdown.grandTotalLkr, 2686.86);
+  });
+
+  it("validates handler entrypoint error handling on invalid order payload", async () => {
+    const invalidInput: CreateOrderAndFolioTxInput = {
+      tenantId: TEST_TENANT,
+      locationId: "TABLE-01",
+      department: "RESTAURANT",
+      paymentMethod: "CASH",
+      items: [],
+    };
+
+    const res = await handler(invalidInput);
+    assert.equal(res.ok, false);
+    if (!res.ok) {
+      assert.equal(res.error.code, "INVALID_ORDER_ITEMS");
     }
   });
 });

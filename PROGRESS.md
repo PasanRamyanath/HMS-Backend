@@ -104,3 +104,4 @@ This file tracks the sequential completion of backend implementation steps defin
 - [x] Step 093: Provision AWS Budgets Zero-Spend / $1.00 Monthly Cost Alert (`CfnBudget`) (`packages/cdk/lib/hms-stack.ts`)
 - [x] Step 094: Emit CDK `CfnOutput` Values & Auto-Generate Frontend `.env.production` Script (`packages/cdk/scripts/export-outputs.mjs`)
 - [x] Step 095: Write Unit Tests for `qrAuthorizer.ts` Lambda (`packages/cdk/test/qrAuthorizer.test.ts`)
+- [x] Step 096: Write Unit Tests for `orderAndFolioTx.ts` Lambda (`packages/cdk/test/orderAndFolioTx.test.ts`)
