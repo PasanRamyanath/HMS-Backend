@@ -327,4 +327,40 @@ describe("CloudFormation Permanent Free-Tier Cost-Ceiling Guardrails", () => {
       },
     });
   });
+
+  it("registers HmsTable as AppSync DynamoDB DataSource", () => {
+    hmsTemplate.hasResourceProperties("AWS::AppSync::DataSource", {
+      Name: "HmsTableDs",
+      Type: "AMAZON_DYNAMODB",
+    });
+  });
+
+  it("registers all 35 direct AppSync JS DynamoDB resolvers with zero cold starts", () => {
+    hmsTemplate.resourceCountIs("AWS::AppSync::Resolver", 35);
+
+    const sampleResolvers = [
+      { type: "Query", field: "getHotelTenant" },
+      { type: "Mutation", field: "upsertHotelTenant" },
+      { type: "Query", field: "listRooms" },
+      { type: "Query", field: "listMenuCatalog" },
+      { type: "Mutation", field: "toggleMenuItemStock" },
+      { type: "Query", field: "listActiveOrdersByDepartment" },
+      { type: "Mutation", field: "updateServiceOrderStatus" },
+      { type: "Query", field: "listReservationsByDateRange" },
+      { type: "Query", field: "getFolioWithLines" },
+      { type: "Query", field: "listBanquetEvents" },
+      { type: "Query", field: "listStockItems" },
+    ];
+
+    for (const r of sampleResolvers) {
+      hmsTemplate.hasResourceProperties("AWS::AppSync::Resolver", {
+        TypeName: r.type,
+        FieldName: r.field,
+        Runtime: {
+          Name: "APPSYNC_JS",
+          RuntimeVersion: "1.0.0",
+        },
+      });
+    }
+  });
 });

@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
@@ -8,7 +9,14 @@ import {
   Stack,
   type StackProps,
 } from "aws-cdk-lib";
-import { AuthorizationType, Definition, GraphqlApi } from "aws-cdk-lib/aws-appsync";
+import {
+  AuthorizationType,
+  Code,
+  Definition,
+  type DynamoDbDataSource,
+  FunctionRuntime,
+  GraphqlApi,
+} from "aws-cdk-lib/aws-appsync";
 import {
   AccountRecovery,
   CfnUserPoolGroup,
@@ -16,7 +24,13 @@ import {
   UserPool,
   type UserPoolClient,
 } from "aws-cdk-lib/aws-cognito";
-import { AttributeType, BillingMode, ProjectionType, Table } from "aws-cdk-lib/aws-dynamodb";
+import {
+  AttributeType,
+  BillingMode,
+  type ITable,
+  ProjectionType,
+  Table,
+} from "aws-cdk-lib/aws-dynamodb";
 import { Architecture, Runtime } from "aws-cdk-lib/aws-lambda";
 import { NodejsFunction } from "aws-cdk-lib/aws-lambda-nodejs";
 import { LogGroup, RetentionDays } from "aws-cdk-lib/aws-logs";
@@ -70,6 +84,285 @@ const HMS_USER_GROUPS: readonly HmsUserGroupConfig[] = [
   },
 ] as const;
 
+interface DirectJsResolverMapping {
+  readonly typeName: "Query" | "Mutation";
+  readonly fieldName: string;
+  readonly file: string;
+  readonly reqFn: string;
+  readonly resFn: string;
+}
+
+/**
+ * Compact declarative mapping table for all 35 direct AppSync JS DynamoDB resolvers.
+ * Resolvers execute entirely in the AppSync edge runtime without Lambda invocations.
+ */
+const DIRECT_JS_RESOLVERS: readonly DirectJsResolverMapping[] = [
+  // Hotel Tenant (hotelTenant.js)
+  {
+    typeName: "Query",
+    fieldName: "getHotelTenant",
+    file: "hotelTenant.js",
+    reqFn: "getHotelTenantRequest",
+    resFn: "getHotelTenantResponse",
+  },
+  {
+    typeName: "Mutation",
+    fieldName: "upsertHotelTenant",
+    file: "hotelTenant.js",
+    reqFn: "upsertHotelTenantRequest",
+    resFn: "upsertHotelTenantResponse",
+  },
+
+  // Rooms (rooms.js)
+  {
+    typeName: "Query",
+    fieldName: "listRooms",
+    file: "rooms.js",
+    reqFn: "listRoomsRequest",
+    resFn: "listRoomsResponse",
+  },
+  {
+    typeName: "Query",
+    fieldName: "getRoom",
+    file: "rooms.js",
+    reqFn: "getRoomRequest",
+    resFn: "getRoomResponse",
+  },
+  {
+    typeName: "Mutation",
+    fieldName: "upsertRoom",
+    file: "rooms.js",
+    reqFn: "upsertRoomRequest",
+    resFn: "upsertRoomResponse",
+  },
+  {
+    typeName: "Mutation",
+    fieldName: "updateRoomHousekeepingStatus",
+    file: "rooms.js",
+    reqFn: "updateRoomHousekeepingStatusRequest",
+    resFn: "updateRoomHousekeepingStatusResponse",
+  },
+
+  // Menu Catalog (menuCatalog.js)
+  {
+    typeName: "Query",
+    fieldName: "listMenuCatalog",
+    file: "menuCatalog.js",
+    reqFn: "listMenuCatalogRequest",
+    resFn: "listMenuCatalogResponse",
+  },
+  {
+    typeName: "Query",
+    fieldName: "listMenuCategories",
+    file: "menuCatalog.js",
+    reqFn: "listMenuCategoriesRequest",
+    resFn: "listMenuCategoriesResponse",
+  },
+  {
+    typeName: "Query",
+    fieldName: "listMenuItems",
+    file: "menuCatalog.js",
+    reqFn: "listMenuItemsRequest",
+    resFn: "listMenuItemsResponse",
+  },
+
+  // Menu Mutations (menuMutations.js)
+  {
+    typeName: "Mutation",
+    fieldName: "upsertMenuItem",
+    file: "menuMutations.js",
+    reqFn: "upsertMenuItemRequest",
+    resFn: "upsertMenuItemResponse",
+  },
+  {
+    typeName: "Mutation",
+    fieldName: "upsertMenuCategory",
+    file: "menuMutations.js",
+    reqFn: "upsertMenuCategoryRequest",
+    resFn: "upsertMenuCategoryResponse",
+  },
+  {
+    typeName: "Mutation",
+    fieldName: "toggleMenuItemStock",
+    file: "menuMutations.js",
+    reqFn: "toggleMenuItemStockRequest",
+    resFn: "toggleMenuItemStockResponse",
+  },
+  {
+    typeName: "Mutation",
+    fieldName: "toggleMenuItemAvailability",
+    file: "menuMutations.js",
+    reqFn: "toggleMenuItemAvailabilityRequest",
+    resFn: "toggleMenuItemAvailabilityResponse",
+  },
+
+  // KDS Orders (kdsOrders.js)
+  {
+    typeName: "Query",
+    fieldName: "listActiveOrdersByDepartment",
+    file: "kdsOrders.js",
+    reqFn: "listActiveOrdersByDepartmentRequest",
+    resFn: "listActiveOrdersByDepartmentResponse",
+  },
+  {
+    typeName: "Query",
+    fieldName: "listActiveServiceOrders",
+    file: "kdsOrders.js",
+    reqFn: "listActiveServiceOrdersRequest",
+    resFn: "listActiveServiceOrdersResponse",
+  },
+  {
+    typeName: "Query",
+    fieldName: "getServiceOrder",
+    file: "kdsOrders.js",
+    reqFn: "getServiceOrderRequest",
+    resFn: "getServiceOrderResponse",
+  },
+
+  // Order Status Transitions (updateOrderStatus.js)
+  {
+    typeName: "Mutation",
+    fieldName: "updateServiceOrderStatus",
+    file: "updateOrderStatus.js",
+    reqFn: "updateServiceOrderStatusRequest",
+    resFn: "updateServiceOrderStatusResponse",
+  },
+  {
+    typeName: "Mutation",
+    fieldName: "updateOrderStatus",
+    file: "updateOrderStatus.js",
+    reqFn: "updateOrderStatusRequest",
+    resFn: "updateOrderStatusResponse",
+  },
+
+  // Reservations & Tape Chart (reservationsQuery.js)
+  {
+    typeName: "Query",
+    fieldName: "listReservationsByDateRange",
+    file: "reservationsQuery.js",
+    reqFn: "listReservationsByDateRangeRequest",
+    resFn: "listReservationsByDateRangeResponse",
+  },
+  {
+    typeName: "Query",
+    fieldName: "listReservations",
+    file: "reservationsQuery.js",
+    reqFn: "listReservationsRequest",
+    resFn: "listReservationsResponse",
+  },
+  {
+    typeName: "Query",
+    fieldName: "getReservation",
+    file: "reservationsQuery.js",
+    reqFn: "getReservationRequest",
+    resFn: "getReservationResponse",
+  },
+
+  // Guest Folios (folioQuery.js)
+  {
+    typeName: "Query",
+    fieldName: "getFolioWithLines",
+    file: "folioQuery.js",
+    reqFn: "getFolioWithLinesRequest",
+    resFn: "getFolioWithLinesResponse",
+  },
+  {
+    typeName: "Query",
+    fieldName: "getFolio",
+    file: "folioQuery.js",
+    reqFn: "getFolioRequest",
+    resFn: "getFolioResponse",
+  },
+  {
+    typeName: "Query",
+    fieldName: "listFoliosForReservation",
+    file: "folioQuery.js",
+    reqFn: "listFoliosForReservationRequest",
+    resFn: "listFoliosForReservationResponse",
+  },
+
+  // Banquets & Weddings (banquets.js)
+  {
+    typeName: "Query",
+    fieldName: "listBanquetEvents",
+    file: "banquets.js",
+    reqFn: "listBanquetEventsRequest",
+    resFn: "listBanquetEventsResponse",
+  },
+  {
+    typeName: "Query",
+    fieldName: "getBanquetEvent",
+    file: "banquets.js",
+    reqFn: "getBanquetEventRequest",
+    resFn: "getBanquetEventResponse",
+  },
+  {
+    typeName: "Query",
+    fieldName: "listBanquetHalls",
+    file: "banquets.js",
+    reqFn: "listBanquetHallsRequest",
+    resFn: "listBanquetHallsResponse",
+  },
+  {
+    typeName: "Mutation",
+    fieldName: "upsertBanquetHall",
+    file: "banquets.js",
+    reqFn: "upsertBanquetHallRequest",
+    resFn: "upsertBanquetHallResponse",
+  },
+  {
+    typeName: "Mutation",
+    fieldName: "upsertBanquetEvent",
+    file: "banquets.js",
+    reqFn: "upsertBanquetEventRequest",
+    resFn: "upsertBanquetEventResponse",
+  },
+  {
+    typeName: "Mutation",
+    fieldName: "createBanquetEvent",
+    file: "banquets.js",
+    reqFn: "createBanquetEventRequest",
+    resFn: "createBanquetEventResponse",
+  },
+  {
+    typeName: "Mutation",
+    fieldName: "updateBanquetEventStatus",
+    file: "banquets.js",
+    reqFn: "updateBanquetEventStatusRequest",
+    resFn: "updateBanquetEventStatusResponse",
+  },
+
+  // Store Inventory & SLTDA Statutory Reports (reportsAndStock.js)
+  {
+    typeName: "Query",
+    fieldName: "listStockItems",
+    file: "reportsAndStock.js",
+    reqFn: "listStockItemsRequest",
+    resFn: "listStockItemsResponse",
+  },
+  {
+    typeName: "Query",
+    fieldName: "listSltdaMonthlyReports",
+    file: "reportsAndStock.js",
+    reqFn: "listSltdaMonthlyReportsRequest",
+    resFn: "listSltdaMonthlyReportsResponse",
+  },
+  {
+    typeName: "Query",
+    fieldName: "getSltdaMonthlyReturn",
+    file: "reportsAndStock.js",
+    reqFn: "getSltdaMonthlyReturnRequest",
+    resFn: "getSltdaMonthlyReturnResponse",
+  },
+  {
+    typeName: "Query",
+    fieldName: "getNightAuditReport",
+    file: "reportsAndStock.js",
+    reqFn: "getNightAuditReportRequest",
+    resFn: "getNightAuditReportResponse",
+  },
+] as const;
+
 /**
  * Sri Lankan Cloud SaaS HMS Serverless Infrastructure Stack.
  * Provisions the permanent AWS Free-Tier compliant stack in ap-south-1 (Mumbai):
@@ -88,6 +381,7 @@ export class SriLankaHmsStack extends Stack {
   public readonly userGroups: Record<string, CfnUserPoolGroup>;
   public readonly qrAuthorizerFn: NodejsFunction;
   public readonly api: GraphqlApi;
+  public readonly dbDataSource: DynamoDbDataSource;
 
   constructor(scope: Construct, id: string, props?: SriLankaHmsStackProps) {
     super(scope, id, props);
@@ -296,6 +590,26 @@ export class SriLankaHmsStack extends Stack {
       },
       xrayEnabled: false,
     });
+
+    // Wire HmsTable as AppSync DynamoDB Data Source
+    this.dbDataSource = this.api.addDynamoDbDataSource(
+      "HmsTableDs",
+      this.hmsTable as unknown as ITable,
+    );
+
+    // Register all 35 direct AppSync JS DynamoDB resolvers from compiled dist/resolvers
+    const resolversDir = resolve(__dirname, "../../graphql/dist/resolvers");
+    for (const r of DIRECT_JS_RESOLVERS) {
+      const codePath = resolve(resolversDir, r.file);
+      const rawCode = readFileSync(codePath, "utf8");
+      const adaptedCode = `${rawCode}\nexport const request = ${r.reqFn};\nexport const response = ${r.resFn};\n`;
+      this.dbDataSource.createResolver(`Resolver${r.typeName}${r.fieldName}`, {
+        typeName: r.typeName,
+        fieldName: r.fieldName,
+        code: Code.fromInline(adaptedCode),
+        runtime: FunctionRuntime.JS_1_0_0,
+      });
+    }
 
     // Stack Outputs for automated CI/CD and Frontend environment configuration
     new CfnOutput(this, "HmsTableArn", {

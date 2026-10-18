@@ -91,3 +91,4 @@ This file tracks the sequential completion of backend implementation steps defin
 - [x] Step 080: Provision Cognito RBAC User Groups (`SUPER_ADMIN`, `HOTEL_ADMIN`, `FRONT_DESK`, `KITCHEN_KDS`, `HOUSEKEEPING`, `POS_CASHIER`) (`packages/cdk/lib/hms-stack.ts`)
 - [x] Step 081: Implement AppSync Custom Lambda Authorizer (`qrAuthorizer.ts`) for Zero-Login Guest QR Access (`packages/cdk/lambdas/qrAuthorizer.ts`)
 - [x] Step 082: Provision AWS AppSync GraphQL API (`HmsApi`) with Dual Auth (`USER_POOL` + `AWS_LAMBDA`) (`packages/cdk/lib/hms-stack.ts`)
+- [x] Step 083: Wire `HmsTable` as AppSync DynamoDB Data Source & Register Direct JS Resolvers (`packages/cdk/lib/hms-stack.ts`)
