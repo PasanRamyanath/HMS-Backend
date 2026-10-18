@@ -1108,6 +1108,8 @@ export type Mutation = {
   settleFolio: Maybe<FolioInvoice>;
   /** Quickly toggles item 86/out-of-stock availability from kitchen runner screen. */
   toggleMenuItemAvailability: Maybe<MenuItem>;
+  /** Instant 1-tap inStock toggle for Kitchen KDS / Chef screen (<20ms). */
+  toggleMenuItemStock: Maybe<MenuItem>;
   /** Updates appointment lifecycle status of an Ayurveda therapy session. */
   updateAyurvedaAppointmentStatus: Maybe<AyurvedaAppointment>;
   /** Updates the lifecycle status of a banquet event. */
@@ -1251,6 +1253,13 @@ export type MutationSettleFolioArgs = {
 export type MutationToggleMenuItemAvailabilityArgs = {
   id: Scalars['ID']['input'];
   isAvailable: Scalars['Boolean']['input'];
+  tenantId: Scalars['ID']['input'];
+};
+
+
+export type MutationToggleMenuItemStockArgs = {
+  id: Scalars['ID']['input'];
+  inStock: Scalars['Boolean']['input'];
   tenantId: Scalars['ID']['input'];
 };
 

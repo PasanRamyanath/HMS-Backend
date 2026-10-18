@@ -4034,6 +4034,13 @@ type Mutation {
     @aws_iam
 
   """
+  Instant 1-tap inStock toggle for Kitchen KDS / Chef screen (<20ms).
+  """
+  toggleMenuItemStock(tenantId: ID!, id: ID!, inStock: Boolean!): MenuItem
+    @aws_cognito_user_pools
+    @aws_iam
+
+  """
   Places a contactless QR room service order or waiter table service order.
   """
   createServiceOrder(tenantId: ID!, input: CreateServiceOrderInput!): ServiceOrder

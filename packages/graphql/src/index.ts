@@ -11,3 +11,4 @@ export * from "../resolvers/tenantGuard.js";
 export * from "../resolvers/hotelTenant.js";
 export * from "../resolvers/rooms.js";
 export * from "../resolvers/menuCatalog.js";
+export * from "../resolvers/menuMutations.js";

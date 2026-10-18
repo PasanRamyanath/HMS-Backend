@@ -107,7 +107,7 @@ export function tenantGuard<TArgs = Record<string, unknown>>(
  * @param ctx AppSync resolver context
  * @param allowedRoles List of UserRole strings allowed to execute the operation
  */
-export function requireUserRole<TArgs>(ctx: Context<TArgs>, allowedRoles: string[]): void {
+export function requireUserRole<TArgs>(ctx: Context<TArgs>, allowedRoles: readonly string[]): void {
   const identity = ctx.identity as Record<string, unknown> | undefined;
   if (!identity) {
     util.unauthorized();
