@@ -215,3 +215,101 @@ export function createTaxPreset(preset: SriLankaTaxPreset): SriLankaTaxConfig {
       };
   }
 }
+
+/**
+ * Derives net base supply and itemized statutory taxes from an all-inclusive gross quotation
+ * (such as OTA or tour operator contracted rates).
+ *
+ * Uses the exact reciprocal multiplier:
+ * m = (1 + sc) * (1 + tdl + sscl) * (1 + vat)
+ * base = roundLkr(grossInclusiveLkr / m)
+ *
+ * Runs calculateForwardTax(base) and reconciles any cent/rupee rounding residual
+ * (grossInclusiveLkr - sum) on the VAT line (when VAT is enabled) or baseLkr (when VAT is off)
+ * so printed folio line items sum exactly to the contracted gross amount.
+ *
+ * @param grossInclusiveLkr Total contracted all-inclusive amount in Sri Lankan Rupees
+ * @param config Statutory tax configuration
+ * @returns Result containing detailed TaxBreakdownResult or DomainError
+ */
+function getReciprocalMultiplier(config: SriLankaTaxConfig): number {
+  const scRate = config.enableSC ? config.scRate : 0;
+  const tdlRate = config.enableTDL ? config.tdlRate : 0;
+  const ssclRate = config.enableSSCL ? config.ssclRate : 0;
+  const vatRate = config.enableVAT ? config.vatRate : 0;
+  return (1 + scRate) * (1 + tdlRate + ssclRate) * (1 + vatRate);
+}
+
+function reconcileVatResidual(fwd: TaxBreakdownResult, residual: number): TaxBreakdownResult {
+  const adjustedVatLkr = roundLkr(fwd.vatLkr + residual);
+  const adjustedGrandTotalLkr = roundLkr(
+    fwd.subtotalAfterScLkr + fwd.tdlLkr + fwd.ssclLkr + adjustedVatLkr,
+  );
+  const effectiveTaxRate =
+    fwd.baseLkr > 0 ? roundLkr((adjustedGrandTotalLkr - fwd.baseLkr) / fwd.baseLkr) : 0;
+
+  return {
+    ...fwd,
+    vatLkr: adjustedVatLkr,
+    grandTotalLkr: adjustedGrandTotalLkr,
+    effectiveTaxRate,
+  };
+}
+
+/**
+ * Derives net base supply and itemized statutory taxes from an all-inclusive gross quotation
+ * (such as OTA or tour operator contracted rates).
+ *
+ * Uses the exact reciprocal multiplier:
+ * m = (1 + sc) * (1 + tdl + sscl) * (1 + vat)
+ * base = roundLkr(grossInclusiveLkr / m)
+ *
+ * Runs calculateForwardTax(base) and reconciles any cent/rupee rounding residual
+ * (grossInclusiveLkr - sum) on the VAT line (when VAT is enabled) or baseLkr (when VAT is off)
+ * so printed folio line items sum exactly to the contracted gross amount.
+ *
+ * @param grossInclusiveLkr Total contracted all-inclusive amount in Sri Lankan Rupees
+ * @param config Statutory tax configuration
+ * @returns Result containing detailed TaxBreakdownResult or DomainError
+ */
+export function calculateReverseTax(
+  grossInclusiveLkr: number,
+  config: SriLankaTaxConfig = DEFAULT_SRI_LANKA_TAX_CONFIG,
+): Result<TaxBreakdownResult, DomainError> {
+  if (!Number.isFinite(grossInclusiveLkr) || grossInclusiveLkr < 0) {
+    return domainErr(
+      "INVALID_TAX_BASE",
+      "Gross all-inclusive amount must be a non-negative finite number",
+      { grossInclusiveLkr },
+    );
+  }
+
+  const gross = roundLkr(grossInclusiveLkr);
+  if (gross === 0) {
+    return calculateForwardTax(0, config);
+  }
+
+  const m = getReciprocalMultiplier(config);
+  if (m <= 0) {
+    return domainErr("VALIDATION_FAILED", "Invalid tax multiplier", { m });
+  }
+
+  const baseLkr = roundLkr(gross / m);
+  const forwardRes = calculateForwardTax(baseLkr, config);
+  if (!forwardRes.ok) {
+    return forwardRes;
+  }
+
+  const fwd = forwardRes.value;
+  const residual = roundLkr(gross - fwd.grandTotalLkr);
+  if (residual === 0) {
+    return ok(fwd);
+  }
+
+  if (config.enableVAT) {
+    return ok(reconcileVatResidual(fwd, residual));
+  }
+
+  const adjustedBase = roundLkr(fwd.baseLkr + residual);
+  return calculateForwardTax(adjustedBase, config);
+}

@@ -3,6 +3,7 @@ import { describe, it } from "node:test";
 import {
   DEFAULT_SRI_LANKA_TAX_CONFIG,
   calculateForwardTax,
+  calculateReverseTax,
   createTaxPreset,
   roundLkr,
 } from "../src/tax.js";
@@ -142,6 +143,58 @@ describe("Sri Lankan Statutory Tax Engine - Rounding & Configuration", () => {
       if (!res.ok) return;
       assert.equal(res.value.grandTotalLkr, 50000);
       assert.equal(res.value.effectiveTaxRate, 0);
+    });
+  });
+
+  describe("calculateReverseTax (Gross-to-Net All-Inclusive Derivation)", () => {
+    it("derives net base supply for LKR 50,000 all-inclusive quote matching official benchmark", () => {
+      // Benchmark from Step 031 & Section 1.1:
+      // LKR 50,000 gross -> Base LKR 37,217.40, with exact LKR 50,000.00 total
+      const res = calculateReverseTax(50000);
+      assert.equal(res.ok, true);
+      if (!res.ok) return;
+
+      assert.equal(res.value.baseLkr, 37218.17);
+      assert.equal(res.value.scLkr, 3721.82);
+      assert.equal(res.value.subtotalAfterScLkr, 40939.99);
+      assert.equal(res.value.tdlLkr, 409.4);
+      assert.equal(res.value.ssclLkr, 1023.5);
+      assert.equal(res.value.vatBaseLkr, 42372.89);
+      // Reconciled VAT line (-0.01) ensuring grand total is exactly 50,000.00
+      assert.equal(res.value.vatLkr, 7627.11);
+      assert.equal(res.value.grandTotalLkr, 50000);
+    });
+
+    it("handles zero gross inclusive amount", () => {
+      const res = calculateReverseTax(0);
+      assert.equal(res.ok, true);
+      if (!res.ok) return;
+      assert.equal(res.value.baseLkr, 0);
+      assert.equal(res.value.grandTotalLkr, 0);
+    });
+
+    it("derives net base for non-VAT boutique villa preset", () => {
+      const cfg = createTaxPreset("BOUTIQUE_NON_VAT");
+      // 10,000 base + 1,000 SC (10%) = 11,000 + 110 TDL (1%) = 11,110
+      const res = calculateReverseTax(11110, cfg);
+      assert.equal(res.ok, true);
+      if (!res.ok) return;
+      assert.equal(res.value.baseLkr, 10000);
+      assert.equal(res.value.scLkr, 1000);
+      assert.equal(res.value.tdlLkr, 110);
+      assert.equal(res.value.grandTotalLkr, 11110);
+    });
+
+    it("rejects invalid negative or non-finite gross amounts", () => {
+      const negativeRes = calculateReverseTax(-5000);
+      assert.equal(negativeRes.ok, false);
+      if (negativeRes.ok) return;
+      assert.equal(negativeRes.error.code, "INVALID_TAX_BASE");
+
+      const nanRes = calculateReverseTax(Number.NaN);
+      assert.equal(nanRes.ok, false);
+      if (nanRes.ok) return;
+      assert.equal(nanRes.error.code, "INVALID_TAX_BASE");
     });
   });
 });
