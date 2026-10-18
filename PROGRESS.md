@@ -72,3 +72,4 @@ This file tracks the sequential completion of backend implementation steps defin
 - [x] Step 063: Configure `@graphql-codegen/cli` in `packages/graphql/codegen.ts` (`codegen.ts`)
 - [x] Step 064: Create Shared AppSync JS Tenant Isolation Helper (`resolvers/tenantGuard.ts`)
 - [x] Step 065: Implement AppSync JS Resolver: `Query.getHotelTenant` & `Mutation.upsertHotelTenant` (`resolvers/hotelTenant.ts`)
+- [x] Step 066: Implement AppSync JS Resolver: `Query.listRooms` & `Mutation.updateRoomHousekeepingStatus` (`resolvers/rooms.ts`)
