@@ -2787,6 +2787,383 @@ input CreateActivityBookingInput {
 }
 
 # ==============================================================================
+# Store Inventory, FIFO Batches & Procurement (Phase 03.10)
+# ==============================================================================
+
+"""
+FIFO stock batch tracking unit cost, GRN origin, and shelf-life expiration.
+"""
+type FifoBatch @aws_cognito_user_pools @aws_iam @aws_lambda @aws_api_key {
+  """
+  Unique batch identifier within stock item.
+  """
+  batchId: String!
+  """
+  Goods receipt date.
+  """
+  receivedDate: AWSDate!
+  """
+  Perishable food/beverage or chemical expiry date.
+  """
+  expiryDate: AWSDate
+  """
+  Initial quantity received upon GRN posting.
+  """
+  initialQuantity: Float!
+  """
+  Remaining unconsumed quantity in store.
+  """
+  remainingQuantity: Float!
+  """
+  Cost per unit of measure in LKR at time of receipt.
+  """
+  unitCostLkr: Float!
+  """
+  Supplier name or trade partner.
+  """
+  supplierName: String
+  """
+  Goods Received Note number referencing the batch intake.
+  """
+  grnNumber: String!
+}
+
+"""
+Store inventory SKU item with multi-department allocation, par levels, and FIFO costing.
+"""
+type StockItem @aws_cognito_user_pools @aws_iam @aws_lambda @aws_api_key {
+  """
+  Unique stock item identifier.
+  """
+  id: ID!
+  """
+  Multi-tenant property identifier.
+  """
+  tenantId: ID!
+  """
+  Stock Keeping Unit code (e.g. 'DRY-BASMATI-001', 'LIQ-ARRACK-0750').
+  """
+  sku: String!
+  """
+  Item trade / display name.
+  """
+  name: String!
+  """
+  Storage category ('FOOD_DRY_GOODS', 'BEVERAGE_SPIRITS', 'FRESH_PRODUCE', 'HOUSEKEEPING_LINEN', 'MAINTENANCE_SPARES').
+  """
+  category: String!
+  """
+  Owning operating department.
+  """
+  department: Department!
+  """
+  Standard inventory unit of measure ('kg', 'liters', 'bottles', 'units', 'packets').
+  """
+  unitOfMeasure: String!
+  """
+  Safety stock threshold triggering automated purchase requisition.
+  """
+  parLevel: Float!
+  """
+  Standard replenishment batch order quantity.
+  """
+  reorderQuantity: Float!
+  """
+  Total physically available quantity across active batches.
+  """
+  currentStock: Float!
+  """
+  Effective FIFO unit cost in LKR (or latest batch cost if depleted).
+  """
+  fifoCostPerUnitLkr: Float!
+  """
+  Total valuation of on-hand inventory (sum of remaining FIFO batch values).
+  """
+  totalValueLkr: Float!
+  """
+  Itemized FIFO layers currently on hand.
+  """
+  batches: [FifoBatch!]!
+  """
+  Active operational item flag.
+  """
+  isActive: Boolean!
+  """
+  Timestamp of stock item creation.
+  """
+  createdAt: AWSDateTime!
+  """
+  Timestamp of latest stock item update.
+  """
+  updatedAt: AWSDateTime!
+}
+
+"""
+Purchase Order line item detailing ordered SKU, agreed rate, and line total.
+"""
+type PurchaseOrderItem @aws_cognito_user_pools @aws_iam @aws_lambda @aws_api_key {
+  """
+  Linked stock item identifier.
+  """
+  stockItemId: ID!
+  """
+  Stock Keeping Unit code.
+  """
+  stockItemSku: String!
+  """
+  Item display name.
+  """
+  stockItemName: String!
+  """
+  Quantity ordered.
+  """
+  quantityOrdered: Float!
+  """
+  Unit of measure.
+  """
+  unitOfMeasure: String!
+  """
+  Agreed purchase unit rate in LKR.
+  """
+  unitPriceLkr: Float!
+  """
+  Total line cost before taxes in LKR.
+  """
+  totalAmountLkr: Float!
+}
+
+"""
+Purchase Order issued to external suppliers for store replenishment.
+"""
+type PurchaseOrder @aws_cognito_user_pools @aws_iam @aws_lambda @aws_api_key {
+  """
+  Unique purchase order identifier.
+  """
+  id: ID!
+  """
+  Multi-tenant property identifier.
+  """
+  tenantId: ID!
+  """
+  Sequential PO reference number (e.g. 'PO-2026-0089').
+  """
+  poNumber: String!
+  """
+  Supplier or vendor trade name.
+  """
+  supplierName: String!
+  """
+  Supplier contact telephone / mobile number.
+  """
+  supplierContactPhone: AWSPhone
+  """
+  Date purchase order was generated.
+  """
+  orderDate: AWSDate!
+  """
+  Target delivery arrival date.
+  """
+  expectedDeliveryDate: AWSDate
+  """
+  Requesting department.
+  """
+  department: Department!
+  """
+  List of ordered inventory SKU line items.
+  """
+  items: [PurchaseOrderItem!]!
+  """
+  Total purchase amount before statutory taxes in LKR.
+  """
+  subtotalLkr: Float!
+  """
+  Statutory tax breakdown (VAT, SSCL where applicable).
+  """
+  taxBreakdown: TaxBreakdown!
+  """
+  Grand gross payable amount to supplier in LKR.
+  """
+  totalGrossLkr: Float!
+  """
+  Procurement workflow status ('DRAFT', 'APPROVED', 'SENT_TO_SUPPLIER', 'PARTIALLY_RECEIVED', 'COMPLETED', 'CANCELLED').
+  """
+  status: String!
+  """
+  User identifier of authorising manager / purchasing manager.
+  """
+  approvedByUserId: ID
+  """
+  Timestamp of purchase order creation.
+  """
+  createdAt: AWSDateTime!
+  """
+  Timestamp of latest PO update.
+  """
+  updatedAt: AWSDateTime!
+}
+
+"""
+Inventory Voucher line item detailing stock movement and valuation.
+"""
+type InventoryVoucherItem @aws_cognito_user_pools @aws_iam @aws_lambda @aws_api_key {
+  """
+  Stock item identifier.
+  """
+  stockItemId: ID!
+  """
+  Stock Keeping Unit code.
+  """
+  stockItemSku: String!
+  """
+  Item display name.
+  """
+  stockItemName: String!
+  """
+  Quantity moved, received, or issued.
+  """
+  quantity: Float!
+  """
+  Unit of measure.
+  """
+  unitOfMeasure: String!
+  """
+  Cost per unit of measure in LKR.
+  """
+  unitCostLkr: Float!
+  """
+  Total line movement valuation in LKR.
+  """
+  totalCostLkr: Float!
+}
+
+"""
+Inventory movement voucher modeling PR (Purchase Requisition), GRN (Goods Received Note), GIN (Goods Issue Note), and Stock Adjustments.
+"""
+type InventoryVoucher @aws_cognito_user_pools @aws_iam @aws_lambda @aws_api_key {
+  """
+  Unique inventory voucher identifier.
+  """
+  id: ID!
+  """
+  Multi-tenant property identifier.
+  """
+  tenantId: ID!
+  """
+  Sequential voucher reference code (e.g. 'GRN-2026-0145', 'GIN-2026-0072').
+  """
+  voucherNumber: String!
+  """
+  Movement category ('GRN_GOODS_RECEIVED_NOTE', 'GIN_GOODS_ISSUE_NOTE', 'PURCHASE_REQUISITION', 'STOCK_ADJUSTMENT', 'WASTAGE_OR_BREAKAGE').
+  """
+  voucherType: String!
+  """
+  Date of inventory transaction.
+  """
+  voucherDate: AWSDate!
+  """
+  Operating department associated with the movement.
+  """
+  department: Department!
+  """
+  Origin warehouse or store bin (e.g. 'Central Stores', 'Receiving Dock').
+  """
+  sourceLocation: String
+  """
+  Destination department or kitchen station (e.g. 'Main Kitchen Hot Line', 'Pool Bar').
+  """
+  destinationLocation: String
+  """
+  Supplier name for GRN intake vouchers.
+  """
+  supplierName: String
+  """
+  Linked purchase order number for GRN intake.
+  """
+  poNumber: String
+  """
+  Itemized list of stock SKUs moved in this voucher.
+  """
+  items: [InventoryVoucherItem!]!
+  """
+  Total valuation of items moved in LKR.
+  """
+  totalValueLkr: Float!
+  """
+  User identifier of storekeeper or chef authorising the transaction.
+  """
+  authorizedByUserId: ID!
+  """
+  Auditable remarks, supplier delivery note number, or reason for breakage/adjustment.
+  """
+  remarks: String
+  """
+  Timestamp of voucher creation.
+  """
+  createdAt: AWSDateTime!
+  """
+  Timestamp of latest voucher update.
+  """
+  updatedAt: AWSDateTime!
+}
+
+"""
+Input line item for recording Goods Received Notes (GRN).
+"""
+input GrnItemInput {
+  stockItemId: ID!
+  quantityReceived: Float!
+  unitCostLkr: Float!
+  expiryDate: AWSDate
+}
+
+"""
+Input for recording Goods Received Notes into FIFO inventory.
+"""
+input RecordGrnInput {
+  poNumber: String
+  supplierName: String!
+  grnDate: AWSDate!
+  department: Department!
+  items: [GrnItemInput!]!
+  remarks: String
+}
+
+"""
+Input for provisioning or editing a stock inventory item.
+"""
+input UpsertStockItemInput {
+  id: ID
+  sku: String!
+  name: String!
+  category: String!
+  department: Department!
+  unitOfMeasure: String!
+  parLevel: Float!
+  reorderQuantity: Float!
+  isActive: Boolean!
+}
+
+"""
+Input line item for Goods Issue Notes (GIN) or kitchen requisitions.
+"""
+input GinItemInput {
+  stockItemId: ID!
+  quantityIssued: Float!
+}
+
+"""
+Input for issuing stock from central stores to kitchen/bar outlets.
+"""
+input CreateGoodsIssueNoteInput {
+  issueDate: AWSDate!
+  sourceLocation: String!
+  destinationDepartment: Department!
+  destinationLocation: String!
+  items: [GinItemInput!]!
+  remarks: String
+}
+
+# ==============================================================================
 # GraphQL Root Types Placeholder
 # ==============================================================================
 
@@ -3004,6 +3381,61 @@ type Query {
     @aws_iam
     @aws_lambda
     @aws_api_key
+
+  """
+  Retrieves a stock item by identifier.
+  """
+  getStockItem(tenantId: ID!, id: ID!): StockItem
+    @aws_cognito_user_pools
+    @aws_iam
+    @aws_lambda
+    @aws_api_key
+
+  """
+  Lists inventory stock items filtered by department and category.
+  """
+  listStockItems(tenantId: ID!, department: Department, category: String): [StockItem!]!
+    @aws_cognito_user_pools
+    @aws_iam
+    @aws_lambda
+    @aws_api_key
+
+  """
+  Retrieves a purchase order by identifier.
+  """
+  getPurchaseOrder(tenantId: ID!, id: ID!): PurchaseOrder
+    @aws_cognito_user_pools
+    @aws_iam
+    @aws_lambda
+    @aws_api_key
+
+  """
+  Lists purchase orders optionally filtered by workflow status.
+  """
+  listPurchaseOrders(tenantId: ID!, status: String): [PurchaseOrder!]!
+    @aws_cognito_user_pools
+    @aws_iam
+    @aws_lambda
+    @aws_api_key
+
+  """
+  Retrieves an inventory movement voucher (GRN, GIN, Adjustment) by identifier.
+  """
+  getInventoryVoucher(tenantId: ID!, id: ID!): InventoryVoucher
+    @aws_cognito_user_pools
+    @aws_iam
+    @aws_lambda
+    @aws_api_key
+
+  """
+  Lists inventory vouchers filtered by type and date range.
+  """
+  listInventoryVouchers(
+    tenantId: ID!
+    voucherType: String
+    fromDate: AWSDate
+    toDate: AWSDate
+  ): [InventoryVoucher!]! @aws_cognito_user_pools @aws_iam @aws_lambda @aws_api_key
 }
 
 type Mutation {
@@ -3191,6 +3623,27 @@ type Mutation {
   Updates appointment lifecycle status of an Ayurveda therapy session.
   """
   updateAyurvedaAppointmentStatus(tenantId: ID!, id: ID!, status: String!): AyurvedaAppointment
+    @aws_cognito_user_pools
+    @aws_iam
+
+  """
+  Provisions or edits a stock inventory item, par level, and replenishment settings.
+  """
+  upsertStockItem(tenantId: ID!, input: UpsertStockItemInput!): StockItem
+    @aws_cognito_user_pools
+    @aws_iam
+
+  """
+  Records received inventory stock into FIFO batches via Goods Received Note (GRN).
+  """
+  recordGrn(tenantId: ID!, input: RecordGrnInput!): InventoryVoucher
+    @aws_cognito_user_pools
+    @aws_iam
+
+  """
+  Issues stock items from central store to department or kitchen outlet via Goods Issue Note (GIN).
+  """
+  createGoodsIssueNote(tenantId: ID!, input: CreateGoodsIssueNoteInput!): InventoryVoucher
     @aws_cognito_user_pools
     @aws_iam
 }
