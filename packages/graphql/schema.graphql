@@ -507,6 +507,212 @@ enum UserRole {
 }
 
 # ==============================================================================
+# Hotel Tenant & Statutory Tax Configuration Types
+# ==============================================================================
+
+"""
+Multi-tenant hotel property configuration representing a distinct hotel, resort, or villa.
+"""
+type HotelTenant @aws_cognito_user_pools @aws_iam @aws_lambda @aws_api_key {
+  """
+  Unique SaaS tenant identifier (e.g. 'tenant-sigiriya-luxury-001').
+  """
+  id: ID!
+  """
+  Display property trade name.
+  """
+  name: String!
+  """
+  SLTDA property classification tier.
+  """
+  businessType: BusinessType!
+  """
+  Physical postal street address.
+  """
+  address: String!
+  """
+  City or town in Sri Lanka.
+  """
+  city: String!
+  """
+  Sri Lankan postal code.
+  """
+  postalCode: String
+  """
+  Main contact telephone / mobile number in E.164 format.
+  """
+  phone: AWSPhone!
+  """
+  Official contact email address.
+  """
+  email: AWSEmail!
+  """
+  Official Sri Lanka Tourism Development Authority registration reference.
+  """
+  sltdaRegNo: String
+  """
+  Sri Lankan Inland Revenue Department 9-digit Tax Identification Number.
+  """
+  tinNo: String
+  """
+  Sri Lankan Inland Revenue Department 12-digit VAT registration number.
+  """
+  vatRegNo: String
+  """
+  Central Bank of Sri Lanka (CBSL) LankaQR EMVCo merchant identifier.
+  """
+  lankaQrMerchantId: String
+  """
+  High-resolution banner hero image URL for guest QR portal (16:9).
+  """
+  bannerUrl: AWSURL
+  """
+  Square brand mark or logo image URL for folios, receipts, and KDS (1:1).
+  """
+  logoUrl: AWSURL
+  """
+  Official CBSL benchmark or hotel locked USD-to-LKR buying exchange rate.
+  """
+  cbslUsdRateLkr: Float!
+  """
+  Base accounting currency (defaults to 'LKR').
+  """
+  currency: String!
+  """
+  Statutory Sri Lankan tax calculation configuration for this property.
+  """
+  taxConfig: TaxConfig!
+  """
+  ISO timestamp of tenant creation.
+  """
+  createdAt: AWSDateTime!
+  """
+  ISO timestamp of tenant configuration update.
+  """
+  updatedAt: AWSDateTime!
+}
+
+"""
+Sri Lankan 4-stage compounding statutory tax parameters.
+"""
+type TaxConfig @aws_cognito_user_pools @aws_iam @aws_lambda @aws_api_key {
+  """
+  Mandatory hotel service charge percentage (typically 10.0%).
+  """
+  scPercent: Float!
+  """
+  Tourism Development Levy percentage under Tourism Act (typically 1.0% or 0.5%).
+  """
+  tdlPercent: Float!
+  """
+  Social Security Contribution Levy standard rate (typically 2.5641%).
+  """
+  ssclPercent: Float!
+  """
+  Value Added Tax standard rate under Inland Revenue Act (typically 18.0%).
+  """
+  vatPercent: Float!
+  """
+  Flag indicating whether 10% Service Charge is applied.
+  """
+  applySc: Boolean!
+  """
+  Flag indicating whether Tourism Development Levy is applied.
+  """
+  applyTdl: Boolean!
+  """
+  Flag indicating whether Social Security Contribution Levy is applied.
+  """
+  applySscl: Boolean!
+  """
+  Flag indicating whether Value Added Tax is applied.
+  """
+  applyVat: Boolean!
+  """
+  Statutory tax preset category.
+  """
+  taxCategory: TaxCategory!
+}
+
+"""
+Granular 4-stage compounding tax itemization for folios, bills, and IRD reporting.
+"""
+type TaxBreakdown @aws_cognito_user_pools @aws_iam @aws_lambda @aws_api_key {
+  """
+  Net supply base amount prior to any service charge or statutory tax.
+  """
+  baseSupplyLkr: Float!
+  """
+  10% Service charge component.
+  """
+  serviceChargeLkr: Float!
+  """
+  1% Tourism Development Levy component.
+  """
+  tdlLkr: Float!
+  """
+  2.5641% Social Security Contribution Levy component.
+  """
+  ssclLkr: Float!
+  """
+  18% Value Added Tax component.
+  """
+  vatLkr: Float!
+  """
+  Combined sum of service charge and all statutory government levies.
+  """
+  totalTaxAndServiceLkr: Float!
+  """
+  Final gross payable amount inclusive of base supply, service charge, and taxes.
+  """
+  totalGrossLkr: Float!
+  """
+  Effective compounding tax rate percentage over net base supply.
+  """
+  effectiveTaxRate: Float!
+}
+
+"""
+Input payload for configuring Sri Lankan statutory tax parameters.
+"""
+input TaxConfigInput {
+  scPercent: Float
+  tdlPercent: Float
+  ssclPercent: Float
+  vatPercent: Float
+  applySc: Boolean!
+  applyTdl: Boolean!
+  applySscl: Boolean!
+  applyVat: Boolean!
+  taxCategory: TaxCategory!
+}
+
+"""
+Input payload for creating or updating a multi-tenant hotel profile.
+"""
+input UpsertHotelTenantInput {
+  """
+  Tenant identifier (omitted for new tenant auto-provisioning).
+  """
+  id: ID
+  name: String!
+  businessType: BusinessType!
+  address: String!
+  city: String!
+  postalCode: String
+  phone: AWSPhone!
+  email: AWSEmail!
+  sltdaRegNo: String
+  tinNo: String
+  vatRegNo: String
+  lankaQrMerchantId: String
+  bannerUrl: AWSURL
+  logoUrl: AWSURL
+  cbslUsdRateLkr: Float!
+  taxConfig: TaxConfigInput!
+}
+
+# ==============================================================================
 # GraphQL Root Types Placeholder
 # ==============================================================================
 
@@ -515,6 +721,15 @@ type Query {
   API version ping for AppSync health check.
   """
   apiVersion: String! @aws_cognito_user_pools @aws_iam @aws_lambda @aws_api_key
+
+  """
+  Retrieves a hotel tenant configuration by its unique tenantId.
+  """
+  getHotelTenant(tenantId: ID!): HotelTenant
+    @aws_cognito_user_pools
+    @aws_iam
+    @aws_lambda
+    @aws_api_key
 }
 
 type Mutation {
@@ -522,6 +737,11 @@ type Mutation {
   Health check ping mutation for AppSync real-time subscriptions.
   """
   ping: String! @aws_cognito_user_pools @aws_iam
+
+  """
+  Provisions or updates a hotel tenant profile, SLTDA registrations, and tax presets.
+  """
+  upsertHotelTenant(input: UpsertHotelTenantInput!): HotelTenant @aws_cognito_user_pools @aws_iam
 }
 
 type Subscription {
