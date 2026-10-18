@@ -48,3 +48,4 @@ This file tracks the sequential completion of backend implementation steps defin
 - [x] Step 041: Implement Constant-Time QR Session Token Verifier (`qrHmac.ts`)
 - [x] Step 042: Implement PayHere Checkout Hash Generator (`payhere.ts`)
 - [x] Step 043: Implement PayHere `notify_url` Webhook Signature Verifier (`payhere.ts`)
+- [x] Step 044: Implement WebXPay Subscription & Payment Callback Verifier (`webxpay.ts`)
