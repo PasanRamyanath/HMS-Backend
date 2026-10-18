@@ -28,3 +28,11 @@ This file tracks the sequential completion of backend implementation steps defin
 - [x] Step 023: Write CloudFormation Permanent Free-Tier Cost-Ceiling Guardrail Test (`cost-guardrails.test.ts`)
 - [x] Step 024: Author Master Architecture Decision Record (`docs/adr-001-codespaces-saas-apple-hig.md`)
 - [x] Step 025: Create & Execute Master 3-Repo Verification Gate (`scripts/verify-all-repos.sh`)
+
+## Phase 02: Sri Lankan Statutory Tax, NIC/Passport, LankaQR & Payment Crypto Engine
+- [x] Step 026: Define Tax Configuration & Breakdown Types (`tax.ts`)
+- [ ] Step 027: Implement Exact Half-Up Rupee & Cent Rounding Helper `roundLkr`
+- [ ] Step 028: Implement Forward 4-Stage Compounding Tax Calculation (`calculateForwardTax`)
+- [ ] Step 029: Implement Small Guest House Tier Support (`createTaxPreset`)
+- [ ] Step 030: Implement Reverse All-Inclusive Gross-to-Net Derivation (`calculateReverseTax`)
+- [ ] Step 031: Write Exhaustive IRD/SLTDA Tax Test Vectors

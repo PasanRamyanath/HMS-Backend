@@ -14,3 +14,4 @@ export * from "./result.js";
 export * from "./auditChain.js";
 export * from "./format.js";
 export * from "./config.js";
+export * from "./tax.js";
