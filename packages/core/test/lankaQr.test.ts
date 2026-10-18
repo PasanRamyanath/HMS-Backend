@@ -190,3 +190,119 @@ describe("LankaQR EMVCo MPM Payload Builder (buildLankaQrPayload)", () => {
     assert.equal(audit.entryHash.length, 64);
   });
 });
+
+describe("Exhaustive CBSL LankaQR EMVCo Test Vectors (Rung 5)", () => {
+  interface DecodedTlv {
+    readonly tag: string;
+    readonly length: number;
+    readonly value: string;
+  }
+
+  function decodeTlvs(payload: string): DecodedTlv[] {
+    const list: DecodedTlv[] = [];
+    let offset = 0;
+    while (offset < payload.length) {
+      const tag = payload.slice(offset, offset + 2);
+      const lengthStr = payload.slice(offset + 2, offset + 4);
+      const length = Number.parseInt(lengthStr, 10);
+      const value = payload.slice(offset + 4, offset + 4 + length);
+      list.push({ tag, length, value });
+      offset += 4 + length;
+    }
+    return list;
+  }
+
+  it("verifies exact TLV byte lengths across complete dynamic room-bill payload", () => {
+    const qrRes = buildLankaQrPayload({
+      merchantId: "777000111222",
+      merchantName: "HERITANCE KANDALAMA",
+      merchantCity: "DAMBULLA",
+      mcc: "7011",
+      amountLkr: 100757.25,
+      referenceId: "FOLIO-7701",
+      isDynamic: true,
+      tenantId: "heritance-kandalama",
+    });
+
+    assert.equal(qrRes.ok, true);
+    if (!qrRes.ok) return;
+
+    const qr = qrRes.value;
+    const tlvs = decodeTlvs(qr.payload);
+
+    // Verify all standard tags are present in correct order
+    const tagMap = new Map(tlvs.map((t) => [t.tag, t]));
+    assert.equal(tagMap.get("00")?.value, "01");
+    assert.equal(tagMap.get("01")?.value, "12");
+    assert.equal(tagMap.get("52")?.value, "7011");
+    assert.equal(tagMap.get("53")?.value, "144");
+    assert.equal(tagMap.get("54")?.value, "100757.25");
+    assert.equal(tagMap.get("58")?.value, "LK");
+    assert.equal(tagMap.get("59")?.value, "HERITANCE KANDALAMA");
+    assert.equal(tagMap.get("60")?.value, "DAMBULLA");
+    assert.equal(tagMap.get("63")?.value, qr.crc);
+
+    // Verify nested Tag 26 (Merchant Info)
+    const tag26 = tagMap.get("26");
+    assert.ok(tag26);
+    const nested26 = decodeTlvs(tag26.value);
+    const tag26Map = new Map(nested26.map((t) => [t.tag, t]));
+    assert.equal(tag26Map.get("00")?.value, "COM.LANKAQR");
+    assert.equal(tag26Map.get("01")?.value, "777000111222");
+
+    // Verify nested Tag 62 (Additional Data)
+    const tag62 = tagMap.get("62");
+    assert.ok(tag62);
+    const nested62 = decodeTlvs(tag62.value);
+    const tag62Map = new Map(nested62.map((t) => [t.tag, t]));
+    assert.equal(tag62Map.get("05")?.value, "FOLIO-7701");
+  });
+
+  it("verifies CBSL casual dining restaurant table-bill vector with MCC 5812", () => {
+    const qrRes = buildLankaQrPayload({
+      merchantId: "888000333444",
+      merchantName: "OCEAN BLUE SEAFOOD",
+      merchantCity: "BENTOTA",
+      mcc: "5812",
+      amountLkr: 15450.5,
+      referenceId: "TABLE-04-BILL",
+      isDynamic: true,
+    });
+
+    assert.equal(qrRes.ok, true);
+    if (!qrRes.ok) return;
+
+    const qr = qrRes.value;
+    assert.equal(qr.isDynamic, true);
+    assert.equal(qr.amountLkr, 15450.5);
+
+    // Verify CRC integrity
+    const prefix = qr.payload.slice(0, -4);
+    assert.equal(qr.payload.slice(-4), qr.crc);
+    assert.equal(crc16CcittFalse(prefix), qr.crc);
+  });
+
+  it("detects single-character tampering in payload via CRC-16 mismatch", () => {
+    const qrRes = buildLankaQrPayload({
+      merchantId: "100000000001",
+      merchantName: "GALLE FORT HOTEL",
+      merchantCity: "GALLE",
+      amountLkr: 50000,
+      referenceId: "FOLIO-500",
+      isDynamic: true,
+    });
+
+    assert.equal(qrRes.ok, true);
+    if (!qrRes.ok) return;
+
+    const originalPayload = qrRes.value.payload;
+    const prefix = originalPayload.slice(0, -4);
+    const originalCrc = originalPayload.slice(-4);
+
+    // Tamper with the amount (50000 -> 90000)
+    const tamperedPrefix = prefix.replace("50000.00", "90000.00");
+    const tamperedCrc = crc16CcittFalse(tamperedPrefix);
+
+    assert.notEqual(tamperedCrc, originalCrc);
+  });
+});

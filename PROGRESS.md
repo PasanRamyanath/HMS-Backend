@@ -43,3 +43,4 @@ This file tracks the sequential completion of backend implementation steps defin
 - [x] Step 036: Write Unit Tests for Sri Lankan NIC & Passport Extraction (`nicPassport.test.ts`)
 - [x] Step 037: Implement CRC-16/CCITT-FALSE Checksum Function for LankaQR (`lankaQr.ts`)
 - [x] Step 038: Implement LankaQR EMVCo MPM Payload Generator (`lankaQr.ts`)
+- [x] Step 039: Write Verification Tests for LankaQR EMVCo Vectors (`lankaQr.test.ts`)
