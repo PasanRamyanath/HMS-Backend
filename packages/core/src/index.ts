@@ -1,0 +1,11 @@
+/**
+ * @hms/core - Pure TypeScript Sri Lankan Hospitality & Multi-Tenant SaaS Domain Engine.
+ *
+ * Strict Architectural Guarantees:
+ * 1. Zero external runtime npm dependencies (Node 22 standard library only).
+ * 2. Explicit Result<T, DomainError> pattern for deterministic error propagation.
+ * 3. 4-Stage compounding Sri Lankan tax mathematics (SC -> TDL -> SSCL -> VAT).
+ * 4. SHA-256 hash-chained immutable audit log verification.
+ */
+
+export const CORE_VERSION = "1.0.0";

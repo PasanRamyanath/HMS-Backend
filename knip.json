@@ -3,7 +3,7 @@
   "biome": true,
   "lefthook": true,
   "ignoreDependencies": ["@biomejs/biome", "lefthook"],
-  "ignoreBinaries": ["biome", "knip"],
+  "ignoreBinaries": ["biome", "knip", "tsc"],
   "workspaces": {
     "packages/core": {
       "entry": ["src/index.ts!"],
