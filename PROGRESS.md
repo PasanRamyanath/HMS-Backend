@@ -25,6 +25,6 @@ This file tracks the sequential completion of backend implementation steps defin
 - [x] Step 020: Create Cross-Repo GraphQL Contract Sync Script (`scripts/sync-contracts.sh`)
 - [x] Step 021: Implement Shared Sri Lankan Currency & `Asia/Colombo` Date Helpers (`format.ts`)
 - [x] Step 022: Implement Runtime Tenant, Mobile, SLTDA & IRD Validators (`config.ts`)
-- [ ] Step 023: Write CloudFormation Permanent Free-Tier Cost-Ceiling Guardrail Test (`cost-guardrails.test.ts`)
+- [x] Step 023: Write CloudFormation Permanent Free-Tier Cost-Ceiling Guardrail Test (`cost-guardrails.test.ts`)
 - [ ] Step 024: Author Master Architecture Decision Record (`docs/adr-001-codespaces-saas-apple-hig.md`)
 - [ ] Step 025: Create & Execute Master 3-Repo Verification Gate (`scripts/verify-all-repos.sh`)
