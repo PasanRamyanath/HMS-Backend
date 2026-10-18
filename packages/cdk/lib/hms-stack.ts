@@ -1,5 +1,5 @@
 import { RemovalPolicy, Stack, type StackProps } from "aws-cdk-lib";
-import { AttributeType, BillingMode, Table } from "aws-cdk-lib/aws-dynamodb";
+import { AttributeType, BillingMode, ProjectionType, Table } from "aws-cdk-lib/aws-dynamodb";
 import type { Construct } from "constructs";
 
 export interface SriLankaHmsStackProps extends StackProps {}
@@ -24,6 +24,7 @@ export class SriLankaHmsStack extends Stack {
     this.deploymentRegion = this.region;
 
     // Single-table DynamoDB for all 42 multi-tenant SaaS entities
+    // Base table allocated 10 RCU / 10 WCU
     this.hmsTable = new Table(this, "HmsTable", {
       tableName: "HmsSingleTable",
       partitionKey: {
@@ -42,6 +43,40 @@ export class SriLankaHmsStack extends Stack {
       pointInTimeRecoverySpecification: {
         pointInTimeRecoveryEnabled: false,
       },
+    });
+
+    // GSI1: Primary multi-entity inversion index (e.g., GSI1PK = TENANT#<id>#ORDERS, GSI1SK = <status>#<timestamp>)
+    // Allocated 5 RCU / 5 WCU
+    this.hmsTable.addGlobalSecondaryIndex({
+      indexName: "GSI1",
+      partitionKey: {
+        name: "GSI1PK",
+        type: AttributeType.STRING,
+      },
+      sortKey: {
+        name: "GSI1SK",
+        type: AttributeType.STRING,
+      },
+      projectionType: ProjectionType.ALL,
+      readCapacity: 5,
+      writeCapacity: 5,
+    });
+
+    // GSI2: Secondary cross-entity / date-range index (e.g., GSI2PK = TENANT#<id>#RESERVATIONS, GSI2SK = <checkInDate>)
+    // Allocated 5 RCU / 5 WCU
+    this.hmsTable.addGlobalSecondaryIndex({
+      indexName: "GSI2",
+      partitionKey: {
+        name: "GSI2PK",
+        type: AttributeType.STRING,
+      },
+      sortKey: {
+        name: "GSI2SK",
+        type: AttributeType.STRING,
+      },
+      projectionType: ProjectionType.ALL,
+      readCapacity: 5,
+      writeCapacity: 5,
     });
   }
 }

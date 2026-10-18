@@ -86,3 +86,4 @@ This file tracks the sequential completion of backend implementation steps defin
 ## Phase 04: AWS CDK v2 Near-Free-Tier Cloud Infrastructure (`packages/cdk`)
 - [x] Step 076: Create CDK App Entrypoint Configured for `ap-south-1` (Mumbai) (`bin/hms.ts`)
 - [x] Step 077: Define Single-Table DynamoDB Construct (`HmsTable`) with Permanent Free-Tier Provisioned Capacity (`packages/cdk/lib/hms-stack.ts`)
+- [x] Step 078: Configure `GSI1` & `GSI2` Sparse Indexes on `HmsTable` (`packages/cdk/lib/hms-stack.ts`)
