@@ -1645,6 +1645,8 @@ export type Query = {
   listRoomTypes: Array<RoomType>;
   /** Lists all physical rooms and live tape-chart statuses for a property. */
   listRooms: Array<Room>;
+  /** Lists SLTDA monthly statistical returns optionally filtered by calendar year. */
+  listSltdaMonthlyReports: Array<SltdaMonthlyReturn>;
   /** Lists inventory stock items filtered by department and category. */
   listStockItems: Array<StockItem>;
   /** Lists all Tour Operator / DMC credit contracts for a property. */
@@ -1873,6 +1875,12 @@ export type QueryListRoomTypesArgs = {
 
 export type QueryListRoomsArgs = {
   tenantId: Scalars['ID']['input'];
+};
+
+
+export type QueryListSltdaMonthlyReportsArgs = {
+  tenantId: Scalars['ID']['input'];
+  year?: InputMaybe<Scalars['Int']['input']>;
 };
 
 

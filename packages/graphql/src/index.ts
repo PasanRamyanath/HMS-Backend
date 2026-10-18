@@ -17,3 +17,4 @@ export * from "../resolvers/updateOrderStatus.js";
 export * from "../resolvers/reservationsQuery.js";
 export * from "../resolvers/folioQuery.js";
 export * from "../resolvers/banquets.js";
+export * from "../resolvers/reportsAndStock.js";

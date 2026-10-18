@@ -3955,6 +3955,15 @@ type Query {
     @aws_api_key
 
   """
+  Lists SLTDA monthly statistical returns optionally filtered by calendar year.
+  """
+  listSltdaMonthlyReports(tenantId: ID!, year: Int): [SltdaMonthlyReturn!]!
+    @aws_cognito_user_pools
+    @aws_iam
+    @aws_lambda
+    @aws_api_key
+
+  """
   Retrieves an IRD / SLTDA Tourism Development Levy quarterly summary.
   """
   getTdlQuarterlySummary(tenantId: ID!, taxYear: Int!, quarter: Int!): TdlQuarterlySummary
