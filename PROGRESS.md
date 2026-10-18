@@ -70,3 +70,4 @@ This file tracks the sequential completion of backend implementation steps defin
 - [x] Step 061: Define `NightAuditReport`, `SltdaMonthlyReturn`, and `StaffScPoolStatement` Types (`schema.graphql`)
 - [x] Step 062: Define Root `Query`, `Mutation`, and Real-Time `Subscription` Operations (`schema.graphql`)
 - [x] Step 063: Configure `@graphql-codegen/cli` in `packages/graphql/codegen.ts` (`codegen.ts`)
+- [x] Step 064: Create Shared AppSync JS Tenant Isolation Helper (`resolvers/tenantGuard.ts`)

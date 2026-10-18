@@ -19,7 +19,7 @@
       "project": ["src/**/*.ts!"]
     },
     "packages/graphql": {
-      "project": ["src/**/*.ts!"]
+      "project": ["src/**/*.ts!", "resolvers/**/*.ts!"]
     },
     "packages/cdk": {
       "project": ["bin/**/*.ts!", "lib/**/*.ts!"]
