@@ -67,6 +67,46 @@ describe("Sri Lankan NIC Parser (parseSriLankaNic)", () => {
       assert.equal(nic.birthDay, 29);
       assert.equal(nic.dateOfBirthIso, "1996-02-29");
     });
+
+    it("parses early calendar boundaries (Jan 1, Feb 1, Mar 1)", () => {
+      // Day 001 -> Jan 1
+      const jan1 = parseSriLankaNic("900011234V");
+      assert.equal(jan1.ok, true);
+      if (jan1.ok) {
+        assert.equal(jan1.value.dateOfBirthIso, "1990-01-01");
+      }
+
+      // Day 032 -> Feb 1
+      const feb1 = parseSriLankaNic("900321234V");
+      assert.equal(feb1.ok, true);
+      if (feb1.ok) {
+        assert.equal(feb1.value.dateOfBirthIso, "1990-02-01");
+      }
+
+      // Day 061 -> Mar 1
+      const mar1 = parseSriLankaNic("900611234V");
+      assert.equal(mar1.ok, true);
+      if (mar1.ok) {
+        assert.equal(mar1.value.dateOfBirthIso, "1990-03-01");
+      }
+    });
+
+    it("parses year-end calendar boundaries (Dec 31 male & female)", () => {
+      // Day 366 -> Dec 31
+      const dec31 = parseSriLankaNic("903661234V");
+      assert.equal(dec31.ok, true);
+      if (dec31.ok) {
+        assert.equal(dec31.value.dateOfBirthIso, "1990-12-31");
+      }
+
+      // Female Day 866 (366 + 500) -> Dec 31
+      const femaleDec31 = parseSriLankaNic("908661234V");
+      assert.equal(femaleDec31.ok, true);
+      if (femaleDec31.ok) {
+        assert.equal(femaleDec31.value.gender, "FEMALE");
+        assert.equal(femaleDec31.value.dateOfBirthIso, "1990-12-31");
+      }
+    });
   });
 
   describe("Modern 12-digit Format", () => {
@@ -103,6 +143,21 @@ describe("Sri Lankan NIC Parser (parseSriLankaNic)", () => {
       assert.equal(nic.birthDay, 23);
       assert.equal(nic.dateOfBirthIso, "2001-02-23");
     });
+
+    it("parses modern 12-digit boundaries (Jan 1 and Dec 31)", () => {
+      const jan1 = parseSriLankaNic("199500101234");
+      assert.equal(jan1.ok, true);
+      if (jan1.ok) {
+        assert.equal(jan1.value.dateOfBirthIso, "1995-01-01");
+      }
+
+      const dec31 = parseSriLankaNic("200586601234");
+      assert.equal(dec31.ok, true);
+      if (dec31.ok) {
+        assert.equal(dec31.value.gender, "FEMALE");
+        assert.equal(dec31.value.dateOfBirthIso, "2005-12-31");
+      }
+    });
   });
 
   describe("Validation & Errors", () => {
@@ -118,6 +173,22 @@ describe("Sri Lankan NIC Parser (parseSriLankaNic)", () => {
     });
 
     it("rejects invalid day of year code exceeding 366 (or > 866 for female)", () => {
+      // Day 000 (invalid)
+      const res0 = parseSriLankaNic("920001234V");
+      assert.equal(res0.ok, false);
+
+      // Day 500 (female day 0, invalid)
+      const res500 = parseSriLankaNic("925001234V");
+      assert.equal(res500.ok, false);
+
+      // Day 367 (exceeds 366)
+      const res367 = parseSriLankaNic("923671234V");
+      assert.equal(res367.ok, false);
+
+      // Day 867 (female exceeds 366)
+      const res867 = parseSriLankaNic("928671234V");
+      assert.equal(res867.ok, false);
+
       // 929991234V -> dayCode 999 -> 999 - 500 = 499 > 366 -> INVALID
       const res = parseSriLankaNic("929991234V");
       assert.equal(res.ok, false);
