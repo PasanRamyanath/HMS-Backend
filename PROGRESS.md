@@ -55,3 +55,6 @@ This file tracks the sequential completion of backend implementation steps defin
 - [x] Step 048: Implement Sri Lankan EPF (`8%` Employee / `12%` Employer) & ETF (`3%` Employer) Calculator (`payroll.ts`)
 - [x] Step 049: Implement FIFO Inventory Batch Deduction & Recipe BOM Costing Engine (`inventoryMath.ts`)
 - [x] Step 050: Export All Pure Domain Modules & Run Phase 2 Ponytail Audit (`index.ts`)
+
+## Phase 03: 42-Entity Multi-Tenant SaaS GraphQL Schema & Direct AppSync JS Resolvers
+- [x] Step 051: Author Base Scalars, Directives & Enums in `packages/graphql/schema.graphql`

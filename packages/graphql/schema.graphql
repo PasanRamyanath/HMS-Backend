@@ -1,0 +1,538 @@
+# ==============================================================================
+# Sri Lankan Cloud SaaS Hotel Management System (HMS) & Contactless QR Platform.
+# Single-Table Multi-Tenant 42-Entity AppSync GraphQL Schema (APPSYNC_JS_1_0_0).
+#
+# Complies with:
+# 1. Sri Lankan Inland Revenue Department (IRD) & SLTDA statutory requirements.
+# 2. Central Bank of Sri Lanka (CBSL) LankaQR EMVCo standards.
+# 3. Apple Human Interface Guidelines (HIG) responsive tokens and states.
+# 4. AWS AppSync native scalars and multi-auth directives.
+# ==============================================================================
+
+# ==============================================================================
+# AWS AppSync Native Custom Scalars
+# ==============================================================================
+
+"""
+An extended ISO 8601 date string in the format YYYY-MM-DD.
+"""
+scalar AWSDate
+
+"""
+An extended ISO 8601 time string in the format hh:mm:ss.sss.
+"""
+scalar AWSTime
+
+"""
+An extended ISO 8601 date and time string in the format YYYY-MM-DDThh:mm:ss.sssZ.
+Evaluated in or normalized to Asia/Colombo (UTC+05:30) for statutory records.
+"""
+scalar AWSDateTime
+
+"""
+An integer value representing seconds past unix epoch (1970-01-01T00:00:00Z).
+"""
+scalar AWSTimestamp
+
+"""
+An RFC 5322 compliant email address string.
+"""
+scalar AWSEmail
+
+"""
+A string containing serialized JSON data.
+"""
+scalar AWSJSON
+
+"""
+An RFC 3986 compliant Uniform Resource Locator string.
+"""
+scalar AWSURL
+
+"""
+An E.164 compliant phone number string (e.g. +94771234567 for Sri Lankan mobile).
+"""
+scalar AWSPhone
+
+"""
+An IPv4 or IPv6 network address string.
+"""
+scalar AWSIPAddress
+
+# ==============================================================================
+# AWS AppSync Authorization & Real-Time Subscription Directives
+# ==============================================================================
+
+directive @aws_subscribe(mutations: [String!]!) on FIELD_DEFINITION
+directive @aws_auth(cognito_groups: [String!]!) on FIELD_DEFINITION
+directive @aws_cognito_user_pools(
+  cognito_groups: [String!]
+) on OBJECT | FIELD_DEFINITION | INTERFACE | UNION
+directive @aws_iam on OBJECT | FIELD_DEFINITION | INTERFACE | UNION
+directive @aws_lambda on OBJECT | FIELD_DEFINITION | INTERFACE | UNION
+directive @aws_api_key on OBJECT | FIELD_DEFINITION | INTERFACE | UNION
+
+# ==============================================================================
+# Core Sri Lankan Hospitality & Multi-Tenant SaaS Enums
+# ==============================================================================
+
+"""
+Hospitality property classification under Sri Lanka Tourism Development Authority (SLTDA).
+"""
+enum BusinessType {
+  """
+  Full-service urban commercial hotel with 24/7 reception and banqueting.
+  """
+  CITY_HOTEL
+  """
+  Coastal resort property with direct beach frontage or lagoon access.
+  """
+  BEACH_RESORT
+  """
+  Exclusive low-density boutique luxury villa or private estate.
+  """
+  BOUTIQUE_VILLA
+  """
+  Traditional Sri Lankan heritage bungalow or hill-country tea plantation bungalow.
+  """
+  HERITAGE_BUNGALOW
+  """
+  Eco-friendly nature lodge or wildlife safari tented retreat.
+  """
+  ECO_LODGE
+  """
+  Government or private rest house catering to domestic and transit travelers.
+  """
+  REST_HOUSE
+  """
+  Modern tourist guest house or bed & breakfast (under 10 rooms).
+  """
+  GUEST_HOUSE
+  """
+  Serviced apartment or long-stay holiday residence.
+  """
+  SERVICED_APARTMENT
+}
+
+"""
+Hotel operating departments for task allocation, kitchen routing, and service charge distribution.
+"""
+enum Department {
+  """
+  Front Office, reception, reservations, concierge, and guest relations.
+  """
+  FRONT_OFFICE
+  """
+  Housekeeping, linen management, laundry, and room inspection.
+  """
+  HOUSEKEEPING
+  """
+  Main hot kitchen, pantry, pastry, and prep stations.
+  """
+  KITCHEN
+  """
+  Food & Beverage dining room, table service, and banquet service.
+  """
+  RESTAURANT
+  """
+  Main lounge bar, pool bar, and beverage dispense.
+  """
+  BAR
+  """
+  Banquet sales, event coordination, and function floor operations.
+  """
+  BANQUET
+  """
+  Ayurveda wellness pavilion, therapeutic spa, and herbal treatment suites.
+  """
+  SPA
+  """
+  Engineering, facilities maintenance, and utilities monitoring.
+  """
+  MAINTENANCE
+  """
+  Finance, night audit, cashiering, and revenue management.
+  """
+  ACCOUNTS
+  """
+  Property security, loss prevention, and gate pass management.
+  """
+  SECURITY
+  """
+  General management, executive office, and SaaS tenant administration.
+  """
+  MANAGEMENT
+  """
+  Driver quarters, chauffeur lounge, and transport coordination.
+  """
+  TRANSPORT
+}
+
+"""
+Standard international and Sri Lankan hotel meal plan arrangements.
+"""
+enum MealPlan {
+  """
+  Room Only — European Plan (no meals included).
+  """
+  RO
+  """
+  Bed & Breakfast — Continental or Sri Lankan breakfast included.
+  """
+  BB
+  """
+  Half Board — Modified American Plan (Breakfast and Dinner included).
+  """
+  HB
+  """
+  Full Board — American Plan (Breakfast, Lunch, and Dinner included).
+  """
+  FB
+  """
+  All Inclusive — All meals, local beverages, and selected excursions included.
+  """
+  AI
+}
+
+"""
+Dual-tier pricing and statutory tax residency tiers for Sri Lankan tourism.
+"""
+enum ResidencyRateTier {
+  """
+  Sri Lankan citizens holding NIC and permanent resident visa holders (billed in LKR).
+  """
+  SRI_LANKAN_RESIDENT
+  """
+  International foreign passport holders and tourists (contracted in USD, locked to LKR).
+  """
+  FOREIGN_NON_RESIDENT
+  """
+  Diplomatic mission staff and tax-exempt international agencies.
+  """
+  DIPLOMATIC_EXEMPT
+}
+
+"""
+Room and public area housekeeping turnover status for Apple HIG PMS tape chart.
+"""
+enum HousekeepingStatus {
+  """
+  Clean, sanitized, and ready for immediate guest check-in.
+  """
+  CLEAN
+  """
+  Occupied or checked-out room requiring full changeover and linen refresh.
+  """
+  DIRTY
+  """
+  Inspected and certified by housekeeping supervisor / executive housekeeper.
+  """
+  INSPECTED
+  """
+  Temporarily blocked for deep cleaning, pest control, or minor repair.
+  """
+  OUT_OF_SERVICE
+  """
+  Blocked for major refurbishment, water damage, or electrical works.
+  """
+  OUT_OF_ORDER
+  """
+  Quick freshen-up / evening turndown service required.
+  """
+  TOUCH_UP
+  """
+  Do Not Disturb active — guest requested privacy.
+  """
+  DO_NOT_DISTURB
+}
+
+"""
+Real-time Kitchen Display System (KDS) and Room Service order lifecycle status.
+"""
+enum OrderStatus {
+  """
+  Order submitted by guest QR or waiter POS, awaiting kitchen acknowledgment.
+  """
+  SUBMITTED
+  """
+  Order received and acknowledged by the kitchen chef / expediter.
+  """
+  ACKNOWLEDGED
+  """
+  Dishes currently being prepared or cooked on specific kitchen stations.
+  """
+  IN_PREPARATION
+  """
+  Order plated, checked, and ready for runner pickup / food server delivery.
+  """
+  READY_FOR_PICKUP
+  """
+  Order in transit with runner to guest room, cabana, or dining table.
+  """
+  IN_TRANSIT
+  """
+  Order successfully delivered to guest table or room.
+  """
+  DELIVERED
+  """
+  Order rejected or cancelled prior to preparation with audit justification.
+  """
+  CANCELLED
+}
+
+"""
+Dining channel classification for KDS routing, BOT printing, and Service Charge rules.
+"""
+enum DiningType {
+  """
+  Contactless guest ordering directly from guest room via room QR token.
+  """
+  IN_ROOM_DINING
+  """
+  Dine-in table service in hotel restaurant or dining pavilion.
+  """
+  TABLE_SERVICE
+  """
+  Takeaway or packed lunch for safari / day excursion.
+  """
+  TAKEAWAY
+  """
+  Poolside sun lounger or outdoor terrace service.
+  """
+  POOL_SIDE
+  """
+  Private beach cabana or romantic dinner setup.
+  """
+  BEACH_CABANA
+  """
+  Banquet function, wedding buffet, or corporate conference dining.
+  """
+  BANQUET_SERVICE
+  """
+  Staff canteen or complimentary crew dining.
+  """
+  STAFF_DINING
+}
+
+"""
+Settlement payment methods supported by the Sri Lankan PMS folio engine.
+"""
+enum PaymentMethod {
+  """
+  Sri Lankan Rupee cash paid directly at cashier.
+  """
+  CASH_LKR
+  """
+  Foreign currency banknotes accepted and locked using CBSL exchange rate.
+  """
+  CASH_FOREIGN
+  """
+  Visa / Mastercard / Amex processed via POS terminal or merchant gateway.
+  """
+  CREDIT_CARD
+  """
+  Central Bank of Sri Lanka (CBSL) LankaQR EMVCo dynamic dynamic merchant payment.
+  """
+  LANKA_QR
+  """
+  PayHere Sri Lankan payment gateway (Cards, Genie, FriMi, eZ Cash, mCash).
+  """
+  PAYHERE
+  """
+  WebXPay Sri Lankan payment gateway with recurring subscription support.
+  """
+  WEBXPAY
+  """
+  Direct bank wire transfer or Sri Lankan SLIPS / CEFT fast electronic transfer.
+  """
+  BANK_TRANSFER
+  """
+  City Ledger billing to Destination Management Company (DMC) credit account.
+  """
+  CITY_LEDGER_DMC
+  """
+  Authorized management complimentary folio (Zero charge, non-taxable).
+  """
+  COMPLIMENTARY
+}
+
+"""
+Sri Lankan statutory tax registration status and compounding preset.
+"""
+enum TaxCategory {
+  """
+  Full-service registered hotel charging 10% SC + 1% TDL + 2.5641% SSCL + 18% VAT.
+  """
+  FULL_SERVICE_HOTEL_VAT
+  """
+  Boutique villa under LKR 60M annual VAT threshold (10% SC + 1% TDL + 2.5641% SSCL).
+  """
+  BOUTIQUE_NON_VAT
+  """
+  Small guest house under LKR 12M annual turnover (0.5% TDL only).
+  """
+  SMALL_GUESTHOUSE_TDL
+  """
+  Special statutory economic zone or export development tax-exempt status.
+  """
+  TAX_EXEMPT
+}
+
+"""
+Reservation lifecycle states for front desk tape chart and booking engine.
+"""
+enum ReservationStatus {
+  """
+  Provisional reservation inquiry awaiting advance deposit or payment link.
+  """
+  INQUIRY
+  """
+  Confirmed reservation with secured advance deposit or DMC voucher.
+  """
+  CONFIRMED
+  """
+  Guest checked-in, room key issued, active folio open.
+  """
+  CHECKED_IN
+  """
+  Guest settled all folios and checked out.
+  """
+  CHECKED_OUT
+  """
+  Reservation cancelled by guest, OTA, or property.
+  """
+  CANCELLED
+  """
+  Guest failed to arrive by night audit cutoff.
+  """
+  NO_SHOW
+}
+
+"""
+Guest folio settlement status.
+"""
+enum FolioStatus {
+  """
+  Active open folio accepting room charges, F&B orders, and payments.
+  """
+  OPEN
+  """
+  Fully settled folio with zero balance, locked for editing.
+  """
+  SETTLED
+  """
+  Charges transferred to master company folio or DMC City Ledger.
+  """
+  TRANSFERRED
+  """
+  Voided or reversed folio under managerial audit control.
+  """
+  VOIDED
+}
+
+"""
+Immutable audit trail action types for tamper-evident SHA-256 event chaining.
+"""
+enum AuditAction {
+  """
+  New record inserted.
+  """
+  CREATE
+  """
+  Existing record updated.
+  """
+  UPDATE
+  """
+  Record deleted or soft-deleted.
+  """
+  DELETE
+  """
+  State machine or lifecycle status transition.
+  """
+  STATUS_CHANGE
+  """
+  Security violation, authentication failure, or token mismatch.
+  """
+  SECURITY_ALERT
+  """
+  Financial payment recorded or folio settled.
+  """
+  PAYMENT_RECORDED
+}
+
+"""
+Multi-tenant Role-Based Access Control (RBAC) user roles.
+"""
+enum UserRole {
+  """
+  Platform super-admin with global tenant management permissions.
+  """
+  SUPER_ADMIN
+  """
+  Property owner or tenant administrator with full property access.
+  """
+  TENANT_ADMIN
+  """
+  General Manager with property-wide operational and financial oversight.
+  """
+  GENERAL_MANAGER
+  """
+  Front desk agent handling check-ins, check-outs, and guest folios.
+  """
+  FRONT_DESK
+  """
+  Food & Beverage server handling restaurant and bar POS orders.
+  """
+  RESTAURANT_POS
+  """
+  Kitchen expeditor / chef viewing and bumping KDS orders.
+  """
+  KITCHEN_KDS
+  """
+  Housekeeping room attendant updating room cleanliness status.
+  """
+  HOUSEKEEPING_RUNNER
+  """
+  Financial controller / accountant managing folios and tax returns.
+  """
+  ACCOUNTANT
+  """
+  Night auditor executing daily financial close and room rollover.
+  """
+  NIGHT_AUDITOR
+  """
+  Contactless guest accessing room QR ordering without password.
+  """
+  GUEST_QR
+}
+
+# ==============================================================================
+# GraphQL Root Types Placeholder
+# ==============================================================================
+
+type Query {
+  """
+  API version ping for AppSync health check.
+  """
+  apiVersion: String! @aws_cognito_user_pools @aws_iam @aws_lambda @aws_api_key
+}
+
+type Mutation {
+  """
+  Health check ping mutation for AppSync real-time subscriptions.
+  """
+  ping: String! @aws_cognito_user_pools @aws_iam
+}
+
+type Subscription {
+  """
+  Real-time health check subscription for WebSocket connectivity validation.
+  """
+  onPing: String @aws_subscribe(mutations: ["ping"]) @aws_cognito_user_pools @aws_iam
+}
+
+schema {
+  query: Query
+  mutation: Mutation
+  subscription: Subscription
+}
