@@ -35,6 +35,7 @@ export * from "./splitFolioRouter.js";
 export * from "./creditNote.js";
 export * from "./menuSchedule.js";
 export * from "./mealPlanPricing.js";
+export * from "./catalogPresets.js";
 export {
   SRI_LANKA_TIMEZONE,
   SRI_LANKA_LOCALE,

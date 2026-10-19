@@ -149,4 +149,7 @@ This file tracks the sequential completion of backend implementation steps defin
 - [x] Step 228: Write Unit Tests for Sri Lanka Standard Time Menu Window Evaluation (`packages/core/test/menuSchedule.test.ts`)
 - [x] Step 233: Implement Meal-Plan Order Line Pricing Resolver (`packages/core/src/mealPlanPricing.ts`)
 - [x] Step 234: Write Unit Tests for `BB` / `HB` / `FB` / `AI` QR Ordering Entitlements (`packages/core/test/mealPlanPricing.test.ts`)
+- [x] Step 236: Build Free Housekeeping & Express Room Amenity Catalog Preset (`packages/core/src/catalogPresets.ts`)
+- [x] Step 237: Write Unit Tests for Trilingual Catalog Presets (`packages/core/test/catalogPresets.test.ts`)
+
 
