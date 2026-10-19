@@ -131,6 +131,8 @@ This file tracks the sequential completion of backend implementation steps defin
 - [x] Step 180: Implement Outbound Channex ARI Push Helper on Local Reservation Changes (`packages/cdk/lambdas/reservationAndCheckInTx.ts`)
 - [x] Step 181: Implement Zero-Cost RFC 5545 iCal (`.ics`) Feed Exporter & Importer (`packages/core/src/icalSync.ts`)
 - [x] Step 182: Write Unit Tests for RFC 5545 iCal Export & Import (`packages/core/test/icalSync.test.ts`)
+- [x] Step 189: Implement Promo Code & Bank Card Offer Engine (`packages/core/src/promoOffer.ts`)
+- [x] Step 190: Write Unit Tests for Sri Lankan Bank Credit Card Promo Rules (`packages/core/test/promoOffer.test.ts`)
 
 
 

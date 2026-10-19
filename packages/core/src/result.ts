@@ -34,7 +34,14 @@ export type DomainErrorCode =
   | "SUBSCRIPTION_INACTIVE"
   | "PLAN_LIMITATION"
   | "INVALID_DATE_FORMAT"
-  | "INVALID_RATE";
+  | "INVALID_RATE"
+  | "PROMO_EXPIRED"
+  | "INVALID_PROMO_CODE"
+  | "INVALID_BIN"
+  | "MEAL_PLAN_INELIGIBLE"
+  | "BLACKOUT_DATE_CONFLICT"
+  | "MIN_NIGHTS_NOT_MET"
+  | "PROMO_QUOTA_EXCEEDED";
 
 export interface DomainError {
   readonly code: DomainErrorCode;
