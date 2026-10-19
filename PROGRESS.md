@@ -121,4 +121,5 @@ This file tracks the sequential completion of backend implementation steps defin
 - [x] Step 153: Write Unit Tests for Back-to-Back Same-Day Turnaround (`packages/core/test/availabilityFilter.test.ts`)
 - [x] Step 170: Build Late Check-Out & Day-Use Room Rate Calculator (`packages/core/src/dayUseRate.ts`)
 - [x] Step 171: Write Unit Tests for Day-Use & Late Check-Out Fee Calculations (`packages/core/test/dayUseRate.test.ts`)
+- [x] Step 174: Write End-to-End Reservation-to-CheckIn State Transition Tests (`packages/core/test/reservationFlow.test.ts`)
 
