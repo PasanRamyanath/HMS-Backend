@@ -2,17 +2,24 @@ import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import {
   DynamoDBDocumentClient,
   GetCommand,
+  PutCommand,
   QueryCommand,
   TransactWriteCommand,
   type TransactWriteCommandInput,
 } from "@aws-sdk/lib-dynamodb";
 import {
   type AuditLogEntry,
+  type ChannexActorContext,
+  type ChannexAvailabilityPayload,
+  type ChannexSaasSubscription,
+  type DailyInventoryState,
   type DomainError,
   type Result,
   type TaxBreakdownResult,
+  buildChannexAvailabilityPayload,
   calculateForwardTax,
   createAuditEntry,
+  createChannexAriAuditEntry,
   domainErr,
   ok,
   parseSriLankaNic,
@@ -92,13 +99,39 @@ export interface CheckOutGuestTxInput {
   readonly actorUserId?: string | undefined;
 }
 
+export interface CancelReservationTxInput {
+  readonly action: "CANCEL_RESERVATION";
+  readonly tenantId: string;
+  readonly reservationId: string;
+  readonly cancellationReason?: string | undefined;
+  readonly cancellationFeeLkr?: number | undefined;
+  readonly actorUserId?: string | undefined;
+  readonly prevAuditHash?: string | undefined;
+}
+
 export type ReservationTxAction =
   | CreateReservationTxInput
   | CheckInGuestTxInput
-  | CheckOutGuestTxInput;
+  | CheckOutGuestTxInput
+  | CancelReservationTxInput;
+
+export interface ChannexPushResult {
+  readonly success: boolean;
+  readonly statusCode: number;
+  readonly propertyId: string;
+  readonly roomTypeId: string;
+  readonly channexRoomTypeId: string;
+  readonly datesPushed: readonly string[];
+  readonly payload: ChannexAvailabilityPayload;
+  readonly auditLog: AuditLogEntry;
+}
 
 export interface ReservationTxOutput {
-  readonly action: "CREATE_RESERVATION" | "CHECK_IN_GUEST" | "CHECK_OUT_GUEST";
+  readonly action:
+    | "CREATE_RESERVATION"
+    | "CHECK_IN_GUEST"
+    | "CHECK_OUT_GUEST"
+    | "CANCEL_RESERVATION";
   readonly tenantId: string;
   readonly reservationId: string;
   readonly status: ReservationStatus;
@@ -107,12 +140,52 @@ export interface ReservationTxOutput {
   readonly folioId?: string | undefined;
   readonly taxInvoice?: TaxBreakdownResult | undefined;
   readonly auditLog: AuditLogEntry;
+  readonly channexSyncResult?: ChannexPushResult | undefined;
+}
+
+export interface ChannexSyncConfig {
+  readonly apiKey?: string | undefined;
+  readonly apiBaseUrl?: string | undefined;
+  readonly propertyId?: string | undefined;
+  readonly roomTypeMap?:
+    | Record<string, { readonly channexRoomTypeId: string; readonly totalPhysicalRooms: number }>
+    | undefined;
+  readonly fetchFn?: typeof fetch | undefined;
+  readonly timeoutMs?: number | undefined;
+  readonly subscription?: ChannexSaasSubscription | undefined;
 }
 
 export interface ReservationTxDependencies {
   readonly docClient?: DynamoDBDocumentClient | undefined;
   readonly tableName?: string | undefined;
   readonly nowIsoFn?: () => string;
+  readonly channexConfig?: ChannexSyncConfig | undefined;
+}
+
+export interface PushChannexAvailabilityInput {
+  readonly tenantId: string;
+  readonly propertyId?: string | undefined;
+  readonly roomTypeId: string;
+  readonly channexRoomTypeId?: string | undefined;
+  readonly totalPhysicalRooms?: number | undefined;
+  readonly dates?: readonly string[] | undefined;
+  readonly startDate?: string | undefined;
+  readonly endDate?: string | undefined;
+  readonly remainingAvailability?: number | undefined;
+  readonly inventoryByDate?: readonly DailyInventoryState[] | undefined;
+  readonly actor?: ChannexActorContext | undefined;
+  readonly subscription?: ChannexSaasSubscription | undefined;
+  readonly prevAuditHash?: string | undefined;
+}
+
+export interface ChannexPushDependencies {
+  readonly apiKey?: string | undefined;
+  readonly apiBaseUrl?: string | undefined;
+  readonly fetchFn?: typeof fetch | undefined;
+  readonly docClient?: DynamoDBDocumentClient | undefined;
+  readonly tableName?: string | undefined;
+  readonly nowIsoFn?: () => string;
+  readonly timeoutMs?: number | undefined;
 }
 
 interface AssembleCheckInParams {
@@ -754,6 +827,17 @@ export async function executeCreateReservationTx(
   const commitRes = await commitTxItems(docClient, transactItems);
   if (!commitRes.ok) return commitRes;
 
+  let channexSyncResult: ChannexPushResult | undefined;
+  if (deps?.channexConfig) {
+    channexSyncResult = await syncReservationToChannexOnCreate(
+      input,
+      tenantId,
+      deps,
+      nowIso,
+      auditLog.entryHash,
+    );
+  }
+
   return ok({
     action: "CREATE_RESERVATION",
     tenantId,
@@ -762,6 +846,7 @@ export async function executeCreateReservationTx(
     assignedRoomId: input.assignedRoomId,
     folioId,
     auditLog,
+    channexSyncResult,
   });
 }
 
@@ -921,8 +1006,646 @@ export async function executeCheckOutGuestTx(
   });
 }
 
+function enumerateDateRange(checkInDate: string, checkOutDate: string): string[] {
+  const dates: string[] = [];
+  const start = new Date(`${checkInDate}T00:00:00Z`);
+  const end = new Date(`${checkOutDate}T00:00:00Z`);
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+    return [checkInDate];
+  }
+  const current = new Date(start);
+  while (current < end) {
+    dates.push(current.toISOString().slice(0, 10));
+    current.setUTCDate(current.getUTCDate() + 1);
+  }
+  return dates.length > 0 ? dates : [checkInDate];
+}
+
+function buildInventoryStates(
+  input: PushChannexAvailabilityInput,
+  totalPhysicalRooms: number,
+): Result<readonly DailyInventoryState[], DomainError> {
+  if (input.inventoryByDate && input.inventoryByDate.length > 0) {
+    return ok(input.inventoryByDate);
+  }
+
+  let rawDates: readonly string[] = [];
+  if (input.dates && input.dates.length > 0) {
+    rawDates = input.dates;
+  } else if (input.startDate && input.endDate) {
+    rawDates = enumerateDateRange(input.startDate, input.endDate);
+  }
+
+  if (rawDates.length === 0) {
+    return domainErr(
+      "VALIDATION_FAILED",
+      "At least one date or date range is required for Channex availability push",
+    );
+  }
+
+  const bookedRooms =
+    typeof input.remainingAvailability === "number"
+      ? Math.max(0, totalPhysicalRooms - input.remainingAvailability)
+      : 1;
+
+  const states: DailyInventoryState[] = rawDates.map((date) => ({
+    date,
+    bookedRooms,
+    outOfOrderRooms: 0,
+  }));
+
+  return ok(states);
+}
+
+async function executeChannexHttpPost(
+  url: string,
+  apiKey: string,
+  bodyJson: string,
+  timeoutMs: number,
+  fetchFn: typeof fetch,
+): Promise<Result<{ status: number; text: string }, DomainError>> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const res = await fetchFn(url, {
+      method: "POST",
+      headers: {
+        "user-api-key": apiKey,
+        "Content-Type": "application/json",
+      },
+      body: bodyJson,
+      signal: controller.signal,
+    });
+    const text = await res.text();
+    return ok({ status: res.status, text });
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : "Channex HTTP network failure";
+    return domainErr("NETWORK_ERROR", `Failed to push availability to Channex: ${msg}`, {
+      url,
+    });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function persistChannexAriAuditLog(
+  docClient: DynamoDBDocumentClient | undefined,
+  tableName: string | undefined,
+  tenantId: string,
+  auditLog: AuditLogEntry,
+  nowIso: string,
+): Promise<void> {
+  if (!docClient || !tableName) return;
+  try {
+    await docClient.send(
+      new PutCommand({
+        TableName: tableName,
+        Item: {
+          PK: `TENANT#${tenantId}`,
+          SK: `AUDIT#${nowIso}#${auditLog.entryHash.substring(0, 8)}`,
+          entityType: "ImmutableAuditLog",
+          id: auditLog.entryHash,
+          tenantId,
+          actorUserId: auditLog.actorUserId,
+          action: auditLog.action,
+          currentHash: auditLog.entryHash,
+          prevHash: auditLog.prevHash,
+          isoTs: auditLog.isoTs,
+          afterJson: auditLog.afterJson,
+        },
+      }),
+    );
+  } catch (_e) {
+    // Non-critical persistence failure handled gracefully
+  }
+}
+
+interface ResolvedChannexParams {
+  readonly tenantId: string;
+  readonly propertyId: string;
+  readonly channexRoomTypeId: string;
+  readonly totalPhysicalRooms: number;
+  readonly nowIso: string;
+  readonly apiKey: string;
+  readonly fetchFn: typeof fetch;
+  readonly baseUrl: string;
+  readonly timeoutMs: number;
+  readonly tableName: string;
+  readonly docClient?: DynamoDBDocumentClient | undefined;
+}
+
+function resolveChannexPushParams(
+  input: PushChannexAvailabilityInput,
+  deps?: ChannexPushDependencies,
+): Result<ResolvedChannexParams, DomainError> {
+  const apiKey = deps?.apiKey ?? process.env.CHANNEX_API_KEY;
+  if (!apiKey) {
+    return domainErr("CONFIG_ERROR", "CHANNEX_API_KEY is not configured for outbound push");
+  }
+
+  const fetchFn = deps?.fetchFn ?? (typeof fetch !== "undefined" ? fetch : undefined);
+  if (!fetchFn) {
+    return domainErr("CONFIG_ERROR", "fetch function is not available in environment");
+  }
+
+  const nowIso = deps?.nowIsoFn ? deps.nowIsoFn() : new Date().toISOString();
+  const propertyId =
+    input.propertyId ?? process.env.CHANNEX_PROPERTY_ID ?? "channex-property-default";
+  const channexRoomTypeId = input.channexRoomTypeId ?? input.roomTypeId;
+  const totalPhysicalRooms = input.totalPhysicalRooms ?? 10;
+  const baseUrl =
+    deps?.apiBaseUrl ?? process.env.CHANNEX_API_BASE_URL ?? "https://staging.channex.io";
+  const timeoutMs = deps?.timeoutMs ?? 4500;
+  const tableName = deps?.tableName ?? process.env.TABLE_NAME ?? "HmsSingleTable";
+
+  return ok({
+    tenantId: input.tenantId,
+    propertyId,
+    channexRoomTypeId,
+    totalPhysicalRooms,
+    nowIso,
+    apiKey,
+    fetchFn,
+    baseUrl,
+    timeoutMs,
+    tableName,
+    docClient: deps?.docClient,
+  });
+}
+
+interface BuildAndAuditResult {
+  readonly payload: ChannexAvailabilityPayload;
+  readonly auditLog: AuditLogEntry;
+}
+
+async function buildAndAuditChannexPayload(
+  input: PushChannexAvailabilityInput,
+  resolved: ResolvedChannexParams,
+  inventoryByDate: readonly DailyInventoryState[],
+): Promise<Result<BuildAndAuditResult, DomainError>> {
+  const payloadRes = buildChannexAvailabilityPayload({
+    tenantId: resolved.tenantId,
+    propertyId: resolved.propertyId,
+    roomMapping: {
+      roomCategoryId: input.roomTypeId,
+      channexRoomTypeId: resolved.channexRoomTypeId,
+      totalPhysicalRooms: resolved.totalPhysicalRooms,
+    },
+    inventoryByDate,
+    authorizedBy: input.actor,
+    subscription: input.subscription,
+    prevAuditHash: input.prevAuditHash,
+    isoTimestamp: resolved.nowIso,
+  });
+  if (!payloadRes.ok) return payloadRes;
+
+  const auditRes = createChannexAriAuditEntry(
+    resolved.tenantId,
+    input.actor?.actorUserId ?? "SYSTEM_FRONT_DESK",
+    "AVAILABILITY",
+    {
+      propertyId: resolved.propertyId,
+      roomTypeId: input.roomTypeId,
+      channexRoomTypeId: resolved.channexRoomTypeId,
+      datesCount: inventoryByDate.length,
+      dates: inventoryByDate.map((d) => d.date),
+    },
+    resolved.nowIso,
+    input.prevAuditHash,
+  );
+  if (!auditRes.ok) return auditRes;
+
+  await persistChannexAriAuditLog(
+    resolved.docClient,
+    resolved.tableName,
+    resolved.tenantId,
+    auditRes.value,
+    resolved.nowIso,
+  );
+
+  return ok({
+    payload: payloadRes.value,
+    auditLog: auditRes.value,
+  });
+}
+
+async function dispatchChannexHttpPost(
+  resolved: ResolvedChannexParams,
+  payload: ChannexAvailabilityPayload,
+): Promise<Result<{ status: number; text: string }, DomainError>> {
+  const url = `${resolved.baseUrl}/api/v1/availability`;
+  const httpRes = await executeChannexHttpPost(
+    url,
+    resolved.apiKey,
+    JSON.stringify(payload),
+    resolved.timeoutMs,
+    resolved.fetchFn,
+  );
+  if (!httpRes.ok) return httpRes;
+
+  if (httpRes.value.status < 200 || httpRes.value.status >= 300) {
+    return domainErr(
+      "CHANNEX_SYNC_FAILED",
+      `Channex API returned HTTP ${httpRes.value.status}: ${httpRes.value.text}`,
+      {
+        statusCode: httpRes.value.status,
+        propertyId: resolved.propertyId,
+        endpoint: url,
+      },
+    );
+  }
+
+  return httpRes;
+}
+
 /**
- * Unified transactional entrypoint for reservation creation, check-in, and check-out.
+ * Pushes updated room availability for a room type to Channex.io within the 5-second SLA.
+ */
+export async function pushChannexAvailabilityUpdate(
+  input: PushChannexAvailabilityInput,
+  deps?: ChannexPushDependencies,
+): Promise<Result<ChannexPushResult, DomainError>> {
+  const tenantRes = validateTenantId(input.tenantId);
+  if (!tenantRes.ok) return tenantRes;
+
+  const resolved = resolveChannexPushParams(input, deps);
+  if (!resolved.ok) return resolved;
+
+  const inventoryRes = buildInventoryStates(input, resolved.value.totalPhysicalRooms);
+  if (!inventoryRes.ok) return inventoryRes;
+
+  const buildRes = await buildAndAuditChannexPayload(input, resolved.value, inventoryRes.value);
+  if (!buildRes.ok) return buildRes;
+
+  const httpRes = await dispatchChannexHttpPost(resolved.value, buildRes.value.payload);
+  if (!httpRes.ok) return httpRes;
+
+  return ok({
+    success: true,
+    statusCode: httpRes.value.status,
+    propertyId: resolved.value.propertyId,
+    roomTypeId: input.roomTypeId,
+    channexRoomTypeId: resolved.value.channexRoomTypeId,
+    datesPushed: inventoryRes.value.map((d) => d.date),
+    payload: buildRes.value.payload,
+    auditLog: buildRes.value.auditLog,
+  });
+}
+
+async function syncReservationToChannexOnCreate(
+  input: CreateReservationTxInput,
+  tenantId: string,
+  deps: ReservationTxDependencies,
+  nowIso: string,
+  prevHash: string,
+): Promise<ChannexPushResult | undefined> {
+  const cfg = deps.channexConfig;
+  if (!cfg) return undefined;
+
+  const propertyId = cfg.propertyId ?? process.env.CHANNEX_PROPERTY_ID ?? "channex-prop-default";
+  const mapping = cfg.roomTypeMap?.[input.roomTypeId];
+  const channexRoomTypeId = mapping?.channexRoomTypeId ?? input.roomTypeId;
+  const totalPhysicalRooms = mapping?.totalPhysicalRooms ?? 10;
+
+  const pushRes = await pushChannexAvailabilityUpdate(
+    {
+      tenantId,
+      propertyId,
+      roomTypeId: input.roomTypeId,
+      channexRoomTypeId,
+      totalPhysicalRooms,
+      startDate: input.checkInDate,
+      endDate: input.checkOutDate,
+      actor: input.actorUserId
+        ? { actorUserId: input.actorUserId, role: "RESERVATIONIST" }
+        : undefined,
+      subscription: cfg.subscription,
+      prevAuditHash: prevHash,
+    },
+    {
+      apiKey: cfg.apiKey,
+      apiBaseUrl: cfg.apiBaseUrl,
+      fetchFn: cfg.fetchFn,
+      docClient: deps.docClient,
+      tableName: deps.tableName,
+      nowIsoFn: () => nowIso,
+      timeoutMs: cfg.timeoutMs,
+    },
+  );
+
+  return pushRes.ok ? pushRes.value : undefined;
+}
+
+interface StayCancellationData {
+  readonly id: string;
+  readonly status: string;
+  readonly folioId?: string | undefined;
+  readonly roomTypeId?: string | undefined;
+  readonly checkInDate?: string | undefined;
+  readonly checkOutDate?: string | undefined;
+  readonly assignedRoomId?: string | undefined;
+  readonly driverDormBedId?: string | undefined;
+}
+
+async function fetchStayForCancellation(
+  tenantId: string,
+  reservationId: string,
+  docClient: DynamoDBDocumentClient,
+  tableName: string,
+): Promise<Result<StayCancellationData, DomainError>> {
+  try {
+    const res = await docClient.send(
+      new GetCommand({
+        TableName: tableName,
+        Key: {
+          PK: `TENANT#${tenantId}`,
+          SK: `STAY#${reservationId}`,
+        },
+      }),
+    );
+    const item = res.Item;
+    if (!item) {
+      return domainErr("NOT_FOUND", `Reservation ${reservationId} not found`);
+    }
+    if (item.status === "CANCELLED") {
+      return domainErr(
+        "RESERVATION_ALREADY_CANCELLED",
+        `Reservation ${reservationId} is already cancelled`,
+      );
+    }
+    if (item.status === "CHECKED_OUT") {
+      return domainErr("INVALID_STATE", `Cannot cancel reservation in '${item.status}' status`);
+    }
+    return ok({
+      id: reservationId,
+      status: String(item.status),
+      folioId: item.folioId,
+      roomTypeId: item.roomTypeId,
+      checkInDate: item.checkInDate,
+      checkOutDate: item.checkOutDate,
+      assignedRoomId: item.assignedRoomId,
+      driverDormBedId: item.driverAccommodation?.driverDormBedId,
+    });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : "Failed to load stay for cancellation";
+    return domainErr("DATABASE_ERROR", msg);
+  }
+}
+
+interface AssembleCancelParams {
+  readonly tenantId: string;
+  readonly input: CancelReservationTxInput;
+  readonly stayData: StayCancellationData;
+  readonly taxInvoice?: TaxBreakdownResult | undefined;
+  readonly auditLog: AuditLogEntry;
+  readonly nowIso: string;
+  readonly tableName: string;
+}
+
+function assembleCancelReservationTransactItems(
+  p: AssembleCancelParams,
+): NonNullable<TransactWriteCommandInput["TransactItems"]> {
+  const items: NonNullable<TransactWriteCommandInput["TransactItems"]> = [
+    {
+      Update: {
+        TableName: p.tableName,
+        Key: {
+          PK: `TENANT#${p.tenantId}`,
+          SK: `STAY#${p.input.reservationId}`,
+        },
+        UpdateExpression:
+          "SET #st = :cancelled, cancellationReason = :reason, cancelledAt = :now, updatedAt = :now",
+        ConditionExpression: "attribute_exists(PK) AND #st NOT IN (:cancelled, :checkedOut)",
+        ExpressionAttributeNames: { "#st": "status" },
+        ExpressionAttributeValues: {
+          ":cancelled": "CANCELLED",
+          ":checkedOut": "CHECKED_OUT",
+          ":reason": p.input.cancellationReason ?? "GUEST_REQUEST",
+          ":now": p.nowIso,
+        },
+      },
+    },
+  ];
+
+  if (p.stayData.assignedRoomId) {
+    items.push({
+      Update: {
+        TableName: p.tableName,
+        Key: {
+          PK: `TENANT#${p.tenantId}`,
+          SK: `ROOM#${p.stayData.assignedRoomId}`,
+        },
+        UpdateExpression:
+          "SET roomStatus = :vacant, currentReservationId = :empty, updatedAt = :now",
+        ConditionExpression: "attribute_exists(PK)",
+        ExpressionAttributeValues: {
+          ":vacant": "VACANT_CLEAN",
+          ":empty": null,
+          ":now": p.nowIso,
+        },
+      },
+    });
+  }
+
+  if (p.stayData.driverDormBedId) {
+    items.push({
+      Update: {
+        TableName: p.tableName,
+        Key: {
+          PK: `TENANT#${p.tenantId}`,
+          SK: `DRIVERBED#${p.stayData.driverDormBedId}`,
+        },
+        UpdateExpression:
+          "SET isOccupied = :false, currentDriverName = :empty, currentDriverPhone = :empty, currentDriverNic = :empty, updatedAt = :now",
+        ConditionExpression: "attribute_exists(PK)",
+        ExpressionAttributeValues: {
+          ":false": false,
+          ":empty": null,
+          ":now": p.nowIso,
+        },
+      },
+    });
+  }
+
+  if (
+    p.stayData.folioId &&
+    p.input.cancellationFeeLkr &&
+    p.input.cancellationFeeLkr > 0 &&
+    p.taxInvoice
+  ) {
+    items.push({
+      Update: {
+        TableName: p.tableName,
+        Key: {
+          PK: `TENANT#${p.tenantId}`,
+          SK: `FOLIO#${p.stayData.folioId}`,
+        },
+        UpdateExpression:
+          "SET #fst = :settled, totalGrossLkr = :fee, balanceLkr = :fee, taxBreakdown = :tax, lockedAt = :now, updatedAt = :now",
+        ConditionExpression: "attribute_exists(PK)",
+        ExpressionAttributeNames: { "#fst": "status" },
+        ExpressionAttributeValues: {
+          ":settled": "SETTLED",
+          ":fee": p.input.cancellationFeeLkr,
+          ":tax": p.taxInvoice,
+          ":now": p.nowIso,
+        },
+      },
+    });
+  }
+
+  items.push(buildAuditTransactItem(p.tenantId, p.auditLog, p.nowIso, p.tableName));
+  return items;
+}
+
+async function syncReservationToChannexOnCancel(
+  stay: StayCancellationData,
+  tenantId: string,
+  deps: ReservationTxDependencies | undefined,
+  nowIso: string,
+  prevHash: string,
+  actorUserId?: string,
+): Promise<ChannexPushResult | undefined> {
+  const cfg = deps?.channexConfig;
+  if (!cfg || !stay.roomTypeId || !stay.checkInDate || !stay.checkOutDate) {
+    return undefined;
+  }
+
+  const propertyId = cfg.propertyId ?? process.env.CHANNEX_PROPERTY_ID ?? "channex-prop-default";
+  const mapping = cfg.roomTypeMap?.[stay.roomTypeId];
+  const channexRoomTypeId = mapping?.channexRoomTypeId ?? stay.roomTypeId;
+  const totalPhysicalRooms = mapping?.totalPhysicalRooms ?? 10;
+
+  const pushRes = await pushChannexAvailabilityUpdate(
+    {
+      tenantId,
+      propertyId,
+      roomTypeId: stay.roomTypeId,
+      channexRoomTypeId,
+      totalPhysicalRooms,
+      startDate: stay.checkInDate,
+      endDate: stay.checkOutDate,
+      remainingAvailability: totalPhysicalRooms,
+      actor: actorUserId ? { actorUserId, role: "RESERVATIONIST" } : undefined,
+      subscription: cfg.subscription,
+      prevAuditHash: prevHash,
+    },
+    {
+      apiKey: cfg.apiKey,
+      apiBaseUrl: cfg.apiBaseUrl,
+      fetchFn: cfg.fetchFn,
+      docClient: deps?.docClient,
+      tableName: deps?.tableName,
+      nowIsoFn: () => nowIso,
+      timeoutMs: cfg.timeoutMs,
+    },
+  );
+
+  return pushRes.ok ? pushRes.value : undefined;
+}
+
+function resolveCancellationTax(fee?: number): Result<TaxBreakdownResult | undefined, DomainError> {
+  if (!fee || fee <= 0) {
+    return ok(undefined);
+  }
+  return calculateForwardTax(roundLkr(fee));
+}
+
+function createCancellationAuditLog(
+  tenantId: string,
+  input: CancelReservationTxInput,
+  stayData: StayCancellationData,
+  taxInvoice: TaxBreakdownResult | undefined,
+  nowIso: string,
+): Result<AuditLogEntry, DomainError> {
+  return createAuditEntry({
+    tenantId,
+    actorUserId: input.actorUserId ?? "FRONT_DESK_AGENT",
+    action: "CANCEL_RESERVATION_TX",
+    entityType: "Reservation",
+    entityId: input.reservationId,
+    isoTs: nowIso,
+    afterJson: JSON.stringify({
+      reservationId: input.reservationId,
+      cancellationReason: input.cancellationReason ?? "GUEST_REQUEST",
+      cancellationFeeLkr: input.cancellationFeeLkr ?? 0,
+      taxInvoice,
+      releasedRoomId: stayData.assignedRoomId,
+      releasedDriverBedId: stayData.driverDormBedId,
+    }),
+    prevHash: input.prevAuditHash,
+  });
+}
+
+/**
+ * 4. Cancels a reservation, vacates room/driver bed, applies 4-stage tax to cancellation fee, and restores Channex availability.
+ */
+export async function executeCancelReservationTx(
+  input: CancelReservationTxInput,
+  deps?: ReservationTxDependencies,
+): Promise<Result<ReservationTxOutput, DomainError>> {
+  const tenantRes = validateTenantId(input.tenantId);
+  if (!tenantRes.ok) return tenantRes;
+  const tenantId = tenantRes.value;
+
+  const docClient = deps?.docClient ?? getDefaultDocClient();
+  const tableName = deps?.tableName ?? process.env.TABLE_NAME ?? "HmsSingleTable";
+  const nowIso = deps?.nowIsoFn ? deps.nowIsoFn() : new Date().toISOString();
+
+  const stayRes = await fetchStayForCancellation(
+    tenantId,
+    input.reservationId,
+    docClient,
+    tableName,
+  );
+  if (!stayRes.ok) return stayRes;
+
+  const taxRes = resolveCancellationTax(input.cancellationFeeLkr);
+  if (!taxRes.ok) return taxRes;
+  const taxInvoice = taxRes.value;
+
+  const auditRes = createCancellationAuditLog(tenantId, input, stayRes.value, taxInvoice, nowIso);
+  if (!auditRes.ok) return auditRes;
+  const auditLog = auditRes.value;
+
+  const transactItems = assembleCancelReservationTransactItems({
+    tenantId,
+    input,
+    stayData: stayRes.value,
+    taxInvoice,
+    auditLog,
+    nowIso,
+    tableName,
+  });
+
+  const commitRes = await commitTxItems(docClient, transactItems);
+  if (!commitRes.ok) return commitRes;
+
+  const channexSyncResult = await syncReservationToChannexOnCancel(
+    stayRes.value,
+    tenantId,
+    deps,
+    nowIso,
+    auditLog.entryHash,
+    input.actorUserId,
+  );
+
+  return ok({
+    action: "CANCEL_RESERVATION",
+    tenantId,
+    reservationId: input.reservationId,
+    status: "CANCELLED",
+    assignedRoomId: stayRes.value.assignedRoomId,
+    folioId: stayRes.value.folioId,
+    taxInvoice,
+    auditLog,
+    channexSyncResult,
+  });
+}
+
+/**
+ * Unified transactional entrypoint for reservation creation, check-in, check-out, and cancellation.
  */
 export async function executeReservationAndCheckInTx(
   action: ReservationTxAction,
@@ -935,6 +1658,8 @@ export async function executeReservationAndCheckInTx(
       return executeCheckInGuestTx(action, deps);
     case "CHECK_OUT_GUEST":
       return executeCheckOutGuestTx(action, deps);
+    case "CANCEL_RESERVATION":
+      return executeCancelReservationTx(action, deps);
   }
 }
 
