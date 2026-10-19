@@ -142,4 +142,5 @@ This file tracks the sequential completion of backend implementation steps defin
 - [x] Step 202: Write Unit Tests for DMC Master vs. Guest Incidental Split Folio Routing (`packages/core/test/splitFolioRouter.test.ts`)
 - [x] Step 215: Implement Credit Note & Tax Invoice Void/Adjustment Engine (`packages/core/src/creditNote.ts`)
 - [x] Step 216: Write Unit Tests for Statutory Credit Note & Tax Reversal Calculations (`packages/core/test/creditNote.test.ts`)
+- [x] Step 224: Write End-to-End Check-In -> Room Service Order -> Split Folio -> Tax Invoice Check-Out Test (`packages/core/test/folioLifecycle.test.ts`)
 
