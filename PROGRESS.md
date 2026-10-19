@@ -137,3 +137,6 @@ This file tracks the sequential completion of backend implementation steps defin
 - [x] Step 195: Write Unit Tests for Booking Confirmation SMS Formatting (`packages/cdk/test/notifyBooking.test.ts`)
 - [x] Step 199: Write End-to-End Direct Booking -> PayHere Webhook -> Tape Chart Lock Test (`packages/core/test/directBookingE2e.test.ts`)
 
+## Phase 09: Guest Folio Ledger, Split Billing, 4-Stage Compounding Tax Invoice & Payment Settlement
+- [x] Step 201: Implement Split-Folio Routing Engine (`packages/core/src/splitFolioRouter.ts`)
+- [x] Step 202: Write Unit Tests for DMC Master vs. Guest Incidental Split Folio Routing (`packages/core/test/splitFolioRouter.test.ts`)
