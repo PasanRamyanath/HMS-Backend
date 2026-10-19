@@ -295,6 +295,143 @@ describe("Unified Webhook Ingress Lambda (webhooksIngress.ts)", () => {
       const parsed = JSON.parse(res.body);
       assert.equal(parsed.code, "HMAC_EXPIRED");
     });
+
+    it("completes full pull, DynamoDB reservation write, tape chart broadcast, and acknowledgment loop", async () => {
+      const { mockClient, sentCommands } = createMockDocClient();
+
+      const timestamp = Math.floor(new Date(TEST_NOW).getTime() / 1000);
+      const webhookPayload = {
+        event: "booking_new",
+        booking_revision_id: "rev-chx-8877",
+        tenantId: "tenant-kandy-heritage",
+      };
+      const rawBody = JSON.stringify(webhookPayload);
+
+      const prefixBuffer = Buffer.from(`${timestamp}.`, "utf8");
+      const rawBuffer = Buffer.from(rawBody, "utf8");
+      const signature = createHmac("sha256", TEST_CHANNEX_SECRET)
+        .update(Buffer.concat([prefixBuffer, rawBuffer]))
+        .digest("hex");
+
+      const event: LambdaFunctionUrlEvent = {
+        rawPath: "/webhooks/channex",
+        requestContext: {
+          http: { method: "POST", path: "/webhooks/channex" },
+        },
+        headers: {
+          "x-hmac-signature-256": signature,
+          "x-channex-timestamp": timestamp.toString(),
+        },
+        body: rawBody,
+      };
+
+      const fetchedBookingPayload = {
+        id: "bkg-rev-8877",
+        ota_reservation_code: "BKG-OTA-8877",
+        ota_name: "Booking.com",
+        status: "new",
+        currency: "LKR",
+        arrival_date: "2026-11-15",
+        departure_date: "2026-11-18",
+        customer: {
+          name: "Kasun",
+          surname: "Rajitha",
+          email: "kasun@gmail.com",
+          country: "LK",
+        },
+        rooms: [
+          {
+            room_type_id: "rt-deluxe-01",
+            breakfast_included: true,
+            occupancy: { adults: 2 },
+            amount: 150000,
+          },
+        ],
+        total_price: 150000,
+        commission_percentage: 15,
+      };
+
+      const fetchCalls: Array<{ url: string; method: string }> = [];
+      const mockFetch = async (input: RequestInfo | URL, init?: RequestInit) => {
+        const urlStr = String(input);
+        const method = init?.method ?? "GET";
+        fetchCalls.push({ url: urlStr, method });
+
+        if (method === "GET" && urlStr.includes("/booking_revisions/rev-chx-8877")) {
+          return new Response(JSON.stringify(fetchedBookingPayload), {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          });
+        }
+        if (method === "POST" && urlStr.includes("/ack")) {
+          return new Response(JSON.stringify({ ok: true }), {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          });
+        }
+        return new Response("Not Found", { status: 404 });
+      };
+
+      const tapeChartEvents: unknown[] = [];
+      const onRoomStatusChanged = async (evt: unknown) => {
+        tapeChartEvents.push(evt);
+      };
+
+      const res = await executeWebhooksIngress(event, {
+        docClient: mockClient,
+        channexSecret: TEST_CHANNEX_SECRET,
+        channexApiKey: "test-channex-api-key",
+        channexApiBaseUrl: "https://api.channex.io",
+        fetchFn: mockFetch as unknown as typeof fetch,
+        nowIsoFn: () => TEST_NOW,
+        roomMap: {
+          "rt-deluxe-01": {
+            localRoomTypeId: "DELUXE_ROOM",
+            localRoomTypeName: "Deluxe Ocean View",
+          },
+        },
+        onRoomStatusChanged,
+      });
+
+      assert.equal(res.statusCode, 200);
+      const parsed = JSON.parse(res.body);
+      assert.equal(parsed.status, "OK");
+      assert.equal(parsed.reservationCreated, true);
+      assert.equal(parsed.acknowledged, true);
+      assert.equal(parsed.bookingRef, "BKG-OTA-8877");
+
+      // Verify GET pull and POST ack were called
+      assert.equal(fetchCalls.length, 2);
+      assert.equal(fetchCalls[0]?.method, "GET");
+      assert.ok(fetchCalls[0]?.url.includes("/api/v1/booking_revisions/rev-chx-8877"));
+      assert.equal(fetchCalls[1]?.method, "POST");
+      assert.ok(fetchCalls[1]?.url.includes("/api/v1/booking_revisions/rev-chx-8877/ack"));
+
+      // Verify DynamoDB Reservation PutCommand
+      const resPutCmd = sentCommands.find(
+        (c) =>
+          c.type === "PutCommand" &&
+          (c.input as { Item: { SK: string } }).Item.SK === "RES#BKG-OTA-8877",
+      ) as { input: { Item: Record<string, unknown> } };
+      assert.ok(resPutCmd, "Expected DynamoDB Reservation PutCommand");
+      assert.equal(resPutCmd.input.Item.entityType, "Reservation");
+      assert.equal(resPutCmd.input.Item.status, "CONFIRMED");
+      assert.equal(resPutCmd.input.Item.mealPlan, "BB");
+      assert.equal(resPutCmd.input.Item.grossTotalLkr, 150000);
+      assert.equal(resPutCmd.input.Item.nights, 3);
+      assert.ok(resPutCmd.input.Item.taxBreakdown);
+
+      // Verify tape chart broadcast
+      assert.equal(tapeChartEvents.length, 1);
+      assert.deepEqual(tapeChartEvents[0], {
+        tenantId: "tenant-kandy-heritage",
+        roomTypeId: "DELUXE_ROOM",
+        checkInDate: "2026-11-15",
+        checkOutDate: "2026-11-18",
+        status: "CONFIRMED",
+        bookingRef: "BKG-OTA-8877",
+      });
+    });
   });
 
   describe("SMSGo Ingress Route (/webhooks/smsgo)", () => {

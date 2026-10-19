@@ -2,10 +2,13 @@ import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import { DynamoDBDocumentClient, PutCommand, UpdateCommand } from "@aws-sdk/lib-dynamodb";
 import {
   type AuditLogEntry,
+  type ChannexRoomMap,
+  type ParsedChannexReservation,
   createChannexWebhookAuditEntry,
   createPayHereWebhookAuditEntry,
   createSmsAuditEntry,
   createWebXPayAuditEntry,
+  parseChannexBookingRevision,
   verifyChannexWebhook,
   verifyPayHereWebhook,
   verifySmsGoWebhook,
@@ -43,6 +46,18 @@ export interface WebhooksIngressDependencies {
   readonly webXPaySecret?: string | undefined;
   readonly channexSecret?: string | undefined;
   readonly smsGoSecret?: string | undefined;
+  readonly channexApiKey?: string | undefined;
+  readonly channexApiBaseUrl?: string | undefined;
+  readonly fetchFn?: typeof fetch | undefined;
+  readonly roomMap?: ChannexRoomMap | undefined;
+  readonly onRoomStatusChanged?: (event: {
+    tenantId: string;
+    roomTypeId: string;
+    checkInDate: string;
+    checkOutDate: string;
+    status: string;
+    bookingRef: string;
+  }) => Promise<void> | void;
 }
 
 let defaultDocClient: DynamoDBDocumentClient | undefined;
@@ -275,14 +290,176 @@ async function handleWebXPayRoute(
   };
 }
 
-async function handleChannexRoute(
-  event: LambdaFunctionUrlEvent,
-  bodyStr: string,
+async function pullBookingRevisionIfConfigured(
+  revisionId: string | undefined,
+  deps: WebhooksIngressDependencies | undefined,
+): Promise<Record<string, unknown> | undefined> {
+  if (!revisionId) return undefined;
+  const fetchFn = deps?.fetchFn ?? (typeof fetch !== "undefined" ? fetch : undefined);
+  if (!fetchFn) return undefined;
+
+  const baseUrl =
+    deps?.channexApiBaseUrl ?? process.env.CHANNEX_API_BASE_URL ?? "https://staging.channex.io";
+  const apiKey = deps?.channexApiKey ?? process.env.CHANNEX_API_KEY ?? "";
+  if (!apiKey) return undefined;
+
+  try {
+    const res = await fetchFn(`${baseUrl}/api/v1/booking_revisions/${revisionId}`, {
+      method: "GET",
+      headers: {
+        "user-api-key": apiKey,
+        "Content-Type": "application/json",
+      },
+    });
+    if (!res.ok) return undefined;
+    const json = (await res.json()) as Record<string, unknown>;
+    return ((json?.data as Record<string, unknown>) ?? json) as Record<string, unknown>;
+  } catch (_e) {
+    return undefined;
+  }
+}
+
+async function acknowledgeBookingRevisionIfConfigured(
+  revisionId: string | undefined,
+  deps: WebhooksIngressDependencies | undefined,
+): Promise<boolean> {
+  if (!revisionId) return false;
+  const fetchFn = deps?.fetchFn ?? (typeof fetch !== "undefined" ? fetch : undefined);
+  if (!fetchFn) return false;
+
+  const baseUrl =
+    deps?.channexApiBaseUrl ?? process.env.CHANNEX_API_BASE_URL ?? "https://staging.channex.io";
+  const apiKey = deps?.channexApiKey ?? process.env.CHANNEX_API_KEY ?? "";
+  if (!apiKey) return false;
+
+  try {
+    const res = await fetchFn(`${baseUrl}/api/v1/booking_revisions/${revisionId}/ack`, {
+      method: "POST",
+      headers: {
+        "user-api-key": apiKey,
+        "Content-Type": "application/json",
+      },
+    });
+    return res.ok;
+  } catch (_e) {
+    return false;
+  }
+}
+
+async function writeParsedOtaReservation(
+  docClient: DynamoDBDocumentClient,
+  tableName: string,
+  tenantId: string,
+  res: ParsedChannexReservation,
+  nowIso: string,
+): Promise<void> {
+  const roomType = res.rooms[0]?.localRoomTypeId ?? "UNALLOCATED";
+  await docClient.send(
+    new PutCommand({
+      TableName: tableName,
+      Item: {
+        PK: `TENANT#${tenantId}`,
+        SK: `RES#${res.bookingRef}`,
+        GSI1PK: `TENANT#${tenantId}#RESDATE`,
+        GSI1SK: `CHECKIN#${res.checkInDate}#${res.bookingRef}`,
+        GSI2PK: `TENANT#${tenantId}#ROOMRES#${roomType}`,
+        GSI2SK: `DATE#${res.checkInDate}#${res.checkOutDate}`,
+        entityType: "Reservation",
+        bookingRef: res.bookingRef,
+        otaReservationCode: res.otaReservationCode,
+        channexBookingId: res.channexBookingId,
+        source: res.source,
+        status: res.status,
+        guest: res.guest,
+        rooms: res.rooms,
+        mealPlan: res.mealPlan,
+        checkInDate: res.checkInDate,
+        checkOutDate: res.checkOutDate,
+        nights: res.nights,
+        quotedCurrency: res.quotedCurrency,
+        originalTotalPrice: res.originalTotalPrice,
+        grossTotalLkr: res.grossTotalLkr,
+        otaCommissionAmountLkr: res.otaCommissionAmountLkr,
+        otaCommissionPercentage: res.otaCommissionPercentage,
+        netPayableToHotelLkr: res.netPayableToHotelLkr,
+        taxBreakdown: res.taxBreakdown,
+        specialRequests: res.specialRequests,
+        createdAt: nowIso,
+        updatedAt: nowIso,
+      },
+    }),
+  );
+}
+
+async function broadcastTapeChartUpdate(
+  deps: WebhooksIngressDependencies | undefined,
+  tenantId: string,
+  res: ParsedChannexReservation,
+): Promise<void> {
+  if (deps?.onRoomStatusChanged) {
+    try {
+      await deps.onRoomStatusChanged({
+        tenantId,
+        roomTypeId: res.rooms[0]?.localRoomTypeId ?? "UNALLOCATED",
+        checkInDate: res.checkInDate,
+        checkOutDate: res.checkOutDate,
+        status: res.status,
+        bookingRef: res.bookingRef,
+      });
+    } catch (_e) {
+      // Event broadcast error does not fail webhook ack
+    }
+  }
+}
+
+async function processBookingRevisionIfRoomsExist(
+  bookingPayload: Record<string, unknown>,
+  tenantId: string,
   deps: WebhooksIngressDependencies | undefined,
   docClient: DynamoDBDocumentClient,
   tableName: string,
   nowIso: string,
-): Promise<LambdaFunctionUrlResponse> {
+): Promise<{ otaRef?: string; reservationCreated: boolean }> {
+  if (!Array.isArray(bookingPayload.rooms) || bookingPayload.rooms.length === 0) {
+    return { reservationCreated: false };
+  }
+
+  const roomMap = deps?.roomMap ?? {
+    [String(
+      (bookingPayload.rooms as Record<string, unknown>[])?.[0]?.room_type_id ?? "rt-default",
+    )]: {
+      localRoomTypeId: "STANDARD",
+      localRoomTypeName: "Standard Room",
+    },
+  };
+
+  const parseRes = parseChannexBookingRevision(bookingPayload, roomMap, undefined, {
+    tenantId,
+    isoTs: nowIso,
+  });
+
+  if (!parseRes.ok) {
+    return { reservationCreated: false };
+  }
+
+  try {
+    await writeParsedOtaReservation(docClient, tableName, tenantId, parseRes.value, nowIso);
+    if (parseRes.value.auditLog) {
+      await persistAuditLog(docClient, tableName, tenantId, parseRes.value.auditLog, nowIso);
+    }
+    await broadcastTapeChartUpdate(deps, tenantId, parseRes.value);
+    return { otaRef: parseRes.value.bookingRef, reservationCreated: true };
+  } catch (_e) {
+    return { otaRef: parseRes.value.bookingRef, reservationCreated: false };
+  }
+}
+
+function verifyChannexRequest(
+  event: LambdaFunctionUrlEvent,
+  bodyStr: string,
+  deps: WebhooksIngressDependencies | undefined,
+  nowIso: string,
+) {
   const secret =
     deps?.channexSecret ?? process.env.CHANNEX_WEBHOOK_SECRET ?? "channex-secret-key-default";
   const sigHeader =
@@ -294,13 +471,57 @@ async function handleChannexRoute(
     Math.floor(new Date(nowIso).getTime() / 1000).toString();
 
   const nowEpoch = Math.floor(new Date(nowIso).getTime() / 1000);
-  const verifyRes = verifyChannexWebhook({
+  return verifyChannexWebhook({
     rawBody: bodyStr,
     signatureHeader: sigHeader,
     timestampHeader: tsHeader,
     secret,
     nowEpoch,
   });
+}
+
+async function persistOtaWebhookEnvelope(
+  docClient: DynamoDBDocumentClient,
+  tableName: string,
+  tenantId: string,
+  bookingId: string,
+  otaRef: string | undefined,
+  eventType: string,
+  parsed: Record<string, unknown>,
+  nowIso: string,
+): Promise<void> {
+  try {
+    await docClient.send(
+      new PutCommand({
+        TableName: tableName,
+        Item: {
+          PK: `TENANT#${tenantId}`,
+          SK: `OTA#${bookingId}`,
+          GSI1PK: `TENANT#${tenantId}#OTA_BOOKINGS`,
+          GSI1SK: nowIso,
+          entityType: "OtaWebhook",
+          bookingId,
+          bookingRef: otaRef ?? bookingId,
+          eventType,
+          payload: parsed,
+          createdAt: nowIso,
+        },
+      }),
+    );
+  } catch (_e) {
+    // In tests without DynamoDB, continue
+  }
+}
+
+async function handleChannexRoute(
+  event: LambdaFunctionUrlEvent,
+  bodyStr: string,
+  deps: WebhooksIngressDependencies | undefined,
+  docClient: DynamoDBDocumentClient,
+  tableName: string,
+  nowIso: string,
+): Promise<LambdaFunctionUrlResponse> {
+  const verifyRes = verifyChannexRequest(event, bodyStr, deps, nowIso);
   if (!verifyRes.ok) {
     return {
       statusCode: 400,
@@ -311,9 +532,16 @@ async function handleChannexRoute(
 
   const parsed = parseBodyAsJsonOrForm(bodyStr);
   const eventType = String(parsed.event ?? "booking_created");
-  const booking = (parsed.booking as Record<string, unknown>) ?? parsed;
-  const bookingId = String(booking.id ?? booking.booking_id ?? "OTA-BOOKING-001");
-  const tenantId = String(parsed.tenantId ?? booking.tenantId ?? "DEFAULT_TENANT");
+  const revisionId =
+    (typeof parsed.booking_revision_id === "string" ? parsed.booking_revision_id : undefined) ??
+    (typeof parsed.revision_id === "string" ? parsed.revision_id : undefined);
+
+  // Pull revision details from Channex API if revisionId provided and not already in body
+  const pulledData = await pullBookingRevisionIfConfigured(revisionId, deps);
+  const bookingPayload = pulledData ?? (parsed.booking as Record<string, unknown>) ?? parsed;
+
+  const bookingId = String(bookingPayload.id ?? bookingPayload.booking_id ?? "OTA-BOOKING-001");
+  const tenantId = String(parsed.tenantId ?? bookingPayload.tenantId ?? "DEFAULT_TENANT");
 
   const auditRes = createChannexWebhookAuditEntry(
     tenantId,
@@ -327,31 +555,39 @@ async function handleChannexRoute(
     await persistAuditLog(docClient, tableName, tenantId, auditRes.value, nowIso);
   }
 
-  try {
-    await docClient.send(
-      new PutCommand({
-        TableName: tableName,
-        Item: {
-          PK: `TENANT#${tenantId}`,
-          SK: `OTA#${bookingId}`,
-          GSI1PK: `TENANT#${tenantId}#OTA_BOOKINGS`,
-          GSI1SK: nowIso,
-          entityType: "OtaWebhook",
-          bookingId,
-          eventType,
-          payload: parsed,
-          createdAt: nowIso,
-        },
-      }),
-    );
-  } catch (_e) {
-    // In tests without DynamoDB, continue
-  }
+  const { otaRef, reservationCreated } = await processBookingRevisionIfRoomsExist(
+    bookingPayload,
+    tenantId,
+    deps,
+    docClient,
+    tableName,
+    nowIso,
+  );
+
+  await persistOtaWebhookEnvelope(
+    docClient,
+    tableName,
+    tenantId,
+    bookingId,
+    otaRef,
+    eventType,
+    parsed,
+    nowIso,
+  );
+
+  const acknowledged = await acknowledgeBookingRevisionIfConfigured(revisionId, deps);
 
   return {
     statusCode: 200,
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ status: "OK", bookingId, eventType }),
+    body: JSON.stringify({
+      status: "OK",
+      bookingId,
+      bookingRef: otaRef ?? bookingId,
+      eventType,
+      reservationCreated,
+      acknowledged,
+    }),
   };
 }
 

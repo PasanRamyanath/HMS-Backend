@@ -127,6 +127,8 @@ This file tracks the sequential completion of backend implementation steps defin
 - [x] Step 176: Implement Channex ARI (Availability, Rates, Inventory) Payload Builder (`packages/core/src/channexAri.ts`)
 - [x] Step 177: Implement Channex Booking Revision Parser (`packages/core/src/channexAri.ts`)
 - [x] Step 178: Write Unit Tests for Channex Booking.com & Agoda Revision Payloads (`packages/core/test/channexAri.test.ts`)
+- [x] Step 179: Extend `webhooksIngress.ts` to Pull & Acknowledge Channex Booking Revisions (`packages/cdk/lambdas/webhooksIngress.ts`)
+
 
 
 
