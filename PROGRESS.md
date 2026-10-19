@@ -118,3 +118,5 @@ This file tracks the sequential completion of backend implementation steps defin
 
 ## Phase 07: Front-Desk Tape Chart, Reservations, Walk-Ins, Tour Operators (DMC) & Driver Quarters
 - [x] Step 152: Implement Date-Range Conflict & Room Availability Filter (`packages/core/src/availabilityFilter.ts`)
+- [x] Step 153: Write Unit Tests for Back-to-Back Same-Day Turnaround (`packages/core/test/availabilityFilter.test.ts`)
+

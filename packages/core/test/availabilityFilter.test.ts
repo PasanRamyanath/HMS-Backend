@@ -452,4 +452,425 @@ describe("Date-Range Conflict & Room Availability Filter (availabilityFilter.ts)
       }
     });
   });
+
+  describe("Back-to-Back Same-Day Turnaround ([checkIn, checkOut) Semantics)", () => {
+    const testRooms: ReadonlyArray<RoomInventoryItem> = [
+      {
+        id: "rm-101",
+        tenantId,
+        roomNumber: "101",
+        roomTypeId: "rt-ocean-view",
+        building: "Villa Lotus",
+        floor: "1",
+        isActive: true,
+      },
+      {
+        id: "rm-102",
+        tenantId,
+        roomNumber: "102",
+        roomTypeId: "rt-ocean-view",
+        building: "Villa Lotus",
+        floor: "1",
+        isActive: true,
+      },
+      {
+        id: "rm-103",
+        tenantId,
+        roomNumber: "103",
+        roomTypeId: "rt-ocean-view",
+        building: "Villa Lotus",
+        floor: "1",
+        isActive: true,
+      },
+    ];
+
+    it("allows immediate check-in at 14:00 when prior guest checks out at 11:00 on the same date", () => {
+      // Prior reservation: Guest departing 2026-10-20 (Check-out 11:00 AM)
+      const existing: ReadonlyArray<ExistingReservationSlot> = [
+        {
+          id: "res-departing",
+          tenantId,
+          roomId: "rm-101",
+          roomTypeId: "rt-ocean-view",
+          checkInDate: "2026-10-15",
+          checkOutDate: "2026-10-20",
+          status: "CHECKED_IN",
+        },
+      ];
+
+      // New reservation inquiry: Guest arriving 2026-10-20 (Check-in 14:00 PM) -> 2026-10-25
+      const singleCheck = checkSingleRoomAvailability({
+        tenantId,
+        roomId: "rm-101",
+        checkInDate: "2026-10-20",
+        checkOutDate: "2026-10-25",
+        reservations: existing,
+      });
+
+      assert.strictEqual(singleCheck.ok, true);
+      if (singleCheck.ok) {
+        assert.strictEqual(singleCheck.value, true);
+      }
+
+      const multiCheck = filterAvailableRooms({
+        tenantId,
+        checkInDate: "2026-10-20",
+        checkOutDate: "2026-10-25",
+        rooms: testRooms,
+        reservations: existing,
+      });
+
+      assert.strictEqual(multiCheck.ok, true);
+      if (multiCheck.ok) {
+        assert.strictEqual(multiCheck.value.availableRoomsCount, 3);
+        assert.strictEqual(multiCheck.value.conflictingRoomIds.length, 0);
+        assert.strictEqual(multiCheck.value.isAvailable, true);
+      }
+    });
+
+    it("supports multi-guest sequential booking chains with back-to-back same-day handoffs", () => {
+      // 3 sequential contiguous stays on the same room
+      // Guest A: [2026-10-10, 2026-10-14)
+      // Guest B: [2026-10-14, 2026-10-18)
+      // Guest C: [2026-10-18, 2026-10-22)
+      const bookingChain: ReadonlyArray<ExistingReservationSlot> = [
+        {
+          id: "chain-guest-a",
+          tenantId,
+          roomId: "rm-101",
+          roomTypeId: "rt-ocean-view",
+          checkInDate: "2026-10-10",
+          checkOutDate: "2026-10-14",
+          status: "CHECKED_OUT",
+        },
+        {
+          id: "chain-guest-b",
+          tenantId,
+          roomId: "rm-101",
+          roomTypeId: "rt-ocean-view",
+          checkInDate: "2026-10-14",
+          checkOutDate: "2026-10-18",
+          status: "CHECKED_IN",
+        },
+        {
+          id: "chain-guest-c",
+          tenantId,
+          roomId: "rm-101",
+          roomTypeId: "rt-ocean-view",
+          checkInDate: "2026-10-18",
+          checkOutDate: "2026-10-22",
+          status: "CONFIRMED",
+        },
+      ];
+
+      // Next guest arriving exactly on 2026-10-22: [2026-10-22, 2026-10-26)
+      const nextGuest = checkSingleRoomAvailability({
+        tenantId,
+        roomId: "rm-101",
+        checkInDate: "2026-10-22",
+        checkOutDate: "2026-10-26",
+        reservations: bookingChain,
+      });
+      assert.strictEqual(nextGuest.ok, true);
+      if (nextGuest.ok) {
+        assert.strictEqual(nextGuest.value, true);
+      }
+
+      // Guest arriving before Guest A: [2026-10-06, 2026-10-10)
+      const priorGuest = checkSingleRoomAvailability({
+        tenantId,
+        roomId: "rm-101",
+        checkInDate: "2026-10-06",
+        checkOutDate: "2026-10-10",
+        reservations: bookingChain,
+      });
+      assert.strictEqual(priorGuest.ok, true);
+      if (priorGuest.ok) {
+        assert.strictEqual(priorGuest.value, true);
+      }
+
+      // Guest overlapping across boundary [2026-10-13, 2026-10-15) must conflict with both A and B
+      const overlappingGuest = checkSingleRoomAvailability({
+        tenantId,
+        roomId: "rm-101",
+        checkInDate: "2026-10-13",
+        checkOutDate: "2026-10-15",
+        reservations: bookingChain,
+      });
+      assert.strictEqual(overlappingGuest.ok, true);
+      if (overlappingGuest.ok) {
+        assert.strictEqual(overlappingGuest.value, false);
+      }
+    });
+
+    it("permits guest check-in on the exact day a scheduled maintenance block concludes", () => {
+      // AC deep-cleaning scheduled until 2026-10-20
+      const maintenanceBlocks: ReadonlyArray<MaintenanceBlock> = [
+        {
+          id: "maint-1",
+          tenantId,
+          roomId: "rm-102",
+          startDate: "2026-10-17",
+          endDate: "2026-10-20",
+          reason: "Air Conditioner Deep Sanitization & Filter Replacement",
+        },
+      ];
+
+      // Guest checks in on 2026-10-20 after maintenance completes
+      const res = filterAvailableRooms({
+        tenantId,
+        checkInDate: "2026-10-20",
+        checkOutDate: "2026-10-24",
+        rooms: testRooms,
+        reservations: [],
+        maintenanceBlocks,
+      });
+
+      assert.strictEqual(res.ok, true);
+      if (res.ok) {
+        assert.strictEqual(res.value.availableRoomsCount, 3);
+        assert.strictEqual(res.value.conflictingRoomIds.includes("rm-102"), false);
+        assert.strictEqual(res.value.isAvailable, true);
+      }
+    });
+
+    it("permits scheduled maintenance block to start on the exact day a guest checks out", () => {
+      // Guest checks out on 2026-10-20
+      const guestReservations: ReadonlyArray<ExistingReservationSlot> = [
+        {
+          id: "res-guest-departing",
+          tenantId,
+          roomId: "rm-103",
+          roomTypeId: "rt-ocean-view",
+          checkInDate: "2026-10-16",
+          checkOutDate: "2026-10-20",
+          status: "CHECKED_IN",
+        },
+      ];
+
+      // Routine plumbing overhaul starting on 2026-10-20
+      const maintenanceBlocks: ReadonlyArray<MaintenanceBlock> = [
+        {
+          id: "maint-2",
+          tenantId,
+          roomId: "rm-103",
+          startDate: "2026-10-20",
+          endDate: "2026-10-23",
+          reason: "Plumbing Overhaul",
+        },
+      ];
+
+      // Verify room 103 is available for the departing guest's window [16, 20) without collision with maintenance
+      const priorCheck = checkSingleRoomAvailability({
+        tenantId,
+        roomId: "rm-103",
+        checkInDate: "2026-10-16",
+        checkOutDate: "2026-10-20",
+        reservations: [],
+        maintenanceBlocks,
+      });
+
+      assert.strictEqual(priorCheck.ok, true);
+      if (priorCheck.ok) {
+        assert.strictEqual(priorCheck.value, true);
+      }
+
+      // And for the maintenance window [20, 23), room 103 does not conflict with the departing guest
+      const duringMaint = checkSingleRoomAvailability({
+        tenantId,
+        roomId: "rm-103",
+        checkInDate: "2026-10-20",
+        checkOutDate: "2026-10-23",
+        reservations: guestReservations,
+        maintenanceBlocks: [],
+      });
+
+      assert.strictEqual(duringMaint.ok, true);
+      if (duringMaint.ok) {
+        assert.strictEqual(duringMaint.value, true);
+      }
+    });
+
+    it("handles rapid single-night back-to-back stays without collision", () => {
+      // 3 consecutive 1-night stays on room 101:
+      // Night 1: [2026-11-01, 2026-11-02)
+      // Night 2: [2026-11-02, 2026-11-03)
+      // Night 3: [2026-11-03, 2026-11-04)
+      const oneNightReservations: ReadonlyArray<ExistingReservationSlot> = [
+        {
+          id: "stay-night-1",
+          tenantId,
+          roomId: "rm-101",
+          roomTypeId: "rt-ocean-view",
+          checkInDate: "2026-11-01",
+          checkOutDate: "2026-11-02",
+          status: "CONFIRMED",
+        },
+        {
+          id: "stay-night-2",
+          tenantId,
+          roomId: "rm-101",
+          roomTypeId: "rt-ocean-view",
+          checkInDate: "2026-11-02",
+          checkOutDate: "2026-11-03",
+          status: "CONFIRMED",
+        },
+      ];
+
+      // Checking availability for Night 3: [2026-11-03, 2026-11-04)
+      const night3Check = checkSingleRoomAvailability({
+        tenantId,
+        roomId: "rm-101",
+        checkInDate: "2026-11-03",
+        checkOutDate: "2026-11-04",
+        reservations: oneNightReservations,
+      });
+
+      assert.strictEqual(night3Check.ok, true);
+      if (night3Check.ok) {
+        assert.strictEqual(night3Check.value, true);
+      }
+
+      // Inquiry overlapping 1 hour or 1 night across night 1 & 2 [2026-11-01, 2026-11-03) should conflict
+      const twoNightOverlap = checkSingleRoomAvailability({
+        tenantId,
+        roomId: "rm-101",
+        checkInDate: "2026-11-01",
+        checkOutDate: "2026-11-03",
+        reservations: oneNightReservations,
+      });
+
+      assert.strictEqual(twoNightOverlap.ok, true);
+      if (twoNightOverlap.ok) {
+        assert.strictEqual(twoNightOverlap.value, false);
+      }
+    });
+
+    it("processes entire property turnaround on checkout day for group reservations", () => {
+      // Entire hotel (rm-101, rm-102, rm-103) departing 2026-10-20
+      const groupDeparture: ReadonlyArray<ExistingReservationSlot> = [
+        {
+          id: "grp-1",
+          tenantId,
+          roomId: "rm-101",
+          roomTypeId: "rt-ocean-view",
+          checkInDate: "2026-10-15",
+          checkOutDate: "2026-10-20",
+          status: "CHECKED_IN",
+        },
+        {
+          id: "grp-2",
+          tenantId,
+          roomId: "rm-102",
+          roomTypeId: "rt-ocean-view",
+          checkInDate: "2026-10-15",
+          checkOutDate: "2026-10-20",
+          status: "CHECKED_IN",
+        },
+        {
+          id: "grp-3",
+          tenantId,
+          roomId: "rm-103",
+          roomTypeId: "rt-ocean-view",
+          checkInDate: "2026-10-15",
+          checkOutDate: "2026-10-20",
+          status: "CHECKED_IN",
+        },
+      ];
+
+      // New corporate group checking in on 2026-10-20 for 3 rooms
+      const groupArrival = filterAvailableRooms({
+        tenantId,
+        checkInDate: "2026-10-20",
+        checkOutDate: "2026-10-25",
+        roomTypeId: "rt-ocean-view",
+        requestedCount: 3,
+        rooms: testRooms,
+        reservations: groupDeparture,
+      });
+
+      assert.strictEqual(groupArrival.ok, true);
+      if (groupArrival.ok) {
+        assert.strictEqual(groupArrival.value.availableRoomsCount, 3);
+        assert.strictEqual(groupArrival.value.availableCountByRoomType["rt-ocean-view"], 3);
+        assert.strictEqual(groupArrival.value.conflictingRoomIds.length, 0);
+        assert.strictEqual(groupArrival.value.isAvailable, true);
+      }
+    });
+
+    it("supports same-day turnaround in chauffeur dormitory beds", () => {
+      const beds: ReadonlyArray<DriverDormBedItem> = [
+        {
+          id: "bed-sl-1",
+          tenantId,
+          bedNumber: "D-01",
+          dormName: "Chauffeur Quarters North",
+          gender: "MALE",
+          isActive: true,
+        },
+      ];
+
+      // Chauffeur 1 departs 2026-10-20 morning
+      const bedBookings: ReadonlyArray<ExistingDriverBedBooking> = [
+        {
+          id: "driver-booking-1",
+          tenantId,
+          driverBedId: "bed-sl-1",
+          checkInDate: "2026-10-17",
+          checkOutDate: "2026-10-20",
+          status: "CHECKED_IN",
+        },
+      ];
+
+      // Chauffeur 2 arrives 2026-10-20 afternoon
+      const bedCheck = filterAvailableDriverBeds({
+        tenantId,
+        checkInDate: "2026-10-20",
+        checkOutDate: "2026-10-23",
+        gender: "MALE",
+        requestedBedsCount: 1,
+        driverBeds: beds,
+        existingBookings: bedBookings,
+      });
+
+      assert.strictEqual(bedCheck.ok, true);
+      if (bedCheck.ok) {
+        assert.strictEqual(bedCheck.value.availableBedsCount, 1);
+        assert.strictEqual(bedCheck.value.isAvailable, true);
+        assert.strictEqual(bedCheck.value.availableBeds[0]?.id, "bed-sl-1");
+      }
+    });
+
+    it("does not deduct unallocated room-type pool for non-overlapping same-day check-in", () => {
+      // DMC unallocated room-type reservation departing 2026-10-20
+      const unallocatedSlots: ReadonlyArray<ExistingReservationSlot> = [
+        {
+          id: "dmc-unallocated-1",
+          tenantId,
+          roomTypeId: "rt-ocean-view",
+          checkInDate: "2026-10-15",
+          checkOutDate: "2026-10-20",
+          status: "CONFIRMED",
+        },
+      ];
+
+      // Walk-in booking arriving 2026-10-20
+      const res = filterAvailableRooms({
+        tenantId,
+        checkInDate: "2026-10-20",
+        checkOutDate: "2026-10-22",
+        roomTypeId: "rt-ocean-view",
+        requestedCount: 3,
+        rooms: testRooms,
+        reservations: unallocatedSlots,
+      });
+
+      assert.strictEqual(res.ok, true);
+      if (res.ok) {
+        // All 3 rooms are available because unallocated reservation concluded on 2026-10-20
+        assert.strictEqual(res.value.availableCountByRoomType["rt-ocean-view"], 3);
+        assert.strictEqual(res.value.isAvailable, true);
+      }
+    });
+  });
 });
