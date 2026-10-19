@@ -115,3 +115,6 @@ This file tracks the sequential completion of backend implementation steps defin
 - [x] Step 142: Write Unit Tests for `calculateStayQuote` Across Resident & Foreign Bookings in `packages/core/test/rateQuote.test.ts`
 - [x] Step 144: Add Audit Trail Logger for Tax & Rate Modifications (`packages/graphql/resolvers/auditLog.ts`)
 - [x] Step 149: Write Integration Test for Property Setup & Tax Preset Persistence (`packages/core/test/propertySetup.test.ts`)
+
+## Phase 07: Front-Desk Tape Chart, Reservations, Walk-Ins, Tour Operators (DMC) & Driver Quarters
+- [x] Step 152: Implement Date-Range Conflict & Room Availability Filter (`packages/core/src/availabilityFilter.ts`)
