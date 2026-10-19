@@ -354,3 +354,91 @@ export function processGuestOrderIdempotency(
     auditEntry: auditResult.value,
   });
 }
+
+// ============================================================================
+// Inbound Idempotency Evaluation (Duplicate Tap & Replay Resolution)
+// ============================================================================
+
+export type IdempotencyResolution =
+  | {
+      readonly status: "NEW_ORDER";
+      readonly order: ValidatedGuestOrderResult;
+    }
+  | {
+      readonly status: "IDEMPOTENT_REPLAY";
+      readonly orderId: string;
+      readonly grandTotalLkr: number;
+      readonly existingRecord: IdempotencyRecord;
+      readonly isDuplicateTap: true;
+    };
+
+/**
+ * Evaluates an inbound guest order request against any existing idempotency record found in DynamoDB.
+ *
+ * If no existing record exists:
+ *   Validates request, computes statutory taxes and returns status: "NEW_ORDER".
+ *
+ * If an existing record exists with matching tenantId and requestHash:
+ *   Returns status: "IDEMPOTENT_REPLAY" with the original orderId and grandTotalLkr,
+ *   preventing double-posting to the guest room folio or double KDS dispatch.
+ *
+ * If an existing record exists with a DIFFERENT requestHash:
+ *   Rejects with IDEMPOTENCY_PAYLOAD_MISMATCH domain error to prevent key collisions or tampering.
+ */
+export function evaluateInboundOrderIdempotency(
+  request: CreateGuestOrderRequest,
+  existingRecord?: IdempotencyRecord | undefined,
+  prevAuditHash = GENESIS_HASH,
+): Result<IdempotencyResolution, DomainError> {
+  const basicsResult = validateOrderRequestBasics(request);
+  if (!basicsResult.ok) {
+    return basicsResult;
+  }
+
+  if (!existingRecord) {
+    const processResult = processGuestOrderIdempotency(request, prevAuditHash);
+    if (!processResult.ok) {
+      return processResult;
+    }
+    return ok({
+      status: "NEW_ORDER",
+      order: processResult.value,
+    });
+  }
+
+  if (existingRecord.tenantId !== request.tenantId) {
+    return domainErr("TENANT_MISMATCH", "Idempotency record tenant does not match request tenant", {
+      expected: existingRecord.tenantId,
+      received: request.tenantId,
+    });
+  }
+
+  if (existingRecord.status === "FAILED") {
+    return domainErr(
+      "IDEMPOTENCY_PREVIOUS_FAILURE",
+      "Previous order submission with this idempotency key failed",
+      { clientOrderUuid: request.clientOrderUuid, orderId: existingRecord.orderId },
+    );
+  }
+
+  const incomingHash = computeOrderRequestHash(request);
+  if (existingRecord.requestHash !== incomingHash) {
+    return domainErr(
+      "IDEMPOTENCY_PAYLOAD_MISMATCH",
+      "Idempotency key clientOrderUuid was previously used with different order payload or parameters",
+      {
+        clientOrderUuid: request.clientOrderUuid,
+        existingHash: existingRecord.requestHash,
+        incomingHash,
+      },
+    );
+  }
+
+  return ok({
+    status: "IDEMPOTENT_REPLAY",
+    orderId: existingRecord.orderId,
+    grandTotalLkr: existingRecord.grandTotalLkr,
+    existingRecord,
+    isDuplicateTap: true,
+  });
+}

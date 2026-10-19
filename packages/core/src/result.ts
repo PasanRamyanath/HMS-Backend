@@ -45,7 +45,9 @@ export type DomainErrorCode =
   | "CREDIT_LIMIT_EXCEEDED"
   | "INVOICE_ALREADY_CREDITED"
   | "IDEMPOTENCY_CONFLICT"
-  | "INVALID_IDEMPOTENCY_KEY";
+  | "INVALID_IDEMPOTENCY_KEY"
+  | "IDEMPOTENCY_PAYLOAD_MISMATCH"
+  | "IDEMPOTENCY_PREVIOUS_FAILURE";
 
 export interface DomainError {
   readonly code: DomainErrorCode;

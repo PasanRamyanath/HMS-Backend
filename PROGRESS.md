@@ -155,6 +155,8 @@ This file tracks the sequential completion of backend implementation steps defin
 
 ## Phase 11: Contactless Guest Mobile PWA, Room Service & LankaQR Payment Portal
 - [x] Step 270: Implement Idempotency Key Guard on Guest Order Submission (`packages/core/src/orderIdempotency.ts`)
+- [x] Step 271: Write Unit Tests for Order Idempotency & Duplicate Tap Prevention (`packages/core/test/orderIdempotency.test.ts`)
+
 
 
 

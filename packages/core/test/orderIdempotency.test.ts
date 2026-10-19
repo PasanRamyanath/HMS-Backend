@@ -7,6 +7,7 @@ import {
   buildDynamoDbIdempotencyCondition,
   buildIdempotencyRecord,
   computeOrderRequestHash,
+  evaluateInboundOrderIdempotency,
   processGuestOrderIdempotency,
   validateIdempotencyKey,
 } from "../src/orderIdempotency.js";
@@ -253,6 +254,154 @@ describe("Step 270: Guest Order Idempotency Guard (orderIdempotency.ts)", () => 
         assert.strictEqual(val.taxBreakdown.vatLkr, 204.93);
         assert.strictEqual(val.grandTotalLkr, 1343.43);
       }
+    });
+  });
+
+  describe("4. Step 271: evaluateInboundOrderIdempotency & Duplicate Tap Prevention", () => {
+    const baseRequest: CreateGuestOrderRequest = {
+      tenantId: "tenant-sigiriya-resort",
+      clientOrderUuid: "uuid-safari-tap-12345",
+      locationId: "chalet-08",
+      items: [
+        {
+          dishId: "dish-hopper-set",
+          dishName: "Egg Hopper Trio with Seeni Sambol",
+          unitPriceLkr: 1800,
+          quantity: 2,
+        },
+      ],
+      paymentMethod: "ROOM_FOLIO",
+      actorId: "guest-chalet-08",
+      folioId: "folio-chalet-08",
+    };
+
+    it("creates a NEW_ORDER when no prior idempotency record exists", () => {
+      const result = evaluateInboundOrderIdempotency(baseRequest, undefined);
+      assert.strictEqual(result.ok, true);
+      if (result.ok) {
+        assert.strictEqual(result.value.status, "NEW_ORDER");
+        if (result.value.status === "NEW_ORDER") {
+          assert.strictEqual(result.value.order.locationId, "chalet-08");
+          // 3,600 LKR base + 4-stage tax = 4,836.35 LKR
+          assert.strictEqual(result.value.order.grandTotalLkr, 4836.35);
+        }
+      }
+    });
+
+    it("returns IDEMPOTENT_REPLAY without double-billing folio on double-tap", () => {
+      // First submission
+      const firstResult = evaluateInboundOrderIdempotency(baseRequest, undefined);
+      assert.strictEqual(firstResult.ok, true);
+      if (!firstResult.ok || firstResult.value.status !== "NEW_ORDER") return;
+
+      const savedRecord = firstResult.value.order.idempotencyRecord;
+
+      // Guest double-taps button or network retries identical request
+      const secondResult = evaluateInboundOrderIdempotency(baseRequest, savedRecord);
+      assert.strictEqual(secondResult.ok, true);
+      if (secondResult.ok) {
+        assert.strictEqual(secondResult.value.status, "IDEMPOTENT_REPLAY");
+        if (secondResult.value.status === "IDEMPOTENT_REPLAY") {
+          assert.strictEqual(secondResult.value.orderId, savedRecord.orderId);
+          assert.strictEqual(secondResult.value.grandTotalLkr, savedRecord.grandTotalLkr);
+          assert.strictEqual(secondResult.value.isDuplicateTap, true);
+          assert.strictEqual(
+            secondResult.value.existingRecord.clientOrderUuid,
+            baseRequest.clientOrderUuid,
+          );
+        }
+      }
+    });
+
+    it("rejects with IDEMPOTENCY_PAYLOAD_MISMATCH if clientOrderUuid is reused with different items", () => {
+      const firstResult = evaluateInboundOrderIdempotency(baseRequest, undefined);
+      assert.strictEqual(firstResult.ok, true);
+      if (!firstResult.ok || firstResult.value.status !== "NEW_ORDER") return;
+
+      const savedRecord = firstResult.value.order.idempotencyRecord;
+
+      // Tampered/altered payload reusing same UUID
+      const tamperedRequest: CreateGuestOrderRequest = {
+        ...baseRequest,
+        items: [
+          {
+            dishId: "dish-lobster",
+            dishName: "Mirissa Jumbo Lobster Grill",
+            unitPriceLkr: 15000,
+            quantity: 3,
+          },
+        ],
+      };
+
+      const tamperedResult = evaluateInboundOrderIdempotency(tamperedRequest, savedRecord);
+      assert.strictEqual(tamperedResult.ok, false);
+      if (!tamperedResult.ok) {
+        assert.strictEqual(tamperedResult.error.code, "IDEMPOTENCY_PAYLOAD_MISMATCH");
+      }
+    });
+
+    it("enforces tenantId isolation and rejects cross-tenant idempotency reuse", () => {
+      const firstResult = evaluateInboundOrderIdempotency(baseRequest, undefined);
+      assert.strictEqual(firstResult.ok, true);
+      if (!firstResult.ok || firstResult.value.status !== "NEW_ORDER") return;
+
+      const savedRecord = firstResult.value.order.idempotencyRecord;
+
+      // Inbound request from different tenant with same UUID
+      const crossTenantRequest: CreateGuestOrderRequest = {
+        ...baseRequest,
+        tenantId: "tenant-kandy-hills",
+      };
+
+      const crossTenantResult = evaluateInboundOrderIdempotency(crossTenantRequest, savedRecord);
+      assert.strictEqual(crossTenantResult.ok, false);
+      if (!crossTenantResult.ok) {
+        assert.strictEqual(crossTenantResult.error.code, "TENANT_MISMATCH");
+      }
+    });
+
+    it("rejects replay if the previous idempotency record had status FAILED", () => {
+      const failedRecord: IdempotencyRecord = {
+        pk: "TENANT#tenant-sigiriya#IDEMPOTENCY#uuid-failed-order",
+        sk: "RECORD",
+        tenantId: "tenant-sigiriya-resort",
+        clientOrderUuid: baseRequest.clientOrderUuid,
+        orderId: "ORD-FAILED",
+        locationId: "chalet-08",
+        status: "FAILED",
+        requestHash: computeOrderRequestHash(baseRequest),
+        grandTotalLkr: 0,
+        createdAt: new Date().toISOString(),
+        expiresAtTtl: Math.floor(Date.now() / 1000) + 86400,
+      };
+
+      const result = evaluateInboundOrderIdempotency(baseRequest, failedRecord);
+      assert.strictEqual(result.ok, false);
+      if (!result.ok) {
+        assert.strictEqual(result.error.code, "IDEMPOTENCY_PREVIOUS_FAILURE");
+      }
+    });
+
+    it("handles simulated rapid multi-tap burst (20 concurrent requests)", () => {
+      let currentRecord: IdempotencyRecord | undefined;
+      const responses: Array<"NEW_ORDER" | "IDEMPOTENT_REPLAY"> = [];
+
+      for (let i = 0; i < 20; i++) {
+        const res = evaluateInboundOrderIdempotency(baseRequest, currentRecord);
+        assert.strictEqual(res.ok, true);
+        if (res.ok) {
+          responses.push(res.value.status);
+          if (res.value.status === "NEW_ORDER") {
+            currentRecord = res.value.order.idempotencyRecord;
+          }
+        }
+      }
+
+      // Exactly 1 new order processed, 19 duplicate replays prevented
+      const newOrders = responses.filter((s) => s === "NEW_ORDER");
+      const replays = responses.filter((s) => s === "IDEMPOTENT_REPLAY");
+      assert.strictEqual(newOrders.length, 1);
+      assert.strictEqual(replays.length, 19);
     });
   });
 });
