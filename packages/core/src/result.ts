@@ -29,7 +29,12 @@ export type DomainErrorCode =
   | "INVALID_RESERVATION"
   | "RESERVATION_NOT_ACTIVE"
   | "DATE_OVERLAP"
-  | "DRIVER_BED_UNAVAILABLE";
+  | "DRIVER_BED_UNAVAILABLE"
+  | "PERMISSION_DENIED"
+  | "SUBSCRIPTION_INACTIVE"
+  | "PLAN_LIMITATION"
+  | "INVALID_DATE_FORMAT"
+  | "INVALID_RATE";
 
 export interface DomainError {
   readonly code: DomainErrorCode;

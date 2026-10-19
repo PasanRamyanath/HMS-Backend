@@ -123,3 +123,7 @@ This file tracks the sequential completion of backend implementation steps defin
 - [x] Step 171: Write Unit Tests for Day-Use & Late Check-Out Fee Calculations (`packages/core/test/dayUseRate.test.ts`)
 - [x] Step 174: Write End-to-End Reservation-to-CheckIn State Transition Tests (`packages/core/test/reservationFlow.test.ts`)
 
+## Phase 08: Channex.io OTA Channel Manager (Booking.com, Agoda, Expedia, Airbnb) & Direct Website Booking Engine
+- [x] Step 176: Implement Channex ARI (Availability, Rates, Inventory) Payload Builder (`packages/core/src/channexAri.ts`)
+
+

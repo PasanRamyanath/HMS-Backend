@@ -22,6 +22,7 @@ export * from "./qrHmac.js";
 export * from "./payhere.js";
 export * from "./webxpay.js";
 export * from "./channex.js";
+export * from "./channexAri.js";
 export * from "./sms.js";
 export * from "./payroll.js";
 export * from "./inventoryMath.js";
