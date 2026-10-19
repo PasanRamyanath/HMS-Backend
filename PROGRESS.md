@@ -126,6 +126,8 @@ This file tracks the sequential completion of backend implementation steps defin
 ## Phase 08: Channex.io OTA Channel Manager (Booking.com, Agoda, Expedia, Airbnb) & Direct Website Booking Engine
 - [x] Step 176: Implement Channex ARI (Availability, Rates, Inventory) Payload Builder (`packages/core/src/channexAri.ts`)
 - [x] Step 177: Implement Channex Booking Revision Parser (`packages/core/src/channexAri.ts`)
+- [x] Step 178: Write Unit Tests for Channex Booking.com & Agoda Revision Payloads (`packages/core/test/channexAri.test.ts`)
+
 
 
 

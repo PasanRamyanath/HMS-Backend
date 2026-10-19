@@ -698,5 +698,199 @@ describe("Channex ARI Payload Builder Engine (channexAri.ts)", () => {
       assert.strictEqual(resolveMealPlan(false, "all_inclusive"), "AI");
       assert.strictEqual(resolveMealPlan(false, undefined), "RO");
     });
+
+    it("verifies booking_new event payload with Booking.com and full tax breakdown", () => {
+      const bkgNew = {
+        event: "booking_new",
+        property_id: PROPERTY_ID,
+        booking: {
+          id: "chx-bkg-new-101",
+          ota_reservation_code: "BKG-NEW-101",
+          ota_name: "Booking.com",
+          status: "new",
+          currency: "LKR",
+          arrival_date: "2026-11-20",
+          departure_date: "2026-11-22",
+          customer: {
+            name: "Nimal",
+            surname: "Silva",
+            email: "nimal.silva@slt.lk",
+            phone: "+94712345678",
+            country: "LK",
+          },
+          rooms: [
+            {
+              room_type_id: "rt-chx-ocean-suite-99",
+              breakfast_included: false,
+              meal_plan: "RO",
+              occupancy: { adults: 2, children: 0 },
+              amount: 268686,
+            },
+          ],
+          total_price: 268686,
+          ota_commission: 40302.9,
+        },
+      };
+
+      const res = parseChannexBookingRevision(bkgNew, testRoomMap, DEFAULT_SRI_LANKA_TAX_CONFIG, {
+        tenantId: TENANT_ID,
+        authorizedBy: { actorUserId: "STAFF-RES-01", role: "RESERVATIONIST" },
+        subscription: { tenantId: TENANT_ID, active: true, allowChannelManager: true },
+      });
+
+      assert.strictEqual(res.ok, true);
+      if (!res.ok) return;
+
+      assert.strictEqual(res.value.status, "CONFIRMED");
+      assert.strictEqual(res.value.mealPlan, "RO");
+      assert.strictEqual(res.value.grossTotalLkr, 268686);
+      assert.strictEqual(res.value.taxBreakdown.baseLkr, 200000);
+      assert.strictEqual(res.value.taxBreakdown.grandTotalLkr, 268686);
+    });
+
+    it("verifies booking_modification event payload with Agoda and USD-to-LKR rate locking", () => {
+      const agodaMod = {
+        event: "booking_modification",
+        property_id: PROPERTY_ID,
+        booking: {
+          id: "chx-agoda-mod-202",
+          ota_reservation_code: "AGODA-MOD-202",
+          ota_name: "Agoda",
+          status: "modified",
+          currency: "USD",
+          arrival_date: "2026-12-01",
+          departure_date: "2026-12-05",
+          customer: {
+            name: "Klaus",
+            surname: "Mueller",
+            email: "klaus.m@berlin.de",
+            phone: "+491701234567",
+            country: "DE",
+          },
+          rooms: [
+            {
+              room_type_id: "rt-chx-beach-villa-01",
+              breakfast_included: true,
+              occupancy: { adults: 2, children: 2 },
+              amount: 1200,
+            },
+          ],
+          total_price: 1200,
+          commission_percentage: 18,
+        },
+      };
+
+      const res = parseChannexBookingRevision(agodaMod, testRoomMap, DEFAULT_SRI_LANKA_TAX_CONFIG, {
+        tenantId: TENANT_ID,
+        exchangeRateUsdLkr: 310.0,
+      });
+
+      assert.strictEqual(res.ok, true);
+      if (!res.ok) return;
+
+      assert.strictEqual(res.value.status, "MODIFIED");
+      assert.strictEqual(res.value.nights, 4);
+      assert.strictEqual(res.value.lockedExchangeRateLkr, 310.0);
+      // 1200 USD * 310 = 372,000 LKR
+      assert.strictEqual(res.value.grossTotalLkr, 372000);
+      // 18% commission on 372,000 = 66,960 LKR
+      assert.strictEqual(res.value.otaCommissionAmountLkr, 66960);
+      assert.strictEqual(res.value.netPayableToHotelLkr, 305040);
+      assert.strictEqual(res.value.guest.countryIso, "DE");
+      assert.strictEqual(res.value.guest.residencyTier, "NON_RESIDENT");
+    });
+
+    it("verifies booking_cancellation event payload with Booking.com", () => {
+      const bkgCancel = {
+        event: "booking_cancellation",
+        property_id: PROPERTY_ID,
+        booking: {
+          id: "chx-bkg-cancel-303",
+          ota_reservation_code: "BKG-CANCEL-303",
+          ota_name: "Booking.com",
+          status: "cancelled",
+          currency: "LKR",
+          arrival_date: "2026-11-25",
+          departure_date: "2026-11-28",
+          customer: {
+            full_name: "Chaminda Vaas",
+            country: "LK",
+          },
+          rooms: [
+            {
+              room_type_id: "rt-chx-ocean-suite-99",
+              occupancy: { adults: 2 },
+              amount: 0,
+            },
+          ],
+          total_price: 0,
+        },
+      };
+
+      const res = parseChannexBookingRevision(
+        bkgCancel,
+        testRoomMap,
+        DEFAULT_SRI_LANKA_TAX_CONFIG,
+        {
+          tenantId: TENANT_ID,
+        },
+      );
+
+      assert.strictEqual(res.ok, true);
+      if (!res.ok) return;
+
+      assert.strictEqual(res.value.status, "CANCELLED");
+      assert.strictEqual(res.value.bookingRef, "BKG-CANCEL-303");
+      assert.strictEqual(res.value.grossTotalLkr, 0);
+    });
+
+    it("rejects booking revision when SaaS subscription is inactive or feature disabled", () => {
+      const validPayload = {
+        id: "chx-sub-test",
+        currency: "LKR",
+        arrival_date: "2026-11-10",
+        departure_date: "2026-11-12",
+        rooms: [{ room_type_id: "rt-chx-ocean-suite-99", amount: 100000 }],
+        total_price: 100000,
+      };
+
+      const inactiveRes = parseChannexBookingRevision(validPayload, testRoomMap, undefined, {
+        tenantId: TENANT_ID,
+        subscription: { tenantId: TENANT_ID, active: false, allowChannelManager: true },
+      });
+      assert.strictEqual(inactiveRes.ok, false);
+      if (!inactiveRes.ok) {
+        assert.strictEqual(inactiveRes.error.code, "SUBSCRIPTION_INACTIVE");
+      }
+
+      const noFeatureRes = parseChannexBookingRevision(validPayload, testRoomMap, undefined, {
+        tenantId: TENANT_ID,
+        subscription: { tenantId: TENANT_ID, active: true, allowChannelManager: false },
+      });
+      assert.strictEqual(noFeatureRes.ok, false);
+      if (!noFeatureRes.ok) {
+        assert.strictEqual(noFeatureRes.error.code, "PLAN_LIMITATION");
+      }
+    });
+
+    it("rejects booking revision when staff role is not authorized for channel manager", () => {
+      const validPayload = {
+        id: "chx-rbac-test",
+        currency: "LKR",
+        arrival_date: "2026-11-10",
+        departure_date: "2026-11-12",
+        rooms: [{ room_type_id: "rt-chx-ocean-suite-99", amount: 100000 }],
+        total_price: 100000,
+      };
+
+      const rbacRes = parseChannexBookingRevision(validPayload, testRoomMap, undefined, {
+        tenantId: TENANT_ID,
+        authorizedBy: { actorUserId: "STAFF-WAITER-01", role: "WAITER" },
+      });
+      assert.strictEqual(rbacRes.ok, false);
+      if (!rbacRes.ok) {
+        assert.strictEqual(rbacRes.error.code, "PERMISSION_DENIED");
+      }
+    });
   });
 });
