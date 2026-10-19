@@ -147,4 +147,6 @@ This file tracks the sequential completion of backend implementation steps defin
 ## Phase 10: DOMSpeed-Parity Menu, Catalog, Modifiers, Recipe BOM & Multi-Department Service Admin
 - [x] Step 227: Build Time-of-Day Menu Schedule Evaluator (`packages/core/src/menuSchedule.ts`)
 - [x] Step 228: Write Unit Tests for Sri Lanka Standard Time Menu Window Evaluation (`packages/core/test/menuSchedule.test.ts`)
+- [x] Step 233: Implement Meal-Plan Order Line Pricing Resolver (`packages/core/src/mealPlanPricing.ts`)
+- [x] Step 234: Write Unit Tests for `BB` / `HB` / `FB` / `AI` QR Ordering Entitlements (`packages/core/test/mealPlanPricing.test.ts`)
 
