@@ -151,5 +151,6 @@ This file tracks the sequential completion of backend implementation steps defin
 - [x] Step 234: Write Unit Tests for `BB` / `HB` / `FB` / `AI` QR Ordering Entitlements (`packages/core/test/mealPlanPricing.test.ts`)
 - [x] Step 236: Build Free Housekeeping & Express Room Amenity Catalog Preset (`packages/core/src/catalogPresets.ts`)
 - [x] Step 237: Write Unit Tests for Trilingual Catalog Presets (`packages/core/test/catalogPresets.test.ts`)
+- [x] Step 249: Write Unit Tests & Domain Engine for Menu Filtering, Happy Hour Pricing & Dietary Tagging (`packages/core/src/menuFiltering.ts`, `packages/core/test/menuFiltering.test.ts`)
 
 
