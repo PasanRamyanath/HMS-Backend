@@ -135,8 +135,5 @@ This file tracks the sequential completion of backend implementation steps defin
 - [x] Step 190: Write Unit Tests for Sri Lankan Bank Credit Card Promo Rules (`packages/core/test/promoOffer.test.ts`)
 - [x] Step 194: Implement Automated SMS & Email Booking Confirmation Dispatcher (`packages/cdk/lambdas/notifyBooking.ts`)
 - [x] Step 195: Write Unit Tests for Booking Confirmation SMS Formatting (`packages/cdk/test/notifyBooking.test.ts`)
-
-
-
-
+- [x] Step 199: Write End-to-End Direct Booking -> PayHere Webhook -> Tape Chart Lock Test (`packages/core/test/directBookingE2e.test.ts`)
 
