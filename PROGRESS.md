@@ -120,4 +120,5 @@ This file tracks the sequential completion of backend implementation steps defin
 - [x] Step 152: Implement Date-Range Conflict & Room Availability Filter (`packages/core/src/availabilityFilter.ts`)
 - [x] Step 153: Write Unit Tests for Back-to-Back Same-Day Turnaround (`packages/core/test/availabilityFilter.test.ts`)
 - [x] Step 170: Build Late Check-Out & Day-Use Room Rate Calculator (`packages/core/src/dayUseRate.ts`)
+- [x] Step 171: Write Unit Tests for Day-Use & Late Check-Out Fee Calculations (`packages/core/test/dayUseRate.test.ts`)
 

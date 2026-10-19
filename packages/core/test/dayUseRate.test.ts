@@ -600,5 +600,126 @@ describe("Late Check-Out & Day-Use Room Rate Calculator (dayUseRate.ts)", () => 
       });
       assert.strictEqual(res2.ok, false);
     });
+
+    it("supports FULL_DAY_USE and CUSTOM day-use transit package multipliers", () => {
+      // FULL_DAY_USE: 1.0 multiplier
+      const fullRes = calculateDayUseRate({
+        tenantId: validTenant,
+        roomNumber: "109",
+        date: "2026-10-25",
+        checkInTime: "08:00",
+        checkOutTime: "17:00",
+        baseOvernightRateLkr: 20000,
+        packageType: "FULL_DAY_USE",
+        authorizedBy: frontDeskActor,
+      });
+      assert.strictEqual(fullRes.ok, true);
+      if (fullRes.ok) {
+        assert.strictEqual(fullRes.value.multiplier, 1.0);
+        assert.strictEqual(fullRes.value.taxableBaseLkr, 20000);
+      }
+
+      // CUSTOM package <= 6h: 0.35 multiplier
+      const customShort = calculateDayUseRate({
+        tenantId: validTenant,
+        roomNumber: "109",
+        date: "2026-10-25",
+        checkInTime: "08:00",
+        checkOutTime: "13:00", // 5 hrs
+        baseOvernightRateLkr: 20000,
+        packageType: "CUSTOM",
+        authorizedBy: frontDeskActor,
+      });
+      assert.strictEqual(customShort.ok, true);
+      if (customShort.ok) {
+        assert.strictEqual(customShort.value.multiplier, 0.35);
+        assert.strictEqual(customShort.value.taxableBaseLkr, 7000);
+      }
+
+      // CUSTOM package > 6h: 0.5 multiplier
+      const customLong = calculateDayUseRate({
+        tenantId: validTenant,
+        roomNumber: "109",
+        date: "2026-10-25",
+        checkInTime: "08:00",
+        checkOutTime: "16:00", // 8 hrs
+        baseOvernightRateLkr: 20000,
+        packageType: "CUSTOM",
+        authorizedBy: frontDeskActor,
+      });
+      assert.strictEqual(customLong.ok, true);
+      if (customLong.ok) {
+        assert.strictEqual(customLong.value.multiplier, 0.5);
+        assert.strictEqual(customLong.value.taxableBaseLkr, 10000);
+      }
+    });
+
+    it("supports TAX_INCLUSIVE day-use rate calculation", () => {
+      const res = calculateDayUseRate({
+        tenantId: validTenant,
+        roomNumber: "110",
+        date: "2026-10-25",
+        checkInTime: "09:00",
+        checkOutTime: "17:00",
+        baseOvernightRateLkr: 20000, // half-day gross = 10,000 LKR
+        pricingModel: "TAX_INCLUSIVE",
+        authorizedBy: frontDeskActor,
+      });
+      assert.strictEqual(res.ok, true);
+      if (res.ok) {
+        assert.strictEqual(res.value.pricingModel, "TAX_INCLUSIVE");
+        assert.strictEqual(res.value.totalChargeLkr, 10000);
+        const rev = calculateReverseTax(10000);
+        assert.strictEqual(rev.ok, true);
+        if (rev.ok) {
+          assert.strictEqual(res.value.taxableBaseLkr, rev.value.baseLkr);
+        }
+      }
+    });
+
+    it("verifies multi-entry SHA-256 audit chaining", () => {
+      const firstRes = calculateLateCheckoutFee({
+        tenantId: validTenant,
+        reservationId: "res-chain-01",
+        roomNumber: "305",
+        baseDailyRateLkr: 20000,
+        actualCheckoutTime: "15:00",
+        authorizedBy: frontDeskActor,
+        isoTimestamp: "2026-10-25T08:00:00.000Z",
+      });
+      assert.strictEqual(firstRes.ok, true);
+      if (!firstRes.ok) return;
+
+      const secondRes = calculateLateCheckoutFee({
+        tenantId: validTenant,
+        reservationId: "res-chain-02",
+        roomNumber: "306",
+        baseDailyRateLkr: 25000,
+        actualCheckoutTime: "19:00",
+        authorizedBy: frontDeskActor,
+        prevAuditHash: firstRes.value.auditEntry.entryHash,
+        isoTimestamp: "2026-10-25T09:00:00.000Z",
+      });
+      assert.strictEqual(secondRes.ok, true);
+      if (!secondRes.ok) return;
+
+      const chainVerify = verifyAuditChain([firstRes.value.auditEntry, secondRes.value.auditEntry]);
+      assert.strictEqual(chainVerify.ok, true);
+    });
+
+    it("rejects actor with missing actorUserId", () => {
+      const res = calculateLateCheckoutFee({
+        tenantId: validTenant,
+        reservationId: "res-01",
+        roomNumber: "101",
+        baseDailyRateLkr: 10000,
+        actualCheckoutTime: "14:00",
+        authorizedBy: { actorUserId: "", role: "FRONT_DESK" },
+      });
+      assert.strictEqual(res.ok, false);
+      if (!res.ok) {
+        assert.strictEqual(res.error.code, "UNAUTHORIZED");
+      }
+    });
   });
 });
