@@ -41,7 +41,9 @@ export type DomainErrorCode =
   | "MEAL_PLAN_INELIGIBLE"
   | "BLACKOUT_DATE_CONFLICT"
   | "MIN_NIGHTS_NOT_MET"
-  | "PROMO_QUOTA_EXCEEDED";
+  | "PROMO_QUOTA_EXCEEDED"
+  | "CREDIT_LIMIT_EXCEEDED"
+  | "INVOICE_ALREADY_CREDITED";
 
 export interface DomainError {
   readonly code: DomainErrorCode;

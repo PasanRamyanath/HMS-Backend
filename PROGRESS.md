@@ -140,3 +140,6 @@ This file tracks the sequential completion of backend implementation steps defin
 ## Phase 09: Guest Folio Ledger, Split Billing, 4-Stage Compounding Tax Invoice & Payment Settlement
 - [x] Step 201: Implement Split-Folio Routing Engine (`packages/core/src/splitFolioRouter.ts`)
 - [x] Step 202: Write Unit Tests for DMC Master vs. Guest Incidental Split Folio Routing (`packages/core/test/splitFolioRouter.test.ts`)
+- [x] Step 215: Implement Credit Note & Tax Invoice Void/Adjustment Engine (`packages/core/src/creditNote.ts`)
+- [x] Step 216: Write Unit Tests for Statutory Credit Note & Tax Reversal Calculations (`packages/core/test/creditNote.test.ts`)
+
