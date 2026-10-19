@@ -110,6 +110,6 @@ This file tracks the sequential completion of backend implementation steps defin
 - [x] Step 099: Synthesize CDK Stack (`npx cdk synth`) & Verify Cost Guardrails Suite (`packages/cdk/test/cost-guardrails.test.ts`)
 - [x] Step 100: Run Phase 4 Ponytail Audit & Code Simplification on `packages/cdk`
 
-
-
-
+## Phase 06: Multi-Tenant Property Configuration, Room Types, Dual-Currency Rates & Tax Toggles
+- [x] Step 141: Implement Rate Calculator Pure Helper (`calculateStayQuote`) in `packages/core/src/rateQuote.ts`
+- [x] Step 142: Write Unit Tests for `calculateStayQuote` Across Resident & Foreign Bookings in `packages/core/test/rateQuote.test.ts`
