@@ -144,3 +144,7 @@ This file tracks the sequential completion of backend implementation steps defin
 - [x] Step 216: Write Unit Tests for Statutory Credit Note & Tax Reversal Calculations (`packages/core/test/creditNote.test.ts`)
 - [x] Step 224: Write End-to-End Check-In -> Room Service Order -> Split Folio -> Tax Invoice Check-Out Test (`packages/core/test/folioLifecycle.test.ts`)
 
+## Phase 10: DOMSpeed-Parity Menu, Catalog, Modifiers, Recipe BOM & Multi-Department Service Admin
+- [x] Step 227: Build Time-of-Day Menu Schedule Evaluator (`packages/core/src/menuSchedule.ts`)
+- [x] Step 228: Write Unit Tests for Sri Lanka Standard Time Menu Window Evaluation (`packages/core/test/menuSchedule.test.ts`)
+
