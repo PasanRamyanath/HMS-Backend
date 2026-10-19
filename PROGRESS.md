@@ -133,6 +133,8 @@ This file tracks the sequential completion of backend implementation steps defin
 - [x] Step 182: Write Unit Tests for RFC 5545 iCal Export & Import (`packages/core/test/icalSync.test.ts`)
 - [x] Step 189: Implement Promo Code & Bank Card Offer Engine (`packages/core/src/promoOffer.ts`)
 - [x] Step 190: Write Unit Tests for Sri Lankan Bank Credit Card Promo Rules (`packages/core/test/promoOffer.test.ts`)
+- [x] Step 194: Implement Automated SMS & Email Booking Confirmation Dispatcher (`packages/cdk/lambdas/notifyBooking.ts`)
+- [x] Step 195: Write Unit Tests for Booking Confirmation SMS Formatting (`packages/cdk/test/notifyBooking.test.ts`)
 
 
 
