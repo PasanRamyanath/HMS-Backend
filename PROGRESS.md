@@ -113,3 +113,4 @@ This file tracks the sequential completion of backend implementation steps defin
 ## Phase 06: Multi-Tenant Property Configuration, Room Types, Dual-Currency Rates & Tax Toggles
 - [x] Step 141: Implement Rate Calculator Pure Helper (`calculateStayQuote`) in `packages/core/src/rateQuote.ts`
 - [x] Step 142: Write Unit Tests for `calculateStayQuote` Across Resident & Foreign Bookings in `packages/core/test/rateQuote.test.ts`
+- [x] Step 144: Add Audit Trail Logger for Tax & Rate Modifications (`packages/graphql/resolvers/auditLog.ts`)
