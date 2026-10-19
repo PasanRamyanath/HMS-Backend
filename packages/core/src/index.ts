@@ -29,6 +29,7 @@ export * from "./inventoryMath.js";
 export * from "./rateQuote.js";
 export * from "./availabilityFilter.js";
 export * from "./dayUseRate.js";
+export * from "./icalSync.js";
 export {
   SRI_LANKA_TIMEZONE,
   SRI_LANKA_LOCALE,

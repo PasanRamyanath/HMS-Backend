@@ -129,6 +129,7 @@ This file tracks the sequential completion of backend implementation steps defin
 - [x] Step 178: Write Unit Tests for Channex Booking.com & Agoda Revision Payloads (`packages/core/test/channexAri.test.ts`)
 - [x] Step 179: Extend `webhooksIngress.ts` to Pull & Acknowledge Channex Booking Revisions (`packages/cdk/lambdas/webhooksIngress.ts`)
 - [x] Step 180: Implement Outbound Channex ARI Push Helper on Local Reservation Changes (`packages/cdk/lambdas/reservationAndCheckInTx.ts`)
+- [x] Step 181: Implement Zero-Cost RFC 5545 iCal (`.ics`) Feed Exporter & Importer (`packages/core/src/icalSync.ts`)
 
 
 
