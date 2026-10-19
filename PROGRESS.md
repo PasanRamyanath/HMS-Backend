@@ -153,4 +153,8 @@ This file tracks the sequential completion of backend implementation steps defin
 - [x] Step 237: Write Unit Tests for Trilingual Catalog Presets (`packages/core/test/catalogPresets.test.ts`)
 - [x] Step 249: Write Unit Tests & Domain Engine for Menu Filtering, Happy Hour Pricing & Dietary Tagging (`packages/core/src/menuFiltering.ts`, `packages/core/test/menuFiltering.test.ts`)
 
+## Phase 11: Contactless Guest Mobile PWA, Room Service & LankaQR Payment Portal
+- [x] Step 270: Implement Idempotency Key Guard on Guest Order Submission (`packages/core/src/orderIdempotency.ts`)
+
+
 

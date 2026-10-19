@@ -43,7 +43,9 @@ export type DomainErrorCode =
   | "MIN_NIGHTS_NOT_MET"
   | "PROMO_QUOTA_EXCEEDED"
   | "CREDIT_LIMIT_EXCEEDED"
-  | "INVOICE_ALREADY_CREDITED";
+  | "INVOICE_ALREADY_CREDITED"
+  | "IDEMPOTENCY_CONFLICT"
+  | "INVALID_IDEMPOTENCY_KEY";
 
 export interface DomainError {
   readonly code: DomainErrorCode;
