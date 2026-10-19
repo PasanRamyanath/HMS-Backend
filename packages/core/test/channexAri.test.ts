@@ -15,6 +15,7 @@ import {
   type ChannexAvailabilityInput,
   type ChannexRatePlanMapping,
   type ChannexRestrictionsInput,
+  type ChannexRoomMap,
   type ChannexRoomMapping,
   DEFAULT_SRI_LANKA_TAX_CONFIG,
   GENESIS_HASH,
@@ -23,7 +24,10 @@ import {
   calculateNetAvailability,
   computeAuditEntryHash,
   createChannexAriAuditEntry,
+  createChannexBookingAuditEntry,
   isStaffAuthorizedForChannelManager,
+  parseChannexBookingRevision,
+  resolveMealPlan,
 } from "../src/index.js";
 
 describe("Channex ARI Payload Builder Engine (channexAri.ts)", () => {
@@ -375,6 +379,324 @@ describe("Channex ARI Payload Builder Engine (channexAri.ts)", () => {
       // Verify SHA-256 cryptographic hash integrity
       const recomputed = computeAuditEntryHash(entry);
       assert.strictEqual(entry.entryHash, recomputed);
+    });
+
+    it("creates verified SHA-256 hash-chained audit log entry for Channex booking revision", () => {
+      const auditRes = createChannexBookingAuditEntry(
+        TENANT_ID,
+        "CHANNEX_WEBHOOK",
+        "BKG-2026-9999",
+        "CONFIRMED",
+        { ota: "Booking.com", grossLkr: 200000 },
+        FIXED_TS,
+        GENESIS_HASH,
+      );
+
+      assert.strictEqual(auditRes.ok, true);
+      if (!auditRes.ok) return;
+
+      const entry = auditRes.value;
+      assert.strictEqual(entry.tenantId, TENANT_ID);
+      assert.strictEqual(entry.action, "OTA_BOOKING_CONFIRMED");
+      assert.strictEqual(entry.entityType, "Reservation");
+      assert.strictEqual(entry.entityId, "BKG-2026-9999");
+      assert.strictEqual(entry.prevHash, GENESIS_HASH);
+
+      const recomputed = computeAuditEntryHash(entry);
+      assert.strictEqual(entry.entryHash, recomputed);
+    });
+  });
+
+  describe("6. Channex Booking Revision Parser (parseChannexBookingRevision)", () => {
+    const testRoomMap: ChannexRoomMap = {
+      "rt-chx-ocean-suite-99": {
+        localRoomTypeId: "OCEAN_POOL_SUITE",
+        localRoomTypeName: "Ocean Pool Suite",
+      },
+      "rt-chx-beach-villa-01": {
+        localRoomTypeId: "BEACH_VILLA",
+        localRoomTypeName: "Beachfront Villa",
+      },
+    };
+
+    it("parses Booking.com reservation with LKR currency, breakfast_included (BB), and 4-stage tax reverse breakdown", () => {
+      const rawBookingJson = JSON.stringify({
+        event: "booking_created",
+        property_id: PROPERTY_ID,
+        booking: {
+          id: "chx-bkg-001",
+          ota_reservation_code: "BKG-2026-987654",
+          ota_name: "Booking.com",
+          status: "new",
+          currency: "LKR",
+          arrival_date: "2026-11-10",
+          departure_date: "2026-11-13",
+          customer: {
+            name: "Sunil",
+            surname: "Perera",
+            email: "sunil.p@gmail.com",
+            phone: "+94771234567",
+            country: "LK",
+            notes: "Non-smoking room, high floor requested",
+          },
+          rooms: [
+            {
+              room_type_id: "rt-chx-ocean-suite-99",
+              rate_plan_id: "rp-chx-bar-bb-01",
+              breakfast_included: true,
+              occupancy: { adults: 2, children: 1, infants: 0 },
+              amount: 403029,
+              days: [
+                { date: "2026-11-10", amount: 134343 },
+                { date: "2026-11-11", amount: 134343 },
+                { date: "2026-11-12", amount: 134343 },
+              ],
+            },
+          ],
+          total_price: 403029,
+          commission_percentage: 15,
+          notes: "Anniversary celebration",
+          special_requests: "Early check-in 1:00 PM",
+        },
+      });
+
+      const res = parseChannexBookingRevision(
+        rawBookingJson,
+        testRoomMap,
+        DEFAULT_SRI_LANKA_TAX_CONFIG,
+        {
+          tenantId: TENANT_ID,
+          prevAuditHash: GENESIS_HASH,
+        },
+      );
+
+      assert.strictEqual(res.ok, true);
+      if (!res.ok) return;
+
+      const b = res.value;
+      assert.strictEqual(b.bookingRef, "BKG-2026-987654");
+      assert.strictEqual(b.otaReservationCode, "BKG-2026-987654");
+      assert.strictEqual(b.channexBookingId, "chx-bkg-001");
+      assert.strictEqual(b.channelName, "Booking.com");
+      assert.strictEqual(b.source, "OTA_BOOKING.COM");
+      assert.strictEqual(b.status, "CONFIRMED");
+      assert.strictEqual(b.checkInDate, "2026-11-10");
+      assert.strictEqual(b.checkOutDate, "2026-11-13");
+      assert.strictEqual(b.nights, 3);
+      assert.strictEqual(b.quotedCurrency, "LKR");
+      assert.strictEqual(b.originalTotalPrice, 403029);
+      assert.strictEqual(b.grossTotalLkr, 403029);
+
+      // 15% commission on 403,029 = 60,454.35
+      assert.strictEqual(b.otaCommissionPercentage, 15);
+      assert.strictEqual(b.otaCommissionAmountLkr, 60454.35);
+      assert.strictEqual(b.netPayableToHotelLkr, 342574.65);
+
+      // Guest details
+      assert.strictEqual(b.guest.fullName, "Sunil Perera");
+      assert.strictEqual(b.guest.firstName, "Sunil");
+      assert.strictEqual(b.guest.lastName, "Perera");
+      assert.strictEqual(b.guest.email, "sunil.p@gmail.com");
+      assert.strictEqual(b.guest.countryIso, "LK");
+      assert.strictEqual(b.guest.residencyTier, "RESIDENT");
+
+      // Meal Plan
+      assert.strictEqual(b.mealPlan, "BB");
+      assert.strictEqual(b.rooms[0]?.mealPlan, "BB");
+      assert.strictEqual(b.rooms[0]?.localRoomTypeId, "OCEAN_POOL_SUITE");
+      assert.strictEqual(b.rooms[0]?.localRoomTypeName, "Ocean Pool Suite");
+      assert.strictEqual(b.rooms[0]?.adults, 2);
+      assert.strictEqual(b.rooms[0]?.children, 1);
+      assert.strictEqual(b.rooms[0]?.days.length, 3);
+
+      // Reverse 4-Stage Taxes:
+      // 3 nights @ 100,000 base + 34.343% tax = 403,029 gross
+      // Base: 300,000 LKR
+      assert.strictEqual(b.taxBreakdown.baseLkr, 300000);
+      assert.strictEqual(b.taxBreakdown.scLkr, 30000);
+      assert.strictEqual(b.taxBreakdown.subtotalAfterScLkr, 330000);
+      assert.strictEqual(b.taxBreakdown.grandTotalLkr, 403029);
+
+      // Special requests concatenation
+      assert.ok(b.specialRequests.includes("Anniversary celebration"));
+      assert.ok(b.specialRequests.includes("Early check-in 1:00 PM"));
+      assert.ok(b.specialRequests.includes("Non-smoking room"));
+
+      // Audit Log
+      assert.ok(b.auditLog !== undefined);
+      assert.strictEqual(b.auditLog?.tenantId, TENANT_ID);
+      assert.strictEqual(b.auditLog?.action, "OTA_BOOKING_CONFIRMED");
+      assert.strictEqual(b.auditLog?.entityId, "BKG-2026-987654");
+      assert.strictEqual(b.auditLog?.prevHash, GENESIS_HASH);
+    });
+
+    it("parses Agoda reservation with USD currency, converting to LKR and identifying foreign tourist", () => {
+      const agodaPayload = {
+        id: "chx-agoda-888",
+        ota_reservation_code: "AGODA-776655",
+        ota_name: "Agoda",
+        status: "modified",
+        currency: "USD",
+        arrival_date: "2026-12-20",
+        departure_date: "2026-12-25",
+        customer: {
+          name: "Emily",
+          surname: "Watson",
+          email: "emily.w@oxford.ac.uk",
+          phone: "+447911123456",
+          country: "GB",
+        },
+        rooms: [
+          {
+            room_type_id: "rt-chx-beach-villa-01",
+            meal_plan: "half_board",
+            occupancy: { adults: 2, children: 0 },
+            amount: 1500,
+            days: [
+              { date: "2026-12-20", amount: 300 },
+              { date: "2026-12-21", amount: 300 },
+              { date: "2026-12-22", amount: 300 },
+              { date: "2026-12-23", amount: 300 },
+              { date: "2026-12-24", amount: 300 },
+            ],
+          },
+        ],
+        total_price: 1500,
+        ota_commission: 270, // 18% USD commission
+      };
+
+      const res = parseChannexBookingRevision(
+        agodaPayload,
+        testRoomMap,
+        DEFAULT_SRI_LANKA_TAX_CONFIG,
+        {
+          tenantId: TENANT_ID,
+          exchangeRateUsdLkr: 300.0,
+        },
+      );
+
+      assert.strictEqual(res.ok, true);
+      if (!res.ok) return;
+
+      const b = res.value;
+      assert.strictEqual(b.bookingRef, "AGODA-776655");
+      assert.strictEqual(b.channelName, "Agoda");
+      assert.strictEqual(b.status, "MODIFIED");
+      assert.strictEqual(b.nights, 5);
+      assert.strictEqual(b.quotedCurrency, "USD");
+      assert.strictEqual(b.originalTotalPrice, 1500);
+
+      // USD 1,500 * 300 = 450,000 LKR
+      assert.strictEqual(b.lockedExchangeRateLkr, 300.0);
+      assert.strictEqual(b.grossTotalLkr, 450000);
+
+      // USD 270 * 300 = 81,000 LKR commission (18%)
+      assert.strictEqual(b.otaCommissionAmountLkr, 81000);
+      assert.strictEqual(b.otaCommissionPercentage, 18);
+      assert.strictEqual(b.netPayableToHotelLkr, 369000);
+
+      // Foreign Tourist
+      assert.strictEqual(b.guest.fullName, "Emily Watson");
+      assert.strictEqual(b.guest.countryIso, "GB");
+      assert.strictEqual(b.guest.residencyTier, "NON_RESIDENT");
+
+      // Meal Plan resolved to HB
+      assert.strictEqual(b.mealPlan, "HB");
+      assert.strictEqual(b.rooms[0]?.mealPlan, "HB");
+      assert.strictEqual(b.rooms[0]?.localRoomTypeId, "BEACH_VILLA");
+      assert.strictEqual(b.rooms[0]?.roomTotalGrossLkr, 450000);
+    });
+
+    it("parses Expedia cancelled reservation cleanly", () => {
+      const expediaPayload = {
+        id: "chx-exp-999",
+        ota_name: "Expedia",
+        status: "cancelled",
+        currency: "LKR",
+        arrival_date: "2026-11-15",
+        departure_date: "2026-11-17",
+        customer: { full_name: "Oliver Smith" },
+        rooms: [
+          {
+            room_type_id: "rt-chx-ocean-suite-99",
+            occupancy: { adults: 1 },
+            amount: 100000,
+          },
+        ],
+        total_price: 100000,
+      };
+
+      const res = parseChannexBookingRevision(expediaPayload, testRoomMap);
+      assert.strictEqual(res.ok, true);
+      if (!res.ok) return;
+
+      assert.strictEqual(res.value.status, "CANCELLED");
+      assert.strictEqual(res.value.channelName, "Expedia");
+      assert.strictEqual(res.value.guest.fullName, "Oliver Smith");
+    });
+
+    it("rejects booking revision when room type is not mapped in roomMap", () => {
+      const unmappedPayload = {
+        id: "chx-bkg-unmapped",
+        currency: "LKR",
+        arrival_date: "2026-11-10",
+        departure_date: "2026-11-12",
+        rooms: [
+          {
+            room_type_id: "rt-unknown-penthouse",
+            amount: 250000,
+          },
+        ],
+        total_price: 250000,
+      };
+
+      const res = parseChannexBookingRevision(unmappedPayload, testRoomMap);
+      assert.strictEqual(res.ok, false);
+      if (!res.ok) {
+        assert.strictEqual(res.error.code, "NOT_FOUND");
+        assert.ok(res.error.message.includes("rt-unknown-penthouse"));
+      }
+    });
+
+    it("rejects booking revision with invalid date format or missing ID", () => {
+      const invalidDatePayload = {
+        id: "chx-bkg-bad-date",
+        currency: "LKR",
+        arrival_date: "10-11-2026", // Bad format
+        departure_date: "2026-11-12",
+        rooms: [{ room_type_id: "rt-chx-ocean-suite-99" }],
+        total_price: 100000,
+      };
+
+      const dateRes = parseChannexBookingRevision(invalidDatePayload, testRoomMap);
+      assert.strictEqual(dateRes.ok, false);
+      if (!dateRes.ok) {
+        assert.strictEqual(dateRes.error.code, "INVALID_DATE_FORMAT");
+      }
+
+      const missingIdPayload = {
+        currency: "LKR",
+        arrival_date: "2026-11-10",
+        departure_date: "2026-11-12",
+        rooms: [{ room_type_id: "rt-chx-ocean-suite-99" }],
+        total_price: 100000,
+      };
+
+      const idRes = parseChannexBookingRevision(missingIdPayload, testRoomMap);
+      assert.strictEqual(idRes.ok, false);
+      if (!idRes.ok) {
+        assert.strictEqual(idRes.error.code, "VALIDATION_FAILED");
+      }
+    });
+
+    it("tests resolveMealPlan across all Sri Lankan hospitality board types", () => {
+      assert.strictEqual(resolveMealPlan(true), "BB");
+      assert.strictEqual(resolveMealPlan(false, "room_only"), "RO");
+      assert.strictEqual(resolveMealPlan(false, "bed_and_breakfast"), "BB");
+      assert.strictEqual(resolveMealPlan(false, "half_board"), "HB");
+      assert.strictEqual(resolveMealPlan(false, "full_board"), "FB");
+      assert.strictEqual(resolveMealPlan(false, "all_inclusive"), "AI");
+      assert.strictEqual(resolveMealPlan(false, undefined), "RO");
     });
   });
 });
