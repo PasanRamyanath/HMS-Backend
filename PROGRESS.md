@@ -175,5 +175,6 @@ This file tracks the sequential completion of backend implementation steps defin
 
 ## Phase 14: Sri Lankan Banquet, Wedding Hall & Conference Management (Poruwa, Corkage, Bite Plates & BEO)
 - [x] Step 326: Implement Sri Lankan Wedding & Banquet Pricing Calculator (`packages/core/src/banquetMath.ts`)
+- [x] Step 327: Write Unit Tests for Sri Lankan Wedding Package & Bite-Plate Calculations (`packages/core/test/banquetMath.test.ts`)
 
 
