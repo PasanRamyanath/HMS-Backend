@@ -173,4 +173,7 @@ This file tracks the sequential completion of backend implementation steps defin
 - [x] Step 321: Implement AppSync JS Resolver for Maintenance Tickets & Lost-and-Found (`packages/graphql/resolvers/housekeepingOps.ts`)
 - [x] Step 324: Write End-to-End Check-Out -> Dirty -> Minibar Post -> Clean -> Inspected -> Check-In Ready Test (`packages/core/test/hkTurnaround.test.ts`)
 
+## Phase 14: Sri Lankan Banquet, Wedding Hall & Conference Management (Poruwa, Corkage, Bite Plates & BEO)
+- [x] Step 326: Implement Sri Lankan Wedding & Banquet Pricing Calculator (`packages/core/src/banquetMath.ts`)
+
 
