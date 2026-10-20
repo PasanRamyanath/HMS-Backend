@@ -47,12 +47,19 @@ export type DomainErrorCode =
   | "IDEMPOTENCY_CONFLICT"
   | "INVALID_IDEMPOTENCY_KEY"
   | "IDEMPOTENCY_PAYLOAD_MISMATCH"
-  | "IDEMPOTENCY_PREVIOUS_FAILURE";
+  | "IDEMPOTENCY_PREVIOUS_FAILURE"
+  | "NETWORK_ERROR"
+  | "CONFIG_ERROR"
+  | "CHANNEX_SYNC_FAILED"
+  | "RESERVATION_ALREADY_CANCELLED"
+  | "INVALID_STATE"
+  | "DATABASE_ERROR";
 
 export interface DomainError {
   readonly code: DomainErrorCode;
   readonly message: string;
   readonly meta?: Readonly<Record<string, unknown>> | undefined;
+  readonly details?: unknown;
 }
 
 export type Result<T, E = DomainError> =
