@@ -190,3 +190,4 @@ This file tracks the sequential completion of backend implementation steps defin
 - [x] Step 374: Write End-to-End Excursion Booking -> Packed Breakfast Trigger -> Split Folio Posting Test (`packages/core/test/activityFlow.test.ts`)
 - [x] Step 381: Implement GRN Price-Spike & Variance Detector (`packages/core/src/grnVariance.ts`)
 - [x] Step 382: Write Unit Tests for GRN Price-Spike & Short-Delivery Detection (`packages/core/test/grnVariance.test.ts`)
+- [x] Step 384: Wire Automatic Recipe BOM Depletion into `orderAndFolioTx.ts` on Order Completion (`packages/cdk/lambdas/orderAndFolioTx.ts`)

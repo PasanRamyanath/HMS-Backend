@@ -331,6 +331,117 @@ describe("Transactional Order & Folio Posting Lambda (orderAndFolioTx.ts)", () =
     assert.equal(output.taxBreakdown.grandTotalLkr, 2686.86);
   });
 
+  it("computes theoretical recipe BOM COGS and returns totalCogsLkr and bomDepletionsCount", async () => {
+    const { mockClient, sentCommands } = createMockDocClient();
+
+    const input: CreateOrderAndFolioTxInput = {
+      tenantId: TEST_TENANT,
+      locationId: "TABLE-02",
+      department: "RESTAURANT",
+      paymentMethod: "CASH",
+      items: [
+        {
+          itemId: "item-cocktail",
+          itemName: "Arrack Cocktail",
+          unitPriceLkr: 2000,
+          quantity: 2,
+          bomIngredients: [
+            { ingredientId: "arrack-750ml", quantityRequired: 0.05, unitCostLkr: 3000 }, // 0.05 * 2 * 3000 = 300 LKR
+            { ingredientId: "lime-juice", quantityRequired: 0.02, unitCostLkr: 500 }, // 0.02 * 2 * 500 = 20 LKR
+          ],
+        },
+      ],
+    };
+
+    const res = await executeOrderAndFolioTx(input, {
+      docClient: mockClient,
+      nowIsoFn: () => TEST_TIME,
+    });
+
+    assert.ok(res.ok);
+    const output = res.value;
+    assert.equal(output.totalCogsLkr, 320);
+    assert.equal(output.bomDepletionsCount, 2);
+
+    const txCmd = sentCommands.find((c) => c.type === "TransactWriteCommand");
+    assert.ok(txCmd);
+    const rawTx = txCmd.input as {
+      TransactItems: Array<{ Put?: { Item: Record<string, unknown> } }>;
+    };
+    const orderPut = rawTx.TransactItems[0]?.Put?.Item;
+    assert.equal(orderPut?.totalCogsLkr, 320);
+    assert.equal(orderPut?.bomDepletionsCount, 2);
+  });
+
+  it("rejects order when actorRole is not authorized", async () => {
+    const { mockClient } = createMockDocClient();
+
+    const input: CreateOrderAndFolioTxInput = {
+      tenantId: TEST_TENANT,
+      locationId: "TABLE-01",
+      department: "RESTAURANT",
+      paymentMethod: "CASH",
+      actorRole: "UNAUTHORIZED_GUEST_ROLE",
+      items: [
+        {
+          itemId: "item-tea",
+          itemName: "Ceylon Tea",
+          unitPriceLkr: 500,
+          quantity: 1,
+        },
+      ],
+    };
+
+    const res = await executeOrderAndFolioTx(input, { docClient: mockClient });
+    assert.equal(res.ok, false);
+    if (!res.ok) {
+      assert.equal(res.error.code, "PERMISSION_DENIED");
+    }
+  });
+
+  it("rejects order when SaaS subscription is inactive or tenant mismatched", async () => {
+    const { mockClient } = createMockDocClient();
+
+    const inputInactive: CreateOrderAndFolioTxInput = {
+      tenantId: TEST_TENANT,
+      locationId: "TABLE-01",
+      department: "RESTAURANT",
+      paymentMethod: "CASH",
+      subscription: {
+        tenantId: TEST_TENANT,
+        active: false,
+      },
+      items: [
+        {
+          itemId: "item-tea",
+          itemName: "Ceylon Tea",
+          unitPriceLkr: 500,
+          quantity: 1,
+        },
+      ],
+    };
+
+    const resInactive = await executeOrderAndFolioTx(inputInactive, { docClient: mockClient });
+    assert.equal(resInactive.ok, false);
+    if (!resInactive.ok) {
+      assert.equal(resInactive.error.code, "SUBSCRIPTION_INACTIVE");
+    }
+
+    const inputMismatch: CreateOrderAndFolioTxInput = {
+      ...inputInactive,
+      subscription: {
+        tenantId: "foreign-tenant-99",
+        active: true,
+      },
+    };
+
+    const resMismatch = await executeOrderAndFolioTx(inputMismatch, { docClient: mockClient });
+    assert.equal(resMismatch.ok, false);
+    if (!resMismatch.ok) {
+      assert.equal(resMismatch.error.code, "TENANT_MISMATCH");
+    }
+  });
+
   it("validates handler entrypoint error handling on invalid order payload", async () => {
     const invalidInput: CreateOrderAndFolioTxInput = {
       tenantId: TEST_TENANT,

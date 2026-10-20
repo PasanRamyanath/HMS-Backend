@@ -25,6 +25,8 @@ export type PaymentMethod = "POST_TO_ROOM_FOLIO" | "LANKA_QR" | "CASH" | "CREDIT
 export interface OrderBomIngredientInput {
   readonly ingredientId: string;
   readonly quantityRequired: number;
+  readonly unitOfMeasure?: string | undefined;
+  readonly unitCostLkr?: number | undefined;
 }
 
 export interface OrderLineItemInput {
@@ -34,6 +36,13 @@ export interface OrderLineItemInput {
   readonly quantity: number;
   readonly notes?: string | undefined;
   readonly bomIngredients?: readonly OrderBomIngredientInput[] | undefined;
+}
+
+export interface OrderSaasSubscriptionInput {
+  readonly tenantId: string;
+  readonly active: boolean;
+  readonly tier?: string | undefined;
+  readonly allowsInventoryBom?: boolean | undefined;
 }
 
 export interface CreateOrderAndFolioTxInput {
@@ -51,6 +60,8 @@ export interface CreateOrderAndFolioTxInput {
   readonly lankaQrMerchantCity?: string | undefined;
   readonly prevAuditHash?: string | undefined;
   readonly actorUserId?: string | undefined;
+  readonly actorRole?: string | undefined;
+  readonly subscription?: OrderSaasSubscriptionInput | undefined;
 }
 
 export interface OrderAndFolioTxOutput {
@@ -62,6 +73,8 @@ export interface OrderAndFolioTxOutput {
   readonly taxBreakdown: TaxBreakdownResult;
   readonly lankaQr?: GeneratedLankaQr | undefined;
   readonly folioLineId?: string | undefined;
+  readonly totalCogsLkr?: number | undefined;
+  readonly bomDepletionsCount?: number | undefined;
   readonly auditLog: AuditLogEntry;
 }
 
@@ -76,6 +89,7 @@ interface AssembleTransactItemsParams {
   readonly orderId: string;
   readonly input: CreateOrderAndFolioTxInput;
   readonly taxBreakdown: TaxBreakdownResult;
+  readonly cogsSummary: { totalCogsLkr: number; bomDepletionsCount: number };
   readonly lankaQr?: GeneratedLankaQr | undefined;
   readonly folioLineId?: string | undefined;
   readonly auditLog: AuditLogEntry;
@@ -97,6 +111,79 @@ function getDefaultDocClient(): DynamoDBDocumentClient {
     });
   }
   return defaultDocClient;
+}
+
+export const AUTHORIZED_ORDER_ROLES = [
+  "GUEST_QR",
+  "WAITER",
+  "BARTENDER",
+  "CHEF",
+  "HEAD_CHEF",
+  "CASHIER",
+  "RESTAURANT_MANAGER",
+  "HOTEL_ADMIN",
+  "SUPER_ADMIN",
+] as const;
+
+export function validateOrderActor(actorRole?: string): Result<void, DomainError> {
+  if (!actorRole) return ok(undefined);
+  const isAllowed = (AUTHORIZED_ORDER_ROLES as readonly string[]).includes(actorRole);
+  if (!isAllowed) {
+    return domainErr(
+      "PERMISSION_DENIED",
+      `Role '${actorRole}' is not authorized to place or fulfill food/beverage orders`,
+      { role: actorRole, authorizedRoles: AUTHORIZED_ORDER_ROLES },
+    );
+  }
+  return ok(undefined);
+}
+
+export function validateOrderSubscription(
+  subscription: OrderSaasSubscriptionInput | undefined,
+  expectedTenantId: string,
+): Result<void, DomainError> {
+  if (!subscription) return ok(undefined);
+  if (subscription.tenantId !== expectedTenantId) {
+    return domainErr(
+      "TENANT_MISMATCH",
+      `Subscription tenant '${subscription.tenantId}' does not match operation tenant '${expectedTenantId}'`,
+    );
+  }
+  if (!subscription.active) {
+    return domainErr("SUBSCRIPTION_INACTIVE", "SaaS subscription for this property is inactive", {
+      tenantId: expectedTenantId,
+    });
+  }
+  if (subscription.allowsInventoryBom === false) {
+    return domainErr(
+      "PLAN_LIMITATION",
+      "Automatic recipe BOM depletion is not entitled under current SaaS plan tier",
+      { tier: subscription.tier },
+    );
+  }
+  return ok(undefined);
+}
+
+export function computeOrderBomCogs(items: readonly OrderLineItemInput[]): {
+  totalCogsLkr: number;
+  bomDepletionsCount: number;
+} {
+  let totalCogs = 0;
+  let count = 0;
+  for (const item of items) {
+    if (!item.bomIngredients) continue;
+    for (const ing of item.bomIngredients) {
+      const totalQty = ing.quantityRequired * item.quantity;
+      count++;
+      if (ing.unitCostLkr && ing.unitCostLkr > 0) {
+        totalCogs += totalQty * ing.unitCostLkr;
+      }
+    }
+  }
+  return {
+    totalCogsLkr: roundLkr(totalCogs),
+    bomDepletionsCount: count,
+  };
 }
 
 function generateRandomId(prefix: string): string {
@@ -337,6 +424,15 @@ function assembleTransactItems(
           ssclLkr: p.taxBreakdown.ssclLkr,
           vatLkr: p.taxBreakdown.vatLkr,
           grandTotalLkr: p.taxBreakdown.grandTotalLkr,
+          totalCogsLkr: p.cogsSummary.totalCogsLkr,
+          bomDepletionsCount: p.cogsSummary.bomDepletionsCount,
+          cogsGrossMarginPercent:
+            p.taxBreakdown.baseLkr > 0
+              ? roundLkr(
+                  ((p.taxBreakdown.baseLkr - p.cogsSummary.totalCogsLkr) / p.taxBreakdown.baseLkr) *
+                    100,
+                )
+              : 0,
           lankaQrPayload: p.lankaQr?.payload,
           folioLineId: p.folioLineId,
           createdAt: p.nowIso,
@@ -398,6 +494,25 @@ async function commitTransaction(
   }
 }
 
+function validateOrderSecurityAndPayload(
+  input: CreateOrderAndFolioTxInput,
+): Result<string, DomainError> {
+  const tenantRes = validateTenantId(input.tenantId);
+  if (!tenantRes.ok) return tenantRes;
+  const tenantId = tenantRes.value;
+
+  const actorRes = validateOrderActor(input.actorRole);
+  if (!actorRes.ok) return actorRes;
+
+  const subRes = validateOrderSubscription(input.subscription, tenantId);
+  if (!subRes.ok) return subRes;
+
+  const itemsRes = validateOrderItems(input.items);
+  if (!itemsRes.ok) return itemsRes;
+
+  return ok(tenantId);
+}
+
 /**
  * Executes atomic transactional ServiceOrder placement, room Folio posting,
  * FIFO recipe inventory batch depletion, and immutable audit logging.
@@ -406,16 +521,11 @@ export async function executeOrderAndFolioTx(
   input: CreateOrderAndFolioTxInput,
   deps?: OrderAndFolioTxDependencies,
 ): Promise<Result<OrderAndFolioTxOutput, DomainError>> {
-  const tenantRes = validateTenantId(input.tenantId);
-  if (!tenantRes.ok) {
-    return tenantRes;
+  const valRes = validateOrderSecurityAndPayload(input);
+  if (!valRes.ok) {
+    return valRes;
   }
-  const tenantId = tenantRes.value;
-
-  const itemsRes = validateOrderItems(input.items);
-  if (!itemsRes.ok) {
-    return itemsRes;
-  }
+  const tenantId = valRes.value;
 
   const docClient = deps?.docClient ?? getDefaultDocClient();
   const tableName = deps?.tableName ?? process.env.TABLE_NAME ?? "HmsSingleTable";
@@ -432,6 +542,7 @@ export async function executeOrderAndFolioTx(
     return prepRes;
   }
   const { taxBreakdown, lankaQr } = prepRes.value;
+  const cogsSummary = computeOrderBomCogs(input.items);
 
   const folioLineId =
     input.paymentMethod === "POST_TO_ROOM_FOLIO" ? generateRandomId("fline") : undefined;
@@ -454,6 +565,7 @@ export async function executeOrderAndFolioTx(
     orderId,
     input,
     taxBreakdown,
+    cogsSummary,
     lankaQr,
     folioLineId,
     auditLog,
@@ -475,6 +587,8 @@ export async function executeOrderAndFolioTx(
     taxBreakdown,
     lankaQr,
     folioLineId,
+    totalCogsLkr: cogsSummary.totalCogsLkr,
+    bomDepletionsCount: cogsSummary.bomDepletionsCount,
     auditLog,
   });
 }
