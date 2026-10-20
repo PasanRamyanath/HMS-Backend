@@ -42,6 +42,7 @@ export * from "./orderSplitter.js";
 export * from "./kdsMetrics.js";
 export * from "./hkAssignment.js";
 export * from "./roomDiscrepancy.js";
+export * from "./hkTurnaround.js";
 export {
   SRI_LANKA_TIMEZONE,
   SRI_LANKA_LOCALE,

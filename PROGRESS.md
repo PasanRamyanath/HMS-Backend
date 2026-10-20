@@ -171,5 +171,6 @@ This file tracks the sequential completion of backend implementation steps defin
 - [x] Step 314: Build Room Discrepancy Detector (`Sleep / Skip Discrepancy`) (`packages/core/src/roomDiscrepancy.ts`)
 - [x] Step 315: Write Unit Tests for Front-Desk vs. Housekeeping Room Discrepancy Detection (`packages/core/test/roomDiscrepancy.test.ts`)
 - [x] Step 321: Implement AppSync JS Resolver for Maintenance Tickets & Lost-and-Found (`packages/graphql/resolvers/housekeepingOps.ts`)
+- [x] Step 324: Write End-to-End Check-Out -> Dirty -> Minibar Post -> Clean -> Inspected -> Check-In Ready Test (`packages/core/test/hkTurnaround.test.ts`)
 
 
