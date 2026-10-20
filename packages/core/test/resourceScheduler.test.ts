@@ -529,4 +529,109 @@ describe("Step 351: resourceScheduler — Resource Slot Conflict Checker for The
       assert.strictEqual(auditEntry.entryHash.length, 64);
     });
   });
+
+  describe("6. Advanced Dual-Resource Collision & Validation Edge Cases (Step 352)", () => {
+    it("flags simultaneous conflicts when both therapist AND room are double-booked", () => {
+      const busyTherapistSlot: ResourceSlot = {
+        slotId: "BUSY-TH-1",
+        tenantId,
+        resourceCategory: "AYURVEDA_THERAPIST",
+        resourceId: "TH-KUMARA-01",
+        resourceName: "Therapist Kumara",
+        bookingRef: "SPA-2026-801",
+        guestName: "Guest X",
+        serviceName: "Abhyanga",
+        startIso: "2026-10-25T14:00:00.000Z",
+        endIso: "2026-10-25T15:00:00.000Z",
+        turnaroundBufferMinutes: 10,
+        status: "CONFIRMED",
+      };
+
+      const busyRoomSlot: ResourceSlot = {
+        slotId: "BUSY-RM-1",
+        tenantId,
+        resourceCategory: "TREATMENT_ROOM",
+        resourceId: "ROOM-SHIRO-2",
+        resourceName: "Shirodhara Suite 2",
+        bookingRef: "SPA-2026-802",
+        guestName: "Guest Y",
+        serviceName: "Herbal Compress",
+        startIso: "2026-10-25T14:30:00.000Z",
+        endIso: "2026-10-25T15:30:00.000Z",
+        turnaroundBufferMinutes: 15,
+        status: "CONFIRMED",
+      };
+
+      const dualInput: DualResourceSlotInput = {
+        tenantId,
+        primaryCategory: "AYURVEDA_THERAPIST",
+        primaryResourceId: "TH-KUMARA-01",
+        secondaryCategory: "TREATMENT_ROOM",
+        secondaryResourceId: "ROOM-SHIRO-2",
+        bookingRef: "SPA-2026-803",
+        guestName: "Guest Z",
+        serviceName: "Simultaneous Booking",
+        startIso: "2026-10-25T14:15:00.000Z",
+        endIso: "2026-10-25T15:15:00.000Z",
+      };
+
+      const checkRes = checkDualResourceConflict(dualInput, [busyTherapistSlot, busyRoomSlot]);
+      assert.strictEqual(checkRes.ok, true);
+      if (!checkRes.ok) return;
+
+      assert.strictEqual(checkRes.value.hasConflict, true);
+      assert.strictEqual(checkRes.value.primaryConflicts.length, 1);
+      assert.strictEqual(checkRes.value.secondaryConflicts.length, 1);
+
+      // Verify scheduling also rejects cleanly with RESOURCE_CONFLICT
+      const scheduleRes = scheduleDualResourceSlots(
+        spaManager,
+        dualInput,
+        [busyTherapistSlot, busyRoomSlot],
+        "SLOT-NEW-TH",
+        "SLOT-NEW-RM",
+        "2026-10-20T10:00:00.000Z",
+      );
+      assert.strictEqual(scheduleRes.ok, false);
+      if (scheduleRes.ok) return;
+      assert.strictEqual(scheduleRes.error.code, "RESOURCE_CONFLICT");
+      assert.ok(scheduleRes.error.message.includes("TH-KUMARA-01"));
+    });
+
+    it("rejects invalid date formats with INVALID_DATE_FORMAT", () => {
+      const candidate: CandidateSlotInput = {
+        tenantId,
+        resourceCategory: "AYURVEDA_THERAPIST",
+        resourceId: "TH-001",
+        bookingRef: "BK-INV",
+        guestName: "Guest",
+        serviceName: "Spa",
+        startIso: "not-a-valid-date",
+        endIso: "2026-10-25T10:00:00.000Z",
+      };
+
+      const result = checkResourceSlotConflict(candidate, []);
+      assert.strictEqual(result.ok, false);
+      if (result.ok) return;
+      assert.strictEqual(result.error.code, "INVALID_DATE_FORMAT");
+    });
+
+    it("rejects candidate slot where endIso is before startIso with VALIDATION_FAILED", () => {
+      const candidate: CandidateSlotInput = {
+        tenantId,
+        resourceCategory: "AYURVEDA_THERAPIST",
+        resourceId: "TH-001",
+        bookingRef: "BK-INV",
+        guestName: "Guest",
+        serviceName: "Spa",
+        startIso: "2026-10-25T11:00:00.000Z",
+        endIso: "2026-10-25T10:00:00.000Z",
+      };
+
+      const result = checkResourceSlotConflict(candidate, []);
+      assert.strictEqual(result.ok, false);
+      if (result.ok) return;
+      assert.strictEqual(result.error.code, "VALIDATION_FAILED");
+    });
+  });
 });
