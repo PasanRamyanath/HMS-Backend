@@ -442,4 +442,206 @@ describe("Spa Consumables BOM FIFO Deduction Engine", () => {
     assert.equal(res.value.deductionLines[0].quantityDeducted, 80);
     assert.equal(res.value.deductionLines[0].lineCogsLkr, 240.0); // 80 * 3.0
   });
+
+  it("strictly enforces chronological FIFO sorting regardless of array insertion order", () => {
+    const unsortedBatches: InventoryBatch[] = [
+      {
+        batchId: "LATEST-BATCH-03",
+        receivedAtIso: "2026-10-20T10:00:00.000Z",
+        initialQty: 500,
+        remainingQty: 500,
+        unitCostLkr: 5.0,
+      },
+      {
+        batchId: "EARLIEST-BATCH-01",
+        receivedAtIso: "2026-09-01T10:00:00.000Z",
+        initialQty: 100,
+        remainingQty: 100,
+        unitCostLkr: 2.0,
+      },
+      {
+        batchId: "MIDDLE-BATCH-02",
+        receivedAtIso: "2026-10-01T10:00:00.000Z",
+        initialQty: 200,
+        remainingQty: 200,
+        unitCostLkr: 3.0,
+      },
+    ];
+
+    const inventory: SpaConsumableItemStock[] = [
+      {
+        itemId: "OIL-MAHANARAYANA-ML",
+        name: "Mahanarayana Medicated Herbal Oil",
+        category: "HERBAL_OIL",
+        unitOfMeasure: "ml",
+        reorderThreshold: 100,
+        batches: unsortedBatches,
+      },
+      {
+        itemId: "OIL-PINDA-ML",
+        name: "Pinda Thailaya Cooling Herbal Oil",
+        category: "HERBAL_OIL",
+        unitOfMeasure: "ml",
+        reorderThreshold: 50,
+        batches: [
+          {
+            batchId: "PINDA-01",
+            receivedAtIso: "2026-10-01T00:00:00.000Z",
+            initialQty: 100,
+            remainingQty: 100,
+            unitCostLkr: 2.5,
+          },
+        ],
+      },
+    ];
+
+    // Abhyanga requires 150ml Mahanarayana:
+    // Should deplete EARLIEST-BATCH-01 (100ml @ 2.00 = 200) + MIDDLE-BATCH-02 (50ml @ 3.00 = 150) = 350 LKR
+    const request: SpaDeductionRequest = {
+      tenantId: TENANT_RESORT,
+      actor: DOCTOR_ACTOR,
+      therapySessionId: "APPT-1008",
+      therapyCode: "ABHYANGA",
+      inventory,
+    };
+
+    const res = deductSpaConsumables(request);
+    assert.equal(res.ok, true);
+    if (!res.ok) return;
+
+    const mahaLine = res.value.deductionLines.find((l) => l.itemId === "OIL-MAHANARAYANA-ML");
+    assert.ok(mahaLine);
+    assert.equal(mahaLine.lineCogsLkr, 350.0);
+    assert.equal(mahaLine.batchAllocations[0].batchId, "EARLIEST-BATCH-01");
+    assert.equal(mahaLine.batchAllocations[0].deductedQty, 100);
+    assert.equal(mahaLine.batchAllocations[1].batchId, "MIDDLE-BATCH-02");
+    assert.equal(mahaLine.batchAllocations[1].deductedQty, 50);
+  });
+
+  it("rejects request if required consumable item is not found in inventory", () => {
+    // Inventory missing King Coconut Oil and Gauze Band
+    const partialInventory: SpaConsumableItemStock[] = [
+      {
+        itemId: "OIL-MAHANARAYANA-ML",
+        name: "Mahanarayana Medicated Herbal Oil",
+        category: "HERBAL_OIL",
+        unitOfMeasure: "ml",
+        reorderThreshold: 100,
+        batches: [
+          {
+            batchId: "B1",
+            receivedAtIso: "2026-10-01T00:00:00.000Z",
+            initialQty: 500,
+            remainingQty: 500,
+            unitCostLkr: 2.5,
+          },
+        ],
+      },
+    ];
+
+    const request: SpaDeductionRequest = {
+      tenantId: TENANT_RESORT,
+      actor: DOCTOR_ACTOR,
+      therapySessionId: "APPT-1009",
+      therapyCode: "SHIRODHARA",
+      inventory: partialInventory,
+    };
+
+    const res = deductSpaConsumables(request);
+    assert.equal(res.ok, false);
+    if (!res.ok) {
+      assert.equal(res.error.code, "NOT_FOUND");
+    }
+  });
+
+  it("validates empty therapySessionId and non-positive session multipliers", () => {
+    const inventory = createSampleInventory();
+
+    const emptySessionReq: SpaDeductionRequest = {
+      tenantId: TENANT_RESORT,
+      actor: DOCTOR_ACTOR,
+      therapySessionId: "   ",
+      therapyCode: "ABHYANGA",
+      inventory,
+    };
+    const res1 = deductSpaConsumables(emptySessionReq);
+    assert.equal(res1.ok, false);
+    if (!res1.ok) {
+      assert.equal(res1.error.code, "VALIDATION_FAILED");
+    }
+
+    const invalidMultReq: SpaDeductionRequest = {
+      tenantId: TENANT_RESORT,
+      actor: DOCTOR_ACTOR,
+      therapySessionId: "APPT-1010",
+      therapyCode: "ABHYANGA",
+      sessionMultiplier: -0.5,
+      inventory,
+    };
+    const res2 = deductSpaConsumables(invalidMultReq);
+    assert.equal(res2.ok, false);
+    if (!res2.ok) {
+      assert.equal(res2.error.code, "VALIDATION_FAILED");
+    }
+  });
+
+  it("detects cryptographic tampering in SHA-256 audit log payload", () => {
+    const inventory = createSampleInventory();
+    const request: SpaDeductionRequest = {
+      tenantId: TENANT_RESORT,
+      actor: DOCTOR_ACTOR,
+      therapySessionId: "APPT-1011",
+      therapyCode: "ABHYANGA",
+      inventory,
+      previousAuditHash: GENESIS_HASH,
+    };
+
+    const res = deductSpaConsumables(request);
+    assert.equal(res.ok, true);
+    if (!res.ok) return;
+
+    // Tamper with the audit log entry
+    const tamperedEntry = {
+      ...res.value.auditLog,
+      afterJson: JSON.stringify({ therapySessionId: "APPT-1011", totalCogsLkr: 0.0 }),
+    };
+
+    const chainRes = verifyAuditChain([tamperedEntry], GENESIS_HASH);
+    assert.equal(chainRes.ok, false);
+    if (!chainRes.ok) {
+      assert.equal(chainRes.error.code, "AUDIT_CHAIN_CORRUPTED");
+    }
+  });
+
+  it("authorizes all valid spa operations roles in RBAC matrix", () => {
+    const allowedRoles: readonly SpaStaffRole[] = [
+      "AYURVEDA_DOCTOR",
+      "SPA_MANAGER",
+      "SENIOR_THERAPIST",
+      "THERAPIST",
+      "GENERAL_MANAGER",
+      "SUPER_ADMIN",
+    ];
+
+    const inventory = createSampleInventory();
+
+    for (const role of allowedRoles) {
+      const actor: SpaConsumablesActor = {
+        userId: `usr-${role.toLowerCase()}`,
+        role,
+        tenantId: TENANT_RESORT,
+      };
+
+      const request: SpaDeductionRequest = {
+        tenantId: TENANT_RESORT,
+        actor,
+        therapySessionId: `APPT-ROLE-${role}`,
+        therapyCode: "ABHYANGA",
+        inventory,
+      };
+
+      const res = deductSpaConsumables(request);
+      assert.equal(res.ok, true, `Role ${role} should be authorized`);
+    }
+  });
 });
