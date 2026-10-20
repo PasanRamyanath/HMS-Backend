@@ -162,4 +162,5 @@ This file tracks the sequential completion of backend implementation steps defin
 - [x] Step 284: Implement Split-Order Department Splitter (`packages/core/src/orderSplitter.ts`)
 - [x] Step 285: Write Unit Tests for Mixed Kitchen KOT + Bar BOT Order Splitting (`packages/core/test/orderSplitter.test.ts`)
 - [x] Step 295: Implement KDS Prep-Time SLA & Bottleneck Analytics Helper (`packages/core/src/kdsMetrics.ts`)
+- [x] Step 296: Write Unit Tests for KDS SLA Metrics & Prep-Time Calculations (`packages/core/test/kdsMetrics.test.ts`)
 
