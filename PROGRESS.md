@@ -165,3 +165,7 @@ This file tracks the sequential completion of backend implementation steps defin
 - [x] Step 296: Write Unit Tests for KDS SLA Metrics & Prep-Time Calculations (`packages/core/test/kdsMetrics.test.ts`)
 - [x] Step 299: Write End-to-End QR Order -> KDS Cooking -> Runner Delivered -> Folio Sync Test (`packages/core/test/kdsLifecycle.test.ts`)
 
+## Phase 13: Housekeeping Mobile Runner, Room Status Matrix, Minibar Posting, Laundry & Maintenance Tickets
+- [x] Step 305: Implement Automated Daily Attendant Room Assignment Balancer (`packages/core/src/hkAssignment.ts`)
+- [x] Step 306: Write Unit Tests for Housekeeping Attendant Workload Balancing (`packages/core/test/hkAssignment.test.ts`)
+
