@@ -182,3 +182,5 @@ This file tracks the sequential completion of backend implementation steps defin
 ## Phase 15: Ayurveda Spa, Safari Jeep, Whale Watching, Gem/Tea Tours & Airport Transfer Excursion Desk
 - [x] Step 351: Implement Resource Slot Conflict Checker for Therapists, Treatment Rooms & Safari Vehicles (`packages/core/src/resourceScheduler.ts`)
 - [x] Step 352: Write Unit Tests for Therapist + Room Dual-Resource Conflict Detection (`packages/core/test/resourceScheduler.test.ts`)
+- [x] Step 357: Implement Excursion Vendor Commission & Net Payout Calculator (`packages/core/src/excursionSplit.ts`)
+- [x] Step 358: Write Unit Tests for Excursion Pass-Through vs. Taxable Hotel Markup (`packages/core/test/excursionSplit.test.ts`)

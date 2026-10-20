@@ -46,6 +46,7 @@ export * from "./hkTurnaround.js";
 export * from "./banquetMath.js";
 export * from "./banquetBomAggregator.js";
 export * from "./resourceScheduler.js";
+export * from "./excursionSplit.js";
 export {
   SRI_LANKA_TIMEZONE,
   SRI_LANKA_LOCALE,
