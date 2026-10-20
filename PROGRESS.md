@@ -188,3 +188,5 @@ This file tracks the sequential completion of backend implementation steps defin
 - [x] Step 365: Write Unit Tests for Spa Herbal Oil Inventory Deduction (`packages/core/test/spaConsumables.test.ts`)
 - [x] Step 368: Implement AppSync JS Resolvers for Spa, Excursions & Transfers (`packages/graphql/resolvers/activities.ts`)
 - [x] Step 374: Write End-to-End Excursion Booking -> Packed Breakfast Trigger -> Split Folio Posting Test (`packages/core/test/activityFlow.test.ts`)
+- [x] Step 381: Implement GRN Price-Spike & Variance Detector (`packages/core/src/grnVariance.ts`)
+- [x] Step 382: Write Unit Tests for GRN Price-Spike & Short-Delivery Detection (`packages/core/test/grnVariance.test.ts`)
