@@ -465,7 +465,7 @@ describe("Step 314 & 315: Room Discrepancy Detector (roomDiscrepancy.ts)", () =>
       }
     });
 
-    it("rejects cross-tenant operation attempts", () => {
+    it("rejects cross-tenant operation attempts for non-SuperAdmin", () => {
       const res = authorizeDiscrepancyOperation(
         tenantId,
         "HOUSEKEEPING_SUPERVISOR",
@@ -476,6 +476,16 @@ describe("Step 314 & 315: Room Discrepancy Detector (roomDiscrepancy.ts)", () =>
       if (!res.ok) {
         assert.equal(res.error.code, "TENANT_MISMATCH");
       }
+    });
+
+    it("permits SuperAdmin cross-tenant discrepancy operations", () => {
+      const res = authorizeDiscrepancyOperation(
+        "platform-superadmin",
+        "SUPER_ADMIN",
+        tenantId,
+        "RESOLVE_ROOM_DISCREPANCY",
+      );
+      assert.equal(res.ok, true);
     });
   });
 
@@ -500,6 +510,106 @@ describe("Step 314 & 315: Room Discrepancy Detector (roomDiscrepancy.ts)", () =>
         assert.equal(resolution.value.auditEntry.entryHash.length, 64);
         assert.match(resolution.value.auditEntry.action, /RESOLVE_DISCREPANCY/);
       }
+    });
+
+    it("rejects discrepancy resolution when resolutionNotes is empty", () => {
+      const resolution = resolveRoomDiscrepancy({
+        tenantId,
+        roomId: "rm-102",
+        resolutionAction: "FALSE_ALARM_DISMISSED",
+        actorUserId: "user-hk-sup-01",
+        actorRole: "HOUSEKEEPING_SUPERVISOR",
+        resolutionNotes: "   ",
+        resolvedAtIso: "2026-10-20T11:00:00Z",
+      });
+
+      assert.equal(resolution.ok, false);
+      if (!resolution.ok) {
+        assert.equal(resolution.error.code, "VALIDATION_FAILED");
+        assert.match(resolution.error.message, /resolutionNotes/);
+      }
+    });
+
+    it("handles missing housekeeping observation by flagging room as STATUS_UNKNOWN", () => {
+      const result = detectRoomDiscrepancies({
+        tenantId,
+        auditDateIso,
+        frontDeskRooms: [
+          {
+            roomId: "rm-uninspected",
+            roomNumber: "999",
+            status: "OCCUPIED",
+            registeredGuestsCount: 2,
+          },
+        ],
+        housekeepingObservations: [
+          {
+            roomId: "rm-other",
+            roomNumber: "101",
+            observationStatus: "OBSERVED_OCCUPIED",
+            observedGuestsCount: 2,
+            hasLuggage: true,
+            bedSleptIn: true,
+            attendantId: "att-1",
+            attendantName: "Kamal",
+            inspectedAtIso: auditDateIso,
+          },
+        ],
+      });
+
+      assert.equal(result.ok, true);
+      if (result.ok) {
+        const item = result.value.items[0];
+        assert.ok(item);
+        assert.equal(item.roomId, "rm-uninspected");
+        assert.equal(item.discrepancyType, "STATUS_UNKNOWN");
+        assert.equal(item.attendantName, "UNASSIGNED");
+        assert.equal(item.recommendation, "SCHEDULE_SUPERVISOR_REINSPECTION");
+      }
+    });
+
+    it("computes custom tax rates for non-VAT boutique hotel correctly", () => {
+      const nonVatTaxConfig = {
+        enableSC: true,
+        scRate: 0.1,
+        enableTDL: true,
+        tdlRate: 0.01,
+        enableSSCL: true,
+        ssclRate: 0.025,
+        enableVAT: false,
+        vatRate: 0.0,
+      };
+
+      const fd: FrontDeskRoomRecord = {
+        roomId: "rm-bv-1",
+        roomNumber: "Villa-1",
+        status: "VACANT",
+        registeredGuestsCount: 0,
+        nightlyRateLkr: 50000,
+      };
+
+      const hk: HousekeepingObservationRecord = {
+        roomId: "rm-bv-1",
+        roomNumber: "Villa-1",
+        observationStatus: "OBSERVED_OCCUPIED",
+        observedGuestsCount: 2,
+        hasLuggage: true,
+        bedSleptIn: true,
+        attendantId: "att-1",
+        attendantName: "Kamal",
+        inspectedAtIso: auditDateIso,
+      };
+
+      const item = classifyRoomDiscrepancy(fd, hk, 50000, 3500, nonVatTaxConfig);
+      assert.equal(item.discrepancyType, "SLEEP");
+      assert.ok(item.financialImpact);
+      // Non-VAT: Base: 50,000, SC 10%: 5,000, Sub: 55,000, TDL 1%: 550, SSCL 2.5%: 1,375, VAT: 0
+      // Grand: 55,000 + 550 + 1,375 = 56,925
+      assert.equal(item.financialImpact.taxes.scLkr, 5000);
+      assert.equal(item.financialImpact.taxes.tdlLkr, 550);
+      assert.equal(item.financialImpact.taxes.ssclLkr, 1375);
+      assert.equal(item.financialImpact.taxes.vatLkr, 0);
+      assert.equal(item.financialImpact.taxes.grandTotalLkr, 56925);
     });
   });
 });

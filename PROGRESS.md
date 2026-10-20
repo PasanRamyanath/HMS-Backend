@@ -169,4 +169,5 @@ This file tracks the sequential completion of backend implementation steps defin
 - [x] Step 305: Implement Automated Daily Attendant Room Assignment Balancer (`packages/core/src/hkAssignment.ts`)
 - [x] Step 306: Write Unit Tests for Housekeeping Attendant Workload Balancing (`packages/core/test/hkAssignment.test.ts`)
 - [x] Step 314: Build Room Discrepancy Detector (`Sleep / Skip Discrepancy`) (`packages/core/src/roomDiscrepancy.ts`)
+- [x] Step 315: Write Unit Tests for Front-Desk vs. Housekeeping Room Discrepancy Detection (`packages/core/test/roomDiscrepancy.test.ts`)
 
