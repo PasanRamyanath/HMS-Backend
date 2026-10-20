@@ -184,3 +184,4 @@ This file tracks the sequential completion of backend implementation steps defin
 - [x] Step 352: Write Unit Tests for Therapist + Room Dual-Resource Conflict Detection (`packages/core/test/resourceScheduler.test.ts`)
 - [x] Step 357: Implement Excursion Vendor Commission & Net Payout Calculator (`packages/core/src/excursionSplit.ts`)
 - [x] Step 358: Write Unit Tests for Excursion Pass-Through vs. Taxable Hotel Markup (`packages/core/test/excursionSplit.test.ts`)
+- [x] Step 364: Build Spa Herbal Oil & Consumables BOM Deduction Helper (`packages/core/src/spaConsumables.ts`)
