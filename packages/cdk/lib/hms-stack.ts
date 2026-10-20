@@ -508,6 +508,64 @@ const DIRECT_JS_RESOLVERS: readonly DirectJsResolverMapping[] = [
     reqFn: "updateAyurvedaAppointmentStatusRequest",
     resFn: "updateAyurvedaAppointmentStatusResponse",
   },
+
+  // Store Inventory, Procurement & FIFO Vouchers (inventoryOps.js)
+  {
+    typeName: "Query",
+    fieldName: "getStockItem",
+    file: "inventoryOps.js",
+    reqFn: "getStockItemRequest",
+    resFn: "getStockItemResponse",
+  },
+  {
+    typeName: "Query",
+    fieldName: "getPurchaseOrder",
+    file: "inventoryOps.js",
+    reqFn: "getPurchaseOrderRequest",
+    resFn: "getPurchaseOrderResponse",
+  },
+  {
+    typeName: "Query",
+    fieldName: "listPurchaseOrders",
+    file: "inventoryOps.js",
+    reqFn: "listPurchaseOrdersRequest",
+    resFn: "listPurchaseOrdersResponse",
+  },
+  {
+    typeName: "Query",
+    fieldName: "getInventoryVoucher",
+    file: "inventoryOps.js",
+    reqFn: "getInventoryVoucherRequest",
+    resFn: "getInventoryVoucherResponse",
+  },
+  {
+    typeName: "Query",
+    fieldName: "listInventoryVouchers",
+    file: "inventoryOps.js",
+    reqFn: "listInventoryVouchersRequest",
+    resFn: "listInventoryVouchersResponse",
+  },
+  {
+    typeName: "Mutation",
+    fieldName: "upsertStockItem",
+    file: "inventoryOps.js",
+    reqFn: "upsertStockItemRequest",
+    resFn: "upsertStockItemResponse",
+  },
+  {
+    typeName: "Mutation",
+    fieldName: "recordGrn",
+    file: "inventoryOps.js",
+    reqFn: "recordGrnRequest",
+    resFn: "recordGrnResponse",
+  },
+  {
+    typeName: "Mutation",
+    fieldName: "createGoodsIssueNote",
+    file: "inventoryOps.js",
+    reqFn: "createGoodsIssueNoteRequest",
+    resFn: "createGoodsIssueNoteResponse",
+  },
 ] as const;
 
 interface LeanLambdaOptions {

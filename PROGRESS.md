@@ -193,3 +193,4 @@ This file tracks the sequential completion of backend implementation steps defin
 - [x] Step 384: Wire Automatic Recipe BOM Depletion into `orderAndFolioTx.ts` on Order Completion (`packages/cdk/lambdas/orderAndFolioTx.ts`)
 - [x] Step 385: Build Bar Liquor Shot / Peg Variance Auditor (`calculateLiquorVariance`) (`packages/core/src/liquorAudit.ts`)
 - [x] Step 386: Write Unit Tests for Sri Lankan 25ml / 50ml Bar Peg Variance Math (`packages/core/test/liquorAudit.test.ts`)
+- [x] Step 393: Implement AppSync JS Resolvers for Stock, PR, PO, GRN & GIN (`packages/graphql/resolvers/inventoryOps.ts`)

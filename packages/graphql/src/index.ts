@@ -21,3 +21,4 @@ export * from "../resolvers/reportsAndStock.js";
 export * from "../resolvers/auditLog.js";
 export * from "../resolvers/housekeepingOps.js";
 export * from "../resolvers/activities.js";
+export * from "../resolvers/inventoryOps.js";
