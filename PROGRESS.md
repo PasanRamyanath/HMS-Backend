@@ -187,3 +187,4 @@ This file tracks the sequential completion of backend implementation steps defin
 - [x] Step 364: Build Spa Herbal Oil & Consumables BOM Deduction Helper (`packages/core/src/spaConsumables.ts`)
 - [x] Step 365: Write Unit Tests for Spa Herbal Oil Inventory Deduction (`packages/core/test/spaConsumables.test.ts`)
 - [x] Step 368: Implement AppSync JS Resolvers for Spa, Excursions & Transfers (`packages/graphql/resolvers/activities.ts`)
+- [x] Step 374: Write End-to-End Excursion Booking -> Packed Breakfast Trigger -> Split Folio Posting Test (`packages/core/test/activityFlow.test.ts`)
