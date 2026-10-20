@@ -44,6 +44,7 @@ export * from "./hkAssignment.js";
 export * from "./roomDiscrepancy.js";
 export * from "./hkTurnaround.js";
 export * from "./banquetMath.js";
+export * from "./banquetBomAggregator.js";
 export {
   SRI_LANKA_TIMEZONE,
   SRI_LANKA_LOCALE,
