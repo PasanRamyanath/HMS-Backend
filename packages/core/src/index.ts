@@ -39,6 +39,7 @@ export * from "./catalogPresets.js";
 export * from "./menuFiltering.js";
 export * from "./orderIdempotency.js";
 export * from "./orderSplitter.js";
+export * from "./kdsMetrics.js";
 export {
   SRI_LANKA_TIMEZONE,
   SRI_LANKA_LOCALE,
