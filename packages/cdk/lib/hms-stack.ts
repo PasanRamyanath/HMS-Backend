@@ -117,7 +117,7 @@ interface DirectJsResolverMapping {
 }
 
 /**
- * Compact declarative mapping table for all 43 direct AppSync JS DynamoDB resolvers.
+ * Compact declarative mapping table for all 52 direct AppSync JS DynamoDB resolvers.
  * Resolvers execute entirely in the AppSync edge runtime without Lambda invocations.
  */
 const DIRECT_JS_RESOLVERS: readonly DirectJsResolverMapping[] = [
@@ -442,6 +442,71 @@ const DIRECT_JS_RESOLVERS: readonly DirectJsResolverMapping[] = [
     file: "housekeepingOps.js",
     reqFn: "updateLostFoundStatusRequest",
     resFn: "updateLostFoundStatusResponse",
+  },
+
+  // Spa, Excursions, Safari Jeeps & Airport Transfers (activities.js)
+  {
+    typeName: "Query",
+    fieldName: "getExcursionBooking",
+    file: "activities.js",
+    reqFn: "getExcursionBookingRequest",
+    resFn: "getExcursionBookingResponse",
+  },
+  {
+    typeName: "Query",
+    fieldName: "listExcursionBookings",
+    file: "activities.js",
+    reqFn: "listExcursionBookingsRequest",
+    resFn: "listExcursionBookingsResponse",
+  },
+  {
+    typeName: "Query",
+    fieldName: "getAyurvedaAppointment",
+    file: "activities.js",
+    reqFn: "getAyurvedaAppointmentRequest",
+    resFn: "getAyurvedaAppointmentResponse",
+  },
+  {
+    typeName: "Query",
+    fieldName: "listAyurvedaAppointments",
+    file: "activities.js",
+    reqFn: "listAyurvedaAppointmentsRequest",
+    resFn: "listAyurvedaAppointmentsResponse",
+  },
+  {
+    typeName: "Mutation",
+    fieldName: "createExcursionBooking",
+    file: "activities.js",
+    reqFn: "createExcursionBookingRequest",
+    resFn: "createExcursionBookingResponse",
+  },
+  {
+    typeName: "Mutation",
+    fieldName: "createAyurvedaAppointment",
+    file: "activities.js",
+    reqFn: "createAyurvedaAppointmentRequest",
+    resFn: "createAyurvedaAppointmentResponse",
+  },
+  {
+    typeName: "Mutation",
+    fieldName: "createActivityBooking",
+    file: "activities.js",
+    reqFn: "createActivityBookingRequest",
+    resFn: "createActivityBookingResponse",
+  },
+  {
+    typeName: "Mutation",
+    fieldName: "updateExcursionStatus",
+    file: "activities.js",
+    reqFn: "updateExcursionStatusRequest",
+    resFn: "updateExcursionStatusResponse",
+  },
+  {
+    typeName: "Mutation",
+    fieldName: "updateAyurvedaAppointmentStatus",
+    file: "activities.js",
+    reqFn: "updateAyurvedaAppointmentStatusRequest",
+    resFn: "updateAyurvedaAppointmentStatusResponse",
   },
 ] as const;
 

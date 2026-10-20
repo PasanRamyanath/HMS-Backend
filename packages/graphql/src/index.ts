@@ -20,3 +20,4 @@ export * from "../resolvers/banquets.js";
 export * from "../resolvers/reportsAndStock.js";
 export * from "../resolvers/auditLog.js";
 export * from "../resolvers/housekeepingOps.js";
+export * from "../resolvers/activities.js";
