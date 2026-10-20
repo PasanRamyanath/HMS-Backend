@@ -178,5 +178,6 @@ This file tracks the sequential completion of backend implementation steps defin
 - [x] Step 327: Write Unit Tests for Sri Lankan Wedding Package & Bite-Plate Calculations (`packages/core/test/banquetMath.test.ts`)
 - [x] Step 340: Implement Banquet Kitchen Bulk Ingredient Requisition Generator (`packages/core/src/banquetBomAggregator.ts`)
 - [x] Step 341: Write Unit Tests for Banquet Bulk Ingredient BOM Aggregation (`packages/core/test/banquetBomAggregator.test.ts`)
+- [x] Step 349: Write End-to-End Wedding Inquiry -> Tentative Hold -> Deposit -> BEO -> Final Settlement Test (`packages/core/test/banquetLifecycle.test.ts`)
 
 
