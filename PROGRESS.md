@@ -191,3 +191,5 @@ This file tracks the sequential completion of backend implementation steps defin
 - [x] Step 381: Implement GRN Price-Spike & Variance Detector (`packages/core/src/grnVariance.ts`)
 - [x] Step 382: Write Unit Tests for GRN Price-Spike & Short-Delivery Detection (`packages/core/test/grnVariance.test.ts`)
 - [x] Step 384: Wire Automatic Recipe BOM Depletion into `orderAndFolioTx.ts` on Order Completion (`packages/cdk/lambdas/orderAndFolioTx.ts`)
+- [x] Step 385: Build Bar Liquor Shot / Peg Variance Auditor (`calculateLiquorVariance`) (`packages/core/src/liquorAudit.ts`)
+- [x] Step 386: Write Unit Tests for Sri Lankan 25ml / 50ml Bar Peg Variance Math (`packages/core/test/liquorAudit.test.ts`)
