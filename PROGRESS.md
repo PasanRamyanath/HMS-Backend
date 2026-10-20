@@ -158,6 +158,6 @@ This file tracks the sequential completion of backend implementation steps defin
 - [x] Step 271: Write Unit Tests for Order Idempotency & Duplicate Tap Prevention (`packages/core/test/orderIdempotency.test.ts`)
 - [x] Step 274: Write End-to-End Guest QR Cart -> Meal Plan Deduction -> Tax -> Order Tracker Test (`packages/core/test/guestQrFlow.test.ts`)
 
-
-
-
+## Phase 12: Kitchen Display System (KDS), Bar Order Tracker (BOT) & Waiter Tablet POS
+- [x] Step 284: Implement Split-Order Department Splitter (`packages/core/src/orderSplitter.ts`)
+- [x] Step 285: Write Unit Tests for Mixed Kitchen KOT + Bar BOT Order Splitting (`packages/core/test/orderSplitter.test.ts`)
