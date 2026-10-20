@@ -498,8 +498,8 @@ describe("CloudFormation Permanent Free-Tier Cost-Ceiling Guardrails", () => {
     });
   });
 
-  it("registers all 35 direct AppSync JS DynamoDB resolvers with zero cold starts", () => {
-    hmsTemplate.resourceCountIs("AWS::AppSync::Resolver", 35);
+  it("registers all 43 direct AppSync JS DynamoDB resolvers with zero cold starts", () => {
+    hmsTemplate.resourceCountIs("AWS::AppSync::Resolver", 43);
 
     const sampleResolvers = [
       { type: "Query", field: "getHotelTenant" },
@@ -513,6 +513,8 @@ describe("CloudFormation Permanent Free-Tier Cost-Ceiling Guardrails", () => {
       { type: "Query", field: "getFolioWithLines" },
       { type: "Query", field: "listBanquetEvents" },
       { type: "Query", field: "listStockItems" },
+      { type: "Query", field: "getMaintenanceTicket" },
+      { type: "Mutation", field: "logLostFoundItem" },
     ];
 
     for (const r of sampleResolvers) {

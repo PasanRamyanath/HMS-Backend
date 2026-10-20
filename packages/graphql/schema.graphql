@@ -3628,6 +3628,172 @@ input DistributeStaffScPoolInput {
 }
 
 # ==============================================================================
+# Maintenance Tickets & Lost-and-Found Entities
+# ==============================================================================
+
+"""
+Operating trade category for physical maintenance and engineering tickets.
+"""
+enum MaintenanceCategory {
+  PLUMBING
+  ELECTRICAL
+  HVAC_AIR_CON
+  CARPENTRY_FURNITURE
+  PAINTING_WALLS
+  PEST_CONTROL
+  APPLIANCE_TV
+}
+
+"""
+Priority urgency level for maintenance engineering tickets.
+"""
+enum MaintenanceSeverity {
+  CRITICAL
+  HIGH
+  MEDIUM
+  LOW
+}
+
+"""
+Workflow lifecycle status for room or common area maintenance tickets.
+"""
+enum MaintenanceStatus {
+  REPORTED
+  ASSIGNED
+  IN_PROGRESS
+  WAITING_PARTS
+  RESOLVED
+  CLOSED
+}
+
+"""
+Physical engineering maintenance or repair ticket entity.
+Single-table mapping:
+  PK: TENANT#<tenantId>
+  SK: MAINT#<ticketId>
+  GSI1PK: TENANT#<tenantId>#MAINT
+  GSI1SK: STATUS#<status>#<severity>#<ticketId>
+"""
+type MaintenanceTicket @aws_cognito_user_pools @aws_iam {
+  id: ID!
+  tenantId: ID!
+  roomNumber: String!
+  category: MaintenanceCategory!
+  severity: MaintenanceSeverity!
+  status: MaintenanceStatus!
+  reportedBy: String!
+  assignedTo: String
+  estimatedCostLkr: Float
+  actualCostLkr: Float
+  description: String!
+  reportedAtIso: AWSDateTime!
+  resolvedAtIso: AWSDateTime
+  notes: String
+  createdAt: AWSDateTime!
+  updatedAt: AWSDateTime!
+}
+
+input CreateMaintenanceTicketInput {
+  ticketId: ID
+  roomNumber: String!
+  category: MaintenanceCategory!
+  severity: MaintenanceSeverity!
+  reportedBy: String!
+  assignedTo: String
+  estimatedCostLkr: Float
+  description: String!
+  reportedAtIso: AWSDateTime
+  notes: String
+}
+
+input UpdateMaintenanceTicketStatusInput {
+  status: MaintenanceStatus!
+  assignedTo: String
+  actualCostLkr: Float
+  notes: String
+}
+
+"""
+Classification categories for lost and found guest property.
+"""
+enum LostFoundCategory {
+  ELECTRONICS
+  PASSPORT_WALLET
+  JEWELRY_WATCH
+  CLOTHING_FOOTWEAR
+  TOILETRIES
+  EYEWEAR
+  DOCUMENTS_CARDS
+  OTHER
+}
+
+"""
+Custody and lifecycle status for lost guest property.
+"""
+enum LostFoundStatus {
+  LOGGED_IN_CUSTODY
+  GUEST_CONTACTED
+  CLAIMED_RETURNED
+  DONATED
+  DISPOSED
+}
+
+"""
+Lost and found property register entity.
+Single-table mapping:
+  PK: TENANT#<tenantId>
+  SK: LOSTFOUND#<itemId>
+  GSI1PK: TENANT#<tenantId>#LOSTFOUND
+  GSI1SK: STATUS#<status>#<category>#<itemId>
+"""
+type LostFoundItem @aws_cognito_user_pools @aws_iam {
+  id: ID!
+  tenantId: ID!
+  itemTitle: String!
+  category: LostFoundCategory!
+  locationFound: String!
+  roomNumber: String
+  foundBy: String!
+  foundDateIso: AWSDateTime!
+  guestName: String
+  guestPhone: String
+  guestNicPassport: String
+  status: LostFoundStatus!
+  estimatedValueLkr: Float
+  photoKey: String
+  storageLockerNumber: String!
+  notes: String
+  createdAt: AWSDateTime!
+  updatedAt: AWSDateTime!
+}
+
+input LogLostFoundItemInput {
+  itemId: ID
+  itemTitle: String!
+  category: LostFoundCategory!
+  locationFound: String!
+  roomNumber: String
+  foundBy: String!
+  foundDateIso: AWSDateTime
+  guestName: String
+  guestPhone: String
+  guestNicPassport: String
+  estimatedValueLkr: Float
+  photoKey: String
+  storageLockerNumber: String!
+  notes: String
+}
+
+input UpdateLostFoundStatusInput {
+  status: LostFoundStatus!
+  guestName: String
+  guestPhone: String
+  guestNicPassport: String
+  storageLockerNumber: String
+  notes: String
+}
+
+# ==============================================================================
 # GraphQL Root Types Placeholder
 # ==============================================================================
 
@@ -3980,6 +4146,40 @@ type Query {
     @aws_iam
     @aws_lambda
     @aws_api_key
+
+  """
+  Retrieves a maintenance engineering ticket by identifier.
+  """
+  getMaintenanceTicket(tenantId: ID!, ticketId: ID!): MaintenanceTicket
+    @aws_cognito_user_pools
+    @aws_iam
+
+  """
+  Lists maintenance tickets for a hotel property, optionally filtered by status or category.
+  """
+  listMaintenanceTickets(
+    tenantId: ID!
+    status: MaintenanceStatus
+    category: MaintenanceCategory
+    limit: Int
+    nextToken: String
+  ): [MaintenanceTicket!]! @aws_cognito_user_pools @aws_iam
+
+  """
+  Retrieves a lost-and-found property register item by identifier.
+  """
+  getLostFoundItem(tenantId: ID!, itemId: ID!): LostFoundItem @aws_cognito_user_pools @aws_iam
+
+  """
+  Lists lost and found registry items, optionally filtered by status or category.
+  """
+  listLostFoundItems(
+    tenantId: ID!
+    status: LostFoundStatus
+    category: LostFoundCategory
+    limit: Int
+    nextToken: String
+  ): [LostFoundItem!]! @aws_cognito_user_pools @aws_iam
 }
 
 type Mutation {
@@ -4241,6 +4441,38 @@ type Mutation {
   distributeStaffScPool(tenantId: ID!, input: DistributeStaffScPoolInput!): StaffScPoolStatement
     @aws_cognito_user_pools
     @aws_iam
+
+  """
+  Logs a new engineering maintenance or preventive repair ticket.
+  """
+  createMaintenanceTicket(tenantId: ID!, input: CreateMaintenanceTicketInput!): MaintenanceTicket
+    @aws_cognito_user_pools
+    @aws_iam
+
+  """
+  Updates the workflow status and resolution cost of a maintenance ticket.
+  """
+  updateMaintenanceTicketStatus(
+    tenantId: ID!
+    ticketId: ID!
+    input: UpdateMaintenanceTicketStatusInput!
+  ): MaintenanceTicket @aws_cognito_user_pools @aws_iam
+
+  """
+  Registers a discovered guest lost property item in the secure custody register.
+  """
+  logLostFoundItem(tenantId: ID!, input: LogLostFoundItemInput!): LostFoundItem
+    @aws_cognito_user_pools
+    @aws_iam
+
+  """
+  Updates custody status, guest claim identity, or disposal of a lost-and-found item.
+  """
+  updateLostFoundStatus(
+    tenantId: ID!
+    itemId: ID!
+    input: UpdateLostFoundStatusInput!
+  ): LostFoundItem @aws_cognito_user_pools @aws_iam
 }
 
 type Subscription {

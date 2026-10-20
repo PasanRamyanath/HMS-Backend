@@ -365,6 +365,19 @@ export type CreateGroupBookingInput = {
   tourOperatorContractId?: InputMaybe<Scalars['ID']['input']>;
 };
 
+export type CreateMaintenanceTicketInput = {
+  assignedTo?: InputMaybe<Scalars['String']['input']>;
+  category: MaintenanceCategory;
+  description: Scalars['String']['input'];
+  estimatedCostLkr?: InputMaybe<Scalars['Float']['input']>;
+  notes?: InputMaybe<Scalars['String']['input']>;
+  reportedAtIso?: InputMaybe<Scalars['AWSDateTime']['input']>;
+  reportedBy: Scalars['String']['input'];
+  roomNumber: Scalars['String']['input'];
+  severity: MaintenanceSeverity;
+  ticketId?: InputMaybe<Scalars['ID']['input']>;
+};
+
 /** Input for creating a new individual or tour reservation. */
 export type CreateReservationInput = {
   adultsCount: Scalars['Int']['input'];
@@ -957,6 +970,131 @@ export type InventoryVoucherItem = {
   unitOfMeasure: Scalars['String']['output'];
 };
 
+export type LogLostFoundItemInput = {
+  category: LostFoundCategory;
+  estimatedValueLkr?: InputMaybe<Scalars['Float']['input']>;
+  foundBy: Scalars['String']['input'];
+  foundDateIso?: InputMaybe<Scalars['AWSDateTime']['input']>;
+  guestName?: InputMaybe<Scalars['String']['input']>;
+  guestNicPassport?: InputMaybe<Scalars['String']['input']>;
+  guestPhone?: InputMaybe<Scalars['String']['input']>;
+  itemId?: InputMaybe<Scalars['ID']['input']>;
+  itemTitle: Scalars['String']['input'];
+  locationFound: Scalars['String']['input'];
+  notes?: InputMaybe<Scalars['String']['input']>;
+  photoKey?: InputMaybe<Scalars['String']['input']>;
+  roomNumber?: InputMaybe<Scalars['String']['input']>;
+  storageLockerNumber: Scalars['String']['input'];
+};
+
+/** Classification categories for lost and found guest property. */
+export enum LostFoundCategory {
+  ClothingFootwear = 'CLOTHING_FOOTWEAR',
+  DocumentsCards = 'DOCUMENTS_CARDS',
+  Electronics = 'ELECTRONICS',
+  Eyewear = 'EYEWEAR',
+  JewelryWatch = 'JEWELRY_WATCH',
+  Other = 'OTHER',
+  PassportWallet = 'PASSPORT_WALLET',
+  Toiletries = 'TOILETRIES'
+}
+
+/**
+ * Lost and found property register entity.
+ * Single-table mapping:
+ *   PK: TENANT#<tenantId>
+ *   SK: LOSTFOUND#<itemId>
+ *   GSI1PK: TENANT#<tenantId>#LOSTFOUND
+ *   GSI1SK: STATUS#<status>#<category>#<itemId>
+ */
+export type LostFoundItem = {
+  __typename?: 'LostFoundItem';
+  category: LostFoundCategory;
+  createdAt: Scalars['AWSDateTime']['output'];
+  estimatedValueLkr: Maybe<Scalars['Float']['output']>;
+  foundBy: Scalars['String']['output'];
+  foundDateIso: Scalars['AWSDateTime']['output'];
+  guestName: Maybe<Scalars['String']['output']>;
+  guestNicPassport: Maybe<Scalars['String']['output']>;
+  guestPhone: Maybe<Scalars['String']['output']>;
+  id: Scalars['ID']['output'];
+  itemTitle: Scalars['String']['output'];
+  locationFound: Scalars['String']['output'];
+  notes: Maybe<Scalars['String']['output']>;
+  photoKey: Maybe<Scalars['String']['output']>;
+  roomNumber: Maybe<Scalars['String']['output']>;
+  status: LostFoundStatus;
+  storageLockerNumber: Scalars['String']['output'];
+  tenantId: Scalars['ID']['output'];
+  updatedAt: Scalars['AWSDateTime']['output'];
+};
+
+/** Custody and lifecycle status for lost guest property. */
+export enum LostFoundStatus {
+  ClaimedReturned = 'CLAIMED_RETURNED',
+  Disposed = 'DISPOSED',
+  Donated = 'DONATED',
+  GuestContacted = 'GUEST_CONTACTED',
+  LoggedInCustody = 'LOGGED_IN_CUSTODY'
+}
+
+/** Operating trade category for physical maintenance and engineering tickets. */
+export enum MaintenanceCategory {
+  ApplianceTv = 'APPLIANCE_TV',
+  CarpentryFurniture = 'CARPENTRY_FURNITURE',
+  Electrical = 'ELECTRICAL',
+  HvacAirCon = 'HVAC_AIR_CON',
+  PaintingWalls = 'PAINTING_WALLS',
+  PestControl = 'PEST_CONTROL',
+  Plumbing = 'PLUMBING'
+}
+
+/** Priority urgency level for maintenance engineering tickets. */
+export enum MaintenanceSeverity {
+  Critical = 'CRITICAL',
+  High = 'HIGH',
+  Low = 'LOW',
+  Medium = 'MEDIUM'
+}
+
+/** Workflow lifecycle status for room or common area maintenance tickets. */
+export enum MaintenanceStatus {
+  Assigned = 'ASSIGNED',
+  Closed = 'CLOSED',
+  InProgress = 'IN_PROGRESS',
+  Reported = 'REPORTED',
+  Resolved = 'RESOLVED',
+  WaitingParts = 'WAITING_PARTS'
+}
+
+/**
+ * Physical engineering maintenance or repair ticket entity.
+ * Single-table mapping:
+ *   PK: TENANT#<tenantId>
+ *   SK: MAINT#<ticketId>
+ *   GSI1PK: TENANT#<tenantId>#MAINT
+ *   GSI1SK: STATUS#<status>#<severity>#<ticketId>
+ */
+export type MaintenanceTicket = {
+  __typename?: 'MaintenanceTicket';
+  actualCostLkr: Maybe<Scalars['Float']['output']>;
+  assignedTo: Maybe<Scalars['String']['output']>;
+  category: MaintenanceCategory;
+  createdAt: Scalars['AWSDateTime']['output'];
+  description: Scalars['String']['output'];
+  estimatedCostLkr: Maybe<Scalars['Float']['output']>;
+  id: Scalars['ID']['output'];
+  notes: Maybe<Scalars['String']['output']>;
+  reportedAtIso: Scalars['AWSDateTime']['output'];
+  reportedBy: Scalars['String']['output'];
+  resolvedAtIso: Maybe<Scalars['AWSDateTime']['output']>;
+  roomNumber: Scalars['String']['output'];
+  severity: MaintenanceSeverity;
+  status: MaintenanceStatus;
+  tenantId: Scalars['ID']['output'];
+  updatedAt: Scalars['AWSDateTime']['output'];
+};
+
 /** Standard international and Sri Lankan hotel meal plan arrangements. */
 export enum MealPlan {
   /** All Inclusive — All meals, local beverages, and selected excursions included. */
@@ -1086,6 +1224,8 @@ export type Mutation = {
   createGoodsIssueNote: Maybe<InventoryVoucher>;
   /** Creates a multi-room group tour booking. */
   createGroupBooking: Maybe<GroupBooking>;
+  /** Logs a new engineering maintenance or preventive repair ticket. */
+  createMaintenanceTicket: Maybe<MaintenanceTicket>;
   /** Creates a new guest room reservation. */
   createReservation: Maybe<Reservation>;
   /** Places a contactless QR room service order or waiter table service order. */
@@ -1098,6 +1238,8 @@ export type Mutation = {
   generateSltdaMonthlyReturn: Maybe<SltdaMonthlyReturn>;
   /** Calculates quarterly Tourism Development Levy (TDL) liability for IRD compliance. */
   generateTdlQuarterlySummary: Maybe<TdlQuarterlySummary>;
+  /** Registers a discovered guest lost property item in the secure custody register. */
+  logLostFoundItem: Maybe<LostFoundItem>;
   /** Health check ping mutation for AppSync real-time subscriptions. */
   ping: Scalars['String']['output'];
   /** Records received inventory stock into FIFO batches via Goods Received Note (GRN). */
@@ -1116,6 +1258,10 @@ export type Mutation = {
   updateBanquetEventStatus: Maybe<BanquetEvent>;
   /** Updates operational status of an excursion booking. */
   updateExcursionStatus: Maybe<ExcursionBooking>;
+  /** Updates custody status, guest claim identity, or disposal of a lost-and-found item. */
+  updateLostFoundStatus: Maybe<LostFoundItem>;
+  /** Updates the workflow status and resolution cost of a maintenance ticket. */
+  updateMaintenanceTicketStatus: Maybe<MaintenanceTicket>;
   /** Kitchen chef or order expediter updates order status on KDS (Acknowledged, Ready, Delivered, Cancelled). */
   updateOrderStatus: Maybe<ServiceOrder>;
   /** Updates room housekeeping cleanliness state from staff runner tablet. */
@@ -1200,6 +1346,12 @@ export type MutationCreateGroupBookingArgs = {
 };
 
 
+export type MutationCreateMaintenanceTicketArgs = {
+  input: CreateMaintenanceTicketInput;
+  tenantId: Scalars['ID']['input'];
+};
+
+
 export type MutationCreateReservationArgs = {
   input: CreateReservationInput;
   tenantId: Scalars['ID']['input'];
@@ -1232,6 +1384,12 @@ export type MutationGenerateSltdaMonthlyReturnArgs = {
 
 export type MutationGenerateTdlQuarterlySummaryArgs = {
   input: GenerateTdlQuarterlySummaryInput;
+  tenantId: Scalars['ID']['input'];
+};
+
+
+export type MutationLogLostFoundItemArgs = {
+  input: LogLostFoundItemInput;
   tenantId: Scalars['ID']['input'];
 };
 
@@ -1286,6 +1444,20 @@ export type MutationUpdateExcursionStatusArgs = {
   id: Scalars['ID']['input'];
   status: Scalars['String']['input'];
   tenantId: Scalars['ID']['input'];
+};
+
+
+export type MutationUpdateLostFoundStatusArgs = {
+  input: UpdateLostFoundStatusInput;
+  itemId: Scalars['ID']['input'];
+  tenantId: Scalars['ID']['input'];
+};
+
+
+export type MutationUpdateMaintenanceTicketStatusArgs = {
+  input: UpdateMaintenanceTicketStatusInput;
+  tenantId: Scalars['ID']['input'];
+  ticketId: Scalars['ID']['input'];
 };
 
 
@@ -1589,6 +1761,10 @@ export type Query = {
   getHotelTenant: Maybe<HotelTenant>;
   /** Retrieves an inventory movement voucher (GRN, GIN, Adjustment) by identifier. */
   getInventoryVoucher: Maybe<InventoryVoucher>;
+  /** Retrieves a lost-and-found property register item by identifier. */
+  getLostFoundItem: Maybe<LostFoundItem>;
+  /** Retrieves a maintenance engineering ticket by identifier. */
+  getMaintenanceTicket: Maybe<MaintenanceTicket>;
   /** Retrieves a single dish or beverage menu item by identifier. */
   getMenuItem: Maybe<MenuItem>;
   /** Retrieves a daily night audit rollover report by business date. */
@@ -1629,6 +1805,10 @@ export type Query = {
   listFoliosForReservation: Array<Folio>;
   /** Lists inventory vouchers filtered by type and date range. */
   listInventoryVouchers: Array<InventoryVoucher>;
+  /** Lists lost and found registry items, optionally filtered by status or category. */
+  listLostFoundItems: Array<LostFoundItem>;
+  /** Lists maintenance tickets for a hotel property, optionally filtered by status or category. */
+  listMaintenanceTickets: Array<MaintenanceTicket>;
   /** Single-query menu catalog fetching all categories with nested menu items in 1 RRU read. */
   listMenuCatalog: Array<MenuCategory>;
   /** Lists active F&B menu categories with trilingual titles and dining channels. */
@@ -1704,6 +1884,18 @@ export type QueryGetHotelTenantArgs = {
 export type QueryGetInventoryVoucherArgs = {
   id: Scalars['ID']['input'];
   tenantId: Scalars['ID']['input'];
+};
+
+
+export type QueryGetLostFoundItemArgs = {
+  itemId: Scalars['ID']['input'];
+  tenantId: Scalars['ID']['input'];
+};
+
+
+export type QueryGetMaintenanceTicketArgs = {
+  tenantId: Scalars['ID']['input'];
+  ticketId: Scalars['ID']['input'];
 };
 
 
@@ -1828,6 +2020,24 @@ export type QueryListInventoryVouchersArgs = {
   tenantId: Scalars['ID']['input'];
   toDate?: InputMaybe<Scalars['AWSDate']['input']>;
   voucherType?: InputMaybe<Scalars['String']['input']>;
+};
+
+
+export type QueryListLostFoundItemsArgs = {
+  category?: InputMaybe<LostFoundCategory>;
+  limit?: InputMaybe<Scalars['Int']['input']>;
+  nextToken?: InputMaybe<Scalars['String']['input']>;
+  status?: InputMaybe<LostFoundStatus>;
+  tenantId: Scalars['ID']['input'];
+};
+
+
+export type QueryListMaintenanceTicketsArgs = {
+  category?: InputMaybe<MaintenanceCategory>;
+  limit?: InputMaybe<Scalars['Int']['input']>;
+  nextToken?: InputMaybe<Scalars['String']['input']>;
+  status?: InputMaybe<MaintenanceStatus>;
+  tenantId: Scalars['ID']['input'];
 };
 
 
@@ -2577,6 +2787,22 @@ export type TrilingualTextInput = {
   en: Scalars['String']['input'];
   si?: InputMaybe<Scalars['String']['input']>;
   ta?: InputMaybe<Scalars['String']['input']>;
+};
+
+export type UpdateLostFoundStatusInput = {
+  guestName?: InputMaybe<Scalars['String']['input']>;
+  guestNicPassport?: InputMaybe<Scalars['String']['input']>;
+  guestPhone?: InputMaybe<Scalars['String']['input']>;
+  notes?: InputMaybe<Scalars['String']['input']>;
+  status: LostFoundStatus;
+  storageLockerNumber?: InputMaybe<Scalars['String']['input']>;
+};
+
+export type UpdateMaintenanceTicketStatusInput = {
+  actualCostLkr?: InputMaybe<Scalars['Float']['input']>;
+  assignedTo?: InputMaybe<Scalars['String']['input']>;
+  notes?: InputMaybe<Scalars['String']['input']>;
+  status: MaintenanceStatus;
 };
 
 /** Input for kitchen expeditor or runner updating order ticket status. */

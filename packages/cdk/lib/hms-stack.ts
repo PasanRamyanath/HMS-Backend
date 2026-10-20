@@ -117,7 +117,7 @@ interface DirectJsResolverMapping {
 }
 
 /**
- * Compact declarative mapping table for all 35 direct AppSync JS DynamoDB resolvers.
+ * Compact declarative mapping table for all 43 direct AppSync JS DynamoDB resolvers.
  * Resolvers execute entirely in the AppSync edge runtime without Lambda invocations.
  */
 const DIRECT_JS_RESOLVERS: readonly DirectJsResolverMapping[] = [
@@ -384,6 +384,64 @@ const DIRECT_JS_RESOLVERS: readonly DirectJsResolverMapping[] = [
     file: "reportsAndStock.js",
     reqFn: "getNightAuditReportRequest",
     resFn: "getNightAuditReportResponse",
+  },
+
+  // Housekeeping Operations: Maintenance Tickets & Lost-and-Found (housekeepingOps.js)
+  {
+    typeName: "Query",
+    fieldName: "getMaintenanceTicket",
+    file: "housekeepingOps.js",
+    reqFn: "getMaintenanceTicketRequest",
+    resFn: "getMaintenanceTicketResponse",
+  },
+  {
+    typeName: "Query",
+    fieldName: "listMaintenanceTickets",
+    file: "housekeepingOps.js",
+    reqFn: "listMaintenanceTicketsRequest",
+    resFn: "listMaintenanceTicketsResponse",
+  },
+  {
+    typeName: "Mutation",
+    fieldName: "createMaintenanceTicket",
+    file: "housekeepingOps.js",
+    reqFn: "createMaintenanceTicketRequest",
+    resFn: "createMaintenanceTicketResponse",
+  },
+  {
+    typeName: "Mutation",
+    fieldName: "updateMaintenanceTicketStatus",
+    file: "housekeepingOps.js",
+    reqFn: "updateMaintenanceTicketStatusRequest",
+    resFn: "updateMaintenanceTicketStatusResponse",
+  },
+  {
+    typeName: "Query",
+    fieldName: "getLostFoundItem",
+    file: "housekeepingOps.js",
+    reqFn: "getLostFoundItemRequest",
+    resFn: "getLostFoundItemResponse",
+  },
+  {
+    typeName: "Query",
+    fieldName: "listLostFoundItems",
+    file: "housekeepingOps.js",
+    reqFn: "listLostFoundItemsRequest",
+    resFn: "listLostFoundItemsResponse",
+  },
+  {
+    typeName: "Mutation",
+    fieldName: "logLostFoundItem",
+    file: "housekeepingOps.js",
+    reqFn: "logLostFoundItemRequest",
+    resFn: "logLostFoundItemResponse",
+  },
+  {
+    typeName: "Mutation",
+    fieldName: "updateLostFoundStatus",
+    file: "housekeepingOps.js",
+    reqFn: "updateLostFoundStatusRequest",
+    resFn: "updateLostFoundStatusResponse",
   },
 ] as const;
 
