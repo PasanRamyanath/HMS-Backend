@@ -246,6 +246,8 @@ This file tracks the sequential completion of backend implementation steps defin
 - [x] Step 488: Bootstrap AWS CDK Environment in `ap-south-1` (Mumbai Region) (`packages/cdk/`)
 - [x] Step 489: Deploy `SriLankaHmsStack` to `ap-south-1` via AWS CDK (`npx cdk deploy`) (`packages/cdk/`)
 - [x] Step 490: Extract CDK Outputs & Populate `packages/web/.env.production` Automatically (`packages/cdk/scripts/export-outputs.mjs`)
+- [x] Step 491: Sync Built `packages/web/dist` Assets to `HmsAssetBucket` & Invalidate CloudFront `/index.html` (`packages/cdk/scripts/deploy-web.mjs`)
+
 
 
 
