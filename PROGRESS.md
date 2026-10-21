@@ -227,6 +227,7 @@ This file tracks the sequential completion of backend implementation steps defin
 - [x] Step 460: Build Tenant Data Export & GDPR / Sri Lanka PDPA Anonymizer (`packages/core/src/pdpaCompliance.ts`)
 - [x] Step 461: Write Unit Tests for Sri Lanka PDPA Guest PII Anonymization (`packages/core/test/pdpaCompliance.test.ts`)
 - [x] Step 463: Generate Future Flutter / Dart GraphQL Schema & Operation Definitions (`packages/graphql/scripts/export-flutter-contracts.mjs`)
+- [x] Step 464: Document Future Flutter App Integration Guide (`docs/flutter-integration-contract.md`)
 
 
 
