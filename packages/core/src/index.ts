@@ -56,6 +56,7 @@ export * from "./irdTaxSchedules.js";
 export * from "./accountingExport.js";
 export * from "./bankSlipsExport.js";
 export * from "./gratuityMath.js";
+export * from "./entitlements.js";
 export * from "./tenant/hasModuleEntitlement.js";
 export {
   SRI_LANKA_TIMEZONE,
