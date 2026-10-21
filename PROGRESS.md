@@ -208,6 +208,7 @@ This file tracks the sequential completion of backend implementation steps defin
 - [x] Step 413: Build Automated Morning GM Flash SMS / Email Summary inside `nightAuditCron.ts` (`packages/cdk/lambdas/nightAuditCron.ts`)
 - [x] Step 414: Build Chart of Accounts & QuickBooks / Xero / Tally Journal Entry CSV Exporter (`packages/core/src/accountingExport.ts`)
 - [x] Step 415: Write Unit Tests for Balanced Double-Entry Accounting Export (`Debits === Credits`) (`packages/core/test/accountingExport.test.ts`)
+- [x] Step 424: Write End-to-End 30-Day Simulated Month -> Night Audits -> SLTDA + TDL + IRD VAT Return Test (`packages/core/test/monthlyComplianceE2e.test.ts`)
 
 
 
