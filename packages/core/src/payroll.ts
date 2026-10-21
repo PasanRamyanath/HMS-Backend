@@ -412,3 +412,312 @@ export function createEpfEtfAuditEntry(
     prevHash,
   });
 }
+
+/**
+ * Statutory Sri Lankan APIT (Advance Personal Income Tax) Progressive Tax Slabs.
+ * Under Inland Revenue Act No. 24 of 2017 as amended by Act No. 45 of 2022.
+ */
+export interface SriLankaApitSlab {
+  readonly slabWidthLkr: number;
+  readonly ratePercent: number;
+}
+
+/**
+ * Standard IRD personal tax-free relief threshold: LKR 100,000 per month (LKR 1,200,000/annum).
+ */
+export const DEFAULT_SRI_LANKA_APIT_RELIEF_THRESHOLD_LKR = 100000;
+
+/**
+ * Progressive monthly slabs: each slab spans LKR 500,000 / 12 = LKR 41,666.67 per month.
+ * Rates: 6%, 12%, 18%, 24%, 30%, and top marginal rate of 36%.
+ */
+export const DEFAULT_SRI_LANKA_APIT_SLABS: readonly SriLankaApitSlab[] = [
+  { slabWidthLkr: 41666.67, ratePercent: 6 },
+  { slabWidthLkr: 41666.67, ratePercent: 12 },
+  { slabWidthLkr: 41666.67, ratePercent: 18 },
+  { slabWidthLkr: 41666.67, ratePercent: 24 },
+  { slabWidthLkr: 41666.67, ratePercent: 30 },
+  { slabWidthLkr: Number.POSITIVE_INFINITY, ratePercent: 36 },
+];
+
+/**
+ * Itemized breakdown per taxable bracket.
+ */
+export interface SriLankaApitSlabBreakdown {
+  readonly slabIndex: number;
+  readonly slabWidthLkr: number;
+  readonly ratePercent: number;
+  readonly taxableAmountInSlabLkr: number;
+  readonly taxAmountLkr: number;
+}
+
+/**
+ * Input configuration for calculating monthly APIT withholding.
+ */
+export interface SriLankaApitInput {
+  readonly monthlyGrossTaxableLkr: number;
+  readonly reliefThresholdLkr?: number | undefined;
+  readonly slabs?: readonly SriLankaApitSlab[] | undefined;
+  readonly tenantId?: string | undefined;
+  readonly employeeId?: string | undefined;
+}
+
+/**
+ * Computed APIT result with slab breakdowns and effective tax rate.
+ */
+export interface SriLankaApitResult {
+  readonly monthlyGrossTaxableLkr: number;
+  readonly reliefThresholdLkr: number;
+  readonly taxableRemunerationLkr: number;
+  readonly slabBreakdowns: readonly SriLankaApitSlabBreakdown[];
+  readonly totalApitLkr: number;
+  readonly effectiveTaxRatePercent: number;
+  readonly tenantId?: string | undefined;
+  readonly employeeId?: string | undefined;
+}
+
+function validateGrossAndRelief(
+  grossLkr: number,
+  reliefThresholdLkr: number,
+): Result<void, DomainError> {
+  if (typeof grossLkr !== "number" || !Number.isFinite(grossLkr) || grossLkr < 0) {
+    return domainErr(
+      "VALIDATION_FAILED",
+      "Monthly gross taxable remuneration must be a non-negative number",
+      { monthlyGrossTaxableLkr: grossLkr },
+    );
+  }
+
+  if (
+    typeof reliefThresholdLkr !== "number" ||
+    !Number.isFinite(reliefThresholdLkr) ||
+    reliefThresholdLkr < 0
+  ) {
+    return domainErr("VALIDATION_FAILED", "Relief threshold must be a non-negative number", {
+      reliefThresholdLkr,
+    });
+  }
+
+  return ok(undefined);
+}
+
+function validateSingleSlab(slab: SriLankaApitSlab, index: number): Result<void, DomainError> {
+  const isWidthValid =
+    typeof slab?.slabWidthLkr === "number" &&
+    (Number.isFinite(slab.slabWidthLkr) || slab.slabWidthLkr === Number.POSITIVE_INFINITY) &&
+    slab.slabWidthLkr > 0;
+
+  if (!isWidthValid) {
+    return domainErr("VALIDATION_FAILED", `Tax slab ${index + 1} width must be a positive number`, {
+      slabIndex: index,
+      slabWidthLkr: slab?.slabWidthLkr,
+    });
+  }
+
+  const isRateValid =
+    typeof slab.ratePercent === "number" &&
+    Number.isFinite(slab.ratePercent) &&
+    slab.ratePercent >= 0 &&
+    slab.ratePercent <= 100;
+
+  if (!isRateValid) {
+    return domainErr(
+      "VALIDATION_FAILED",
+      `Tax slab ${index + 1} rate must be between 0% and 100%`,
+      { slabIndex: index, ratePercent: slab.ratePercent },
+    );
+  }
+
+  return ok(undefined);
+}
+
+function validateApitSlabs(slabs: readonly SriLankaApitSlab[]): Result<void, DomainError> {
+  if (!Array.isArray(slabs) || slabs.length === 0) {
+    return domainErr(
+      "VALIDATION_FAILED",
+      "At least one tax slab must be provided for APIT calculation",
+    );
+  }
+
+  for (let i = 0; i < slabs.length; i++) {
+    const res = validateSingleSlab(slabs[i] as SriLankaApitSlab, i);
+    if (!res.ok) {
+      return res;
+    }
+  }
+
+  return ok(undefined);
+}
+
+interface ResolvedApitParams {
+  readonly grossLkr: number;
+  readonly reliefLkr: number;
+  readonly slabs: readonly SriLankaApitSlab[];
+  readonly tenantId?: string | undefined;
+  readonly employeeId?: string | undefined;
+}
+
+function resolveApitParams(
+  inputOrGrossLkr: number | SriLankaApitInput,
+  customSlabs?: readonly SriLankaApitSlab[],
+  reliefThresholdLkr?: number,
+  options?: { tenantId?: string; employeeId?: string },
+): ResolvedApitParams {
+  if (typeof inputOrGrossLkr === "object" && inputOrGrossLkr !== null) {
+    return {
+      grossLkr: inputOrGrossLkr.monthlyGrossTaxableLkr,
+      reliefLkr: inputOrGrossLkr.reliefThresholdLkr ?? DEFAULT_SRI_LANKA_APIT_RELIEF_THRESHOLD_LKR,
+      slabs: inputOrGrossLkr.slabs ?? customSlabs ?? DEFAULT_SRI_LANKA_APIT_SLABS,
+      tenantId: inputOrGrossLkr.tenantId ?? options?.tenantId,
+      employeeId: inputOrGrossLkr.employeeId ?? options?.employeeId,
+    };
+  }
+
+  return {
+    grossLkr: inputOrGrossLkr,
+    reliefLkr: reliefThresholdLkr ?? DEFAULT_SRI_LANKA_APIT_RELIEF_THRESHOLD_LKR,
+    slabs: customSlabs ?? DEFAULT_SRI_LANKA_APIT_SLABS,
+    tenantId: options?.tenantId,
+    employeeId: options?.employeeId,
+  };
+}
+
+function computeSlabTaxes(
+  taxableRemunerationLkr: number,
+  slabs: readonly SriLankaApitSlab[],
+): { totalApitLkr: number; slabBreakdowns: readonly SriLankaApitSlabBreakdown[] } {
+  let remainingTaxableLkr = taxableRemunerationLkr;
+  let totalApitLkr = 0;
+  const slabBreakdowns: SriLankaApitSlabBreakdown[] = [];
+
+  for (let i = 0; i < slabs.length; i++) {
+    if (remainingTaxableLkr <= 0) {
+      break;
+    }
+
+    const slab = slabs[i];
+    const slabWidth = slab?.slabWidthLkr ?? Number.POSITIVE_INFINITY;
+    const ratePercent = slab?.ratePercent ?? 0;
+    const taxableAmountInSlabLkr = roundLkr(Math.min(remainingTaxableLkr, slabWidth));
+    const taxAmountLkr = roundLkr(taxableAmountInSlabLkr * (ratePercent / 100));
+
+    totalApitLkr = roundLkr(totalApitLkr + taxAmountLkr);
+    remainingTaxableLkr = roundLkr(remainingTaxableLkr - taxableAmountInSlabLkr);
+
+    slabBreakdowns.push({
+      slabIndex: i + 1,
+      slabWidthLkr: slabWidth,
+      ratePercent,
+      taxableAmountInSlabLkr,
+      taxAmountLkr,
+    });
+  }
+
+  return { totalApitLkr, slabBreakdowns };
+}
+
+/**
+ * Calculates monthly Sri Lankan APIT (Advance Personal Income Tax) withholding:
+ *
+ * 1. Deducts statutory monthly tax relief (default: LKR 100,000).
+ * 2. If gross <= relief threshold, taxable remuneration is 0 and APIT is 0.
+ * 3. Applies progressive tax slabs to remuneration exceeding relief threshold.
+ * 4. Sums tax across all applicable slabs, rounding each to integer cents.
+ *
+ * Accepts either:
+ * - `calculateSriLankaApit(input: SriLankaApitInput)`
+ * - `calculateSriLankaApit(monthlyGrossTaxableLkr: number, slabs?: readonly SriLankaApitSlab[], reliefThresholdLkr?: number, options?: { tenantId?: string; employeeId?: string })`
+ */
+export function calculateSriLankaApit(
+  inputOrGrossLkr: number | SriLankaApitInput,
+  customSlabs?: readonly SriLankaApitSlab[],
+  reliefThresholdLkr?: number,
+  options?: { tenantId?: string; employeeId?: string },
+): Result<SriLankaApitResult, DomainError> {
+  const params = resolveApitParams(inputOrGrossLkr, customSlabs, reliefThresholdLkr, options);
+
+  const numRes = validateGrossAndRelief(params.grossLkr, params.reliefLkr);
+  if (!numRes.ok) {
+    return numRes;
+  }
+
+  const slabRes = validateApitSlabs(params.slabs);
+  if (!slabRes.ok) {
+    return slabRes;
+  }
+
+  let validatedTenantId: string | undefined;
+  if (params.tenantId !== undefined) {
+    const tenantRes = validateTenantId(params.tenantId);
+    if (!tenantRes.ok) {
+      return tenantRes;
+    }
+    validatedTenantId = tenantRes.value;
+  }
+
+  const roundedGrossLkr = roundLkr(params.grossLkr);
+  const roundedReliefLkr = roundLkr(params.reliefLkr);
+
+  if (roundedGrossLkr <= roundedReliefLkr) {
+    return ok({
+      monthlyGrossTaxableLkr: roundedGrossLkr,
+      reliefThresholdLkr: roundedReliefLkr,
+      taxableRemunerationLkr: 0,
+      slabBreakdowns: [],
+      totalApitLkr: 0,
+      effectiveTaxRatePercent: 0,
+      tenantId: validatedTenantId,
+      employeeId: params.employeeId?.trim(),
+    });
+  }
+
+  const taxableRemunerationLkr = roundLkr(roundedGrossLkr - roundedReliefLkr);
+  const { totalApitLkr, slabBreakdowns } = computeSlabTaxes(taxableRemunerationLkr, params.slabs);
+  const effectiveTaxRatePercent =
+    roundedGrossLkr > 0 ? roundLkr((totalApitLkr / roundedGrossLkr) * 100) : 0;
+
+  return ok({
+    monthlyGrossTaxableLkr: roundedGrossLkr,
+    reliefThresholdLkr: roundedReliefLkr,
+    taxableRemunerationLkr,
+    slabBreakdowns,
+    totalApitLkr,
+    effectiveTaxRatePercent,
+    tenantId: validatedTenantId,
+    employeeId: params.employeeId?.trim(),
+  });
+}
+
+/**
+ * Creates an immutable SHA-256 hash-chained audit log entry for employee APIT withholding calculations.
+ */
+export function createApitAuditEntry(
+  tenantId: string,
+  actorUserId: string,
+  employeeId: string,
+  billingPeriod: string,
+  apit: SriLankaApitResult,
+  isoTs: string,
+  prevHash?: string | undefined,
+): Result<AuditLogEntry, DomainError> {
+  const afterJson = JSON.stringify({
+    employeeId,
+    billingPeriod,
+    monthlyGrossTaxableLkr: apit.monthlyGrossTaxableLkr,
+    reliefThresholdLkr: apit.reliefThresholdLkr,
+    taxableRemunerationLkr: apit.taxableRemunerationLkr,
+    totalApitLkr: apit.totalApitLkr,
+    effectiveTaxRatePercent: apit.effectiveTaxRatePercent,
+  });
+
+  return createAuditEntry({
+    tenantId,
+    actorUserId,
+    action: "CALCULATE_SRI_LANKA_APIT",
+    entityType: "PayrollPayslip",
+    entityId: `${billingPeriod}:${employeeId}:APIT`,
+    isoTs,
+    afterJson,
+    prevHash,
+  });
+}

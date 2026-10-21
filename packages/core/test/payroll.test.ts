@@ -1,8 +1,11 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
+  DEFAULT_SRI_LANKA_APIT_RELIEF_THRESHOLD_LKR,
   calculateServiceChargePool,
+  calculateSriLankaApit,
   calculateSriLankaEpfEtf,
+  createApitAuditEntry,
   createEpfEtfAuditEntry,
   createServiceChargePoolAuditEntry,
 } from "../src/payroll.js";
@@ -334,6 +337,178 @@ describe("Sri Lankan Statutory EPF (8%/12%) & ETF (3%) Calculator (calculateSriL
     assert.equal(audit.action, "CALCULATE_SRI_LANKA_EPF_ETF");
     assert.equal(audit.entityType, "PayrollPayslip");
     assert.equal(audit.entityId, "2026-09:EMP-HOTEL-771");
+    assert.equal(audit.entryHash.length, 64);
+  });
+});
+
+describe("Sri Lankan APIT (Advance Personal Income Tax) Progressive Tax Calculator (calculateSriLankaApit)", () => {
+  const TEST_TENANT = "cinnamon-grand-colombo";
+
+  it("returns zero APIT when remuneration is below statutory relief threshold (LKR 100,000)", () => {
+    const res = calculateSriLankaApit({
+      monthlyGrossTaxableLkr: 85000,
+      tenantId: TEST_TENANT,
+      employeeId: "EMP-HOTEL-101",
+    });
+
+    assert.equal(res.ok, true);
+    if (!res.ok) return;
+
+    assert.equal(res.value.monthlyGrossTaxableLkr, 85000);
+    assert.equal(res.value.reliefThresholdLkr, DEFAULT_SRI_LANKA_APIT_RELIEF_THRESHOLD_LKR);
+    assert.equal(res.value.taxableRemunerationLkr, 0);
+    assert.equal(res.value.totalApitLkr, 0);
+    assert.equal(res.value.effectiveTaxRatePercent, 0);
+    assert.equal(res.value.slabBreakdowns.length, 0);
+  });
+
+  it("returns zero APIT when remuneration exactly equals relief threshold", () => {
+    const res = calculateSriLankaApit(100000);
+    assert.equal(res.ok, true);
+    if (!res.ok) return;
+
+    assert.equal(res.value.taxableRemunerationLkr, 0);
+    assert.equal(res.value.totalApitLkr, 0);
+  });
+
+  it("calculates single first-slab 6% withholding accurately", () => {
+    // 125,000 gross -> 25,000 taxable above 100,000 -> 25,000 * 0.06 = 1,500 LKR
+    const res = calculateSriLankaApit({
+      monthlyGrossTaxableLkr: 125000,
+      tenantId: TEST_TENANT,
+      employeeId: "EMP-HOTEL-102",
+    });
+
+    assert.equal(res.ok, true);
+    if (!res.ok) return;
+
+    const data = res.value;
+    assert.equal(data.taxableRemunerationLkr, 25000);
+    assert.equal(data.totalApitLkr, 1500);
+    assert.equal(data.effectiveTaxRatePercent, 1.2); // (1500 / 125000) * 100
+    assert.equal(data.slabBreakdowns.length, 1);
+    assert.equal(data.slabBreakdowns[0]?.slabIndex, 1);
+    assert.equal(data.slabBreakdowns[0]?.ratePercent, 6);
+    assert.equal(data.slabBreakdowns[0]?.taxableAmountInSlabLkr, 25000);
+    assert.equal(data.slabBreakdowns[0]?.taxAmountLkr, 1500);
+  });
+
+  it("calculates multi-slab progressive withholding across multiple brackets", () => {
+    // 200,000 gross -> 100,000 taxable
+    // Slab 1: 41,666.67 @ 6% = 2,500.00
+    // Slab 2: 41,666.67 @ 12% = 5,000.00
+    // Slab 3: 16,666.66 @ 18% = 3,000.00 (roundLkr)
+    // Total APIT: 2500.00 + 5000.00 + 3000.00 = 10,500.00 LKR
+    const res = calculateSriLankaApit(200000);
+
+    assert.equal(res.ok, true);
+    if (!res.ok) return;
+
+    const data = res.value;
+    assert.equal(data.taxableRemunerationLkr, 100000);
+    assert.equal(data.slabBreakdowns.length, 3);
+    assert.equal(data.slabBreakdowns[0]?.ratePercent, 6);
+    assert.equal(data.slabBreakdowns[0]?.taxAmountLkr, 2500);
+    assert.equal(data.slabBreakdowns[1]?.ratePercent, 12);
+    assert.equal(data.slabBreakdowns[1]?.taxAmountLkr, 5000);
+    assert.equal(data.slabBreakdowns[2]?.ratePercent, 18);
+    assert.equal(data.slabBreakdowns[2]?.taxAmountLkr, 3000);
+    assert.equal(data.totalApitLkr, 10500);
+    assert.equal(data.effectiveTaxRatePercent, 5.25);
+  });
+
+  it("computes executive remuneration reaching top 36% marginal rate bracket", () => {
+    // 500,000 gross -> 400,000 taxable
+    // Slab 1: 41,666.67 @ 6% = 2,500.00
+    // Slab 2: 41,666.67 @ 12% = 5,000.00
+    // Slab 3: 41,666.67 @ 18% = 7,500.00
+    // Slab 4: 41,666.67 @ 24% = 10,000.00
+    // Slab 5: 41,666.67 @ 30% = 12,500.00
+    // Slab 6: 191,666.65 @ 36% = 68,999.99
+    // Total APIT: 2,500 + 5,000 + 7,500 + 10,000 + 12,500 + 68,999.99 = 106,499.99 LKR
+    const res = calculateSriLankaApit(500000);
+
+    assert.equal(res.ok, true);
+    if (!res.ok) return;
+
+    const data = res.value;
+    assert.equal(data.taxableRemunerationLkr, 400000);
+    assert.equal(data.slabBreakdowns.length, 6);
+    assert.equal(data.slabBreakdowns[5]?.ratePercent, 36);
+    assert.equal(data.slabBreakdowns[5]?.taxAmountLkr, 68999.99);
+    assert.equal(data.totalApitLkr, 106499.99);
+    assert.equal(data.effectiveTaxRatePercent, 21.3);
+  });
+
+  it("supports custom tax slabs and customized relief thresholds", () => {
+    const customSlabs = [
+      { slabWidthLkr: 50000, ratePercent: 5 },
+      { slabWidthLkr: 50000, ratePercent: 10 },
+      { slabWidthLkr: Number.POSITIVE_INFINITY, ratePercent: 20 },
+    ];
+
+    const res = calculateSriLankaApit({
+      monthlyGrossTaxableLkr: 180000,
+      reliefThresholdLkr: 50000, // custom 50k relief
+      slabs: customSlabs,
+    });
+
+    assert.equal(res.ok, true);
+    if (!res.ok) return;
+
+    // 180k - 50k = 130k taxable
+    // Slab 1: 50k @ 5% = 2,500
+    // Slab 2: 50k @ 10% = 5,000
+    // Slab 3: 30k @ 20% = 6,000
+    // Total APIT: 13,500
+    assert.equal(res.value.taxableRemunerationLkr, 130000);
+    assert.equal(res.value.totalApitLkr, 13500);
+  });
+
+  it("rejects negative gross earnings or negative relief thresholds", () => {
+    const negGross = calculateSriLankaApit(-10000);
+    assert.equal(negGross.ok, false);
+    if (!negGross.ok) {
+      assert.equal(negGross.error.code, "VALIDATION_FAILED");
+    }
+
+    const negRelief = calculateSriLankaApit({
+      monthlyGrossTaxableLkr: 100000,
+      reliefThresholdLkr: -5000,
+    });
+    assert.equal(negRelief.ok, false);
+    if (!negRelief.ok) {
+      assert.equal(negRelief.error.code, "VALIDATION_FAILED");
+    }
+  });
+
+  it("creates cryptographically valid SHA-256 audit log entry for APIT calculation", () => {
+    const apitRes = calculateSriLankaApit({
+      monthlyGrossTaxableLkr: 180000,
+      tenantId: TEST_TENANT,
+      employeeId: "EMP-GM-001",
+    });
+
+    assert.equal(apitRes.ok, true);
+    if (!apitRes.ok) return;
+
+    const auditRes = createApitAuditEntry(
+      TEST_TENANT,
+      "actor-finance-controller",
+      "EMP-GM-001",
+      "2026-10",
+      apitRes.value,
+      "2026-10-21T06:45:00.000Z",
+    );
+
+    assert.equal(auditRes.ok, true);
+    if (!auditRes.ok) return;
+
+    const audit = auditRes.value;
+    assert.equal(audit.tenantId, TEST_TENANT);
+    assert.equal(audit.action, "CALCULATE_SRI_LANKA_APIT");
+    assert.equal(audit.entityType, "PayrollPayslip");
+    assert.equal(audit.entityId, "2026-10:EMP-GM-001:APIT");
     assert.equal(audit.entryHash.length, 64);
   });
 });

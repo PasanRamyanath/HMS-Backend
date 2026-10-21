@@ -210,5 +210,9 @@ This file tracks the sequential completion of backend implementation steps defin
 - [x] Step 415: Write Unit Tests for Balanced Double-Entry Accounting Export (`Debits === Credits`) (`packages/core/test/accountingExport.test.ts`)
 - [x] Step 424: Write End-to-End 30-Day Simulated Month -> Night Audits -> SLTDA + TDL + IRD VAT Return Test (`packages/core/test/monthlyComplianceE2e.test.ts`)
 
+## Phase 18: Sri Lankan Hotel Staff Attendance, 10% Service Charge Pool Distribution, EPF (8%/12%), ETF (3%) & Payroll
+- [x] Step 426: Implement Sri Lankan APIT (Advance Personal Income Tax) Monthly Tax Table Calculator (`calculateSriLankaApit`) (`packages/core/src/payroll.ts`)
+
+
 
 
