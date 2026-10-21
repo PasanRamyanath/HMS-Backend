@@ -59,6 +59,7 @@ export * from "./gratuityMath.js";
 export * from "./entitlements.js";
 export * from "./tenant/hasModuleEntitlement.js";
 export * from "./pdpaCompliance.js";
+export * from "./i18n.js";
 export {
   SRI_LANKA_TIMEZONE,
   SRI_LANKA_LOCALE,
