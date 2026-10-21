@@ -51,6 +51,7 @@ export * from "./spaConsumables.js";
 export * from "./grnVariance.js";
 export * from "./liquorAudit.js";
 export * from "./nightAudit.js";
+export * from "./sltdaReports.js";
 export {
   SRI_LANKA_TIMEZONE,
   SRI_LANKA_LOCALE,
