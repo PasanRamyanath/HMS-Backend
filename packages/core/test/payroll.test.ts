@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
   DEFAULT_SRI_LANKA_APIT_RELIEF_THRESHOLD_LKR,
+  type EmployeePayslipResult,
   calculateServiceChargePool,
   calculateSriLankaApit,
   calculateSriLankaEpfEtf,
@@ -687,5 +688,344 @@ describe("Complete Monthly Hotel Payslip Generator (generateEmployeePayslip)", (
     assert.equal(audit.entityType, "PayrollPayslip");
     assert.equal(audit.entityId, "2026-10:EMP-AUDIT-99");
     assert.equal(audit.entryHash.length, 64);
+  });
+});
+
+describe("Step 428: 10-Staff Service Charge Pool, Breakage Deduction, EPF/ETF & APIT Integration Tests", () => {
+  const TEST_TENANT = "cinnamon-grand-colombo";
+  const TEST_PERIOD = "2026-10";
+
+  it("verifies 10-staff hotel SC pool distribution reconciles to exact rupee with breakage deduction", () => {
+    // 10 staff across 5 hotel departments
+    const staffRoster = [
+      {
+        employeeId: "EMP-01",
+        employeeName: "Gamini Silva",
+        department: "Management",
+        staffPointWeight: 2.5,
+        daysWorked: 26,
+      },
+      {
+        employeeId: "EMP-02",
+        employeeName: "Rohan Fernando",
+        department: "Kitchen",
+        staffPointWeight: 2.0,
+        daysWorked: 26,
+      },
+      {
+        employeeId: "EMP-03",
+        employeeName: "Kamal Perera",
+        department: "Kitchen",
+        staffPointWeight: 1.5,
+        daysWorked: 25,
+      },
+      {
+        employeeId: "EMP-04",
+        employeeName: "Nimal Jayasinghe",
+        department: "F&B Service",
+        staffPointWeight: 1.5,
+        daysWorked: 24,
+      },
+      {
+        employeeId: "EMP-05",
+        employeeName: "Sunil Wickrama",
+        department: "F&B Service",
+        staffPointWeight: 1.0,
+        daysWorked: 26,
+      },
+      {
+        employeeId: "EMP-06",
+        employeeName: "Priyantha Bandara",
+        department: "Front Office",
+        staffPointWeight: 1.25,
+        daysWorked: 26,
+      },
+      {
+        employeeId: "EMP-07",
+        employeeName: "Kasun Dissanayake",
+        department: "Front Office",
+        staffPointWeight: 1.0,
+        daysWorked: 22,
+      },
+      {
+        employeeId: "EMP-08",
+        employeeName: "Chathura Kumara",
+        department: "Housekeeping",
+        staffPointWeight: 1.0,
+        daysWorked: 26,
+      },
+      {
+        employeeId: "EMP-09",
+        employeeName: "Ruwan Senaratne",
+        department: "Housekeeping",
+        staffPointWeight: 1.0,
+        daysWorked: 20,
+      },
+      {
+        employeeId: "EMP-10",
+        employeeName: "Dinesh Gunawardena",
+        department: "Maintenance",
+        staffPointWeight: 1.25,
+        daysWorked: 0,
+      }, // Unpaid medical leave
+    ];
+
+    const grossScLkr = 2500000; // 2.5 Million LKR SC collected
+    const breakagePercent = 4.0; // 4% breakage recovery (within statutory 10% cap)
+
+    const poolRes = calculateServiceChargePool({
+      tenantId: TEST_TENANT,
+      billingPeriod: TEST_PERIOD,
+      totalScLkr: grossScLkr,
+      breakageRecoveryPercent: breakagePercent,
+      employees: staffRoster,
+    });
+
+    assert.equal(poolRes.ok, true);
+    if (!poolRes.ok) return;
+
+    const pool = poolRes.value;
+    assert.equal(pool.grossScLkr, 2500000);
+    assert.equal(pool.breakageRecoveryPercent, 4.0);
+    assert.equal(pool.breakageDeductionLkr, 100000); // 4% of 2.5M
+    assert.equal(pool.netScPoolLkr, 2400000); // 2.4 Million net pool
+    assert.equal(pool.allocations.length, 10);
+
+    // Exact rupee reconciliation: total allocated + rounding difference === netScPoolLkr
+    const sumAllocated = pool.allocations.reduce((acc, a) => acc + a.shareLkr, 0);
+    assert.equal(Math.round(sumAllocated + pool.roundingDifferenceCents), pool.netScPoolLkr);
+    assert.equal(pool.totalAllocatedLkr, sumAllocated);
+
+    // Staff with 0 days worked receives exactly 0 LKR
+    const emp10 = pool.allocations.find((a) => a.employeeId === "EMP-10");
+    assert.equal(emp10?.shareLkr, 0);
+    assert.equal(emp10?.sharePercent, 0);
+
+    // Staff with highest weighted points receives highest share
+    const emp01 = pool.allocations.find((a) => a.employeeId === "EMP-01"); // 2.5 * 26 = 65 points
+    const emp05 = pool.allocations.find((a) => a.employeeId === "EMP-05"); // 1.0 * 26 = 26 points
+    assert.ok(emp01 && emp05);
+    assert.ok(emp01.shareLkr > emp05.shareLkr);
+  });
+
+  interface StaffBatchProfile {
+    readonly employeeId: string;
+    readonly name: string;
+    readonly basic: number;
+    readonly bra: number;
+    readonly otHours: number;
+    readonly scShare: number;
+    readonly meals: number;
+    readonly advance: number;
+  }
+
+  function verifyStaffPayslipStatutory(p: EmployeePayslipResult, s: StaffBatchProfile): void {
+    const epfEligible = s.basic + s.bra;
+    assert.equal(p.epfEligibleEarningsLkr, epfEligible);
+    assert.equal(p.employeeEpfLkr, Math.round(epfEligible * 0.08 * 100) / 100);
+    assert.equal(p.employerEpfLkr, Math.round(epfEligible * 0.12 * 100) / 100);
+    assert.equal(p.employerEtfLkr, Math.round(epfEligible * 0.03 * 100) / 100);
+    assert.equal(
+      p.totalStatutoryRemittanceLkr,
+      p.employeeEpfLkr + p.employerEpfLkr + p.employerEtfLkr,
+    );
+    assert.equal(p.netPayLkr, Math.round((p.grossEarningsLkr - p.totalDeductionsLkr) * 100) / 100);
+    assert.equal(
+      p.totalEmployerCostLkr,
+      Math.round((p.grossEarningsLkr + p.employerEpfLkr + p.employerEtfLkr) * 100) / 100,
+    );
+    if (p.grossEarningsLkr > 100000) {
+      assert.ok(
+        p.apitTaxLkr > 0,
+        `Staff ${s.name} with gross ${p.grossEarningsLkr} should have APIT withheld`,
+      );
+    } else {
+      assert.equal(
+        p.apitTaxLkr,
+        0,
+        `Staff ${s.name} with gross ${p.grossEarningsLkr} should have 0 APIT`,
+      );
+    }
+  }
+
+  it("executes full monthly payroll batch for 10 staff with EPF, ETF, Overtime & progressive APIT", () => {
+    // 10 hotel staff profiles
+    const staffProfiles: readonly StaffBatchProfile[] = [
+      {
+        employeeId: "EMP-01",
+        name: "Gamini Silva",
+        basic: 150000,
+        bra: 5000,
+        otHours: 0,
+        scShare: 420000,
+        meals: 0,
+        advance: 0,
+      },
+      {
+        employeeId: "EMP-02",
+        name: "Rohan Fernando",
+        basic: 110000,
+        bra: 4000,
+        otHours: 15,
+        scShare: 336000,
+        meals: 2500,
+        advance: 0,
+      },
+      {
+        employeeId: "EMP-03",
+        name: "Kamal Perera",
+        basic: 75000,
+        bra: 3500,
+        otHours: 20,
+        scShare: 242000,
+        meals: 2500,
+        advance: 5000,
+      },
+      {
+        employeeId: "EMP-04",
+        name: "Nimal Jayasinghe",
+        basic: 65000,
+        bra: 3500,
+        otHours: 12,
+        scShare: 232000,
+        meals: 2500,
+        advance: 0,
+      },
+      {
+        employeeId: "EMP-05",
+        name: "Sunil Wickrama",
+        basic: 45000,
+        bra: 3500,
+        otHours: 10,
+        scShare: 168000,
+        meals: 2000,
+        advance: 2500,
+      },
+      {
+        employeeId: "EMP-06",
+        name: "Priyantha Bandara",
+        basic: 60000,
+        bra: 3500,
+        otHours: 0,
+        scShare: 210000,
+        meals: 2000,
+        advance: 0,
+      },
+      {
+        employeeId: "EMP-07",
+        name: "Kasun Dissanayake",
+        basic: 45000,
+        bra: 3500,
+        otHours: 8,
+        scShare: 142000,
+        meals: 2000,
+        advance: 0,
+      },
+      {
+        employeeId: "EMP-08",
+        name: "Chathura Kumara",
+        basic: 42000,
+        bra: 3500,
+        otHours: 14,
+        scShare: 168000,
+        meals: 2000,
+        advance: 3000,
+      },
+      {
+        employeeId: "EMP-09",
+        name: "Ruwan Senaratne",
+        basic: 40000,
+        bra: 3500,
+        otHours: 6,
+        scShare: 129000,
+        meals: 2000,
+        advance: 0,
+      },
+      {
+        employeeId: "EMP-10",
+        name: "Dinesh Gunawardena",
+        basic: 55000,
+        bra: 3500,
+        otHours: 0,
+        scShare: 0,
+        meals: 0,
+        advance: 0,
+      },
+    ];
+
+    let totalPayrollGrossLkr = 0;
+    let totalEmployeeEpfLkr = 0;
+    let totalEmployerEpfLkr = 0;
+    let totalEmployerEtfLkr = 0;
+    let totalApitWithheldLkr = 0;
+    let totalNetTakeHomeLkr = 0;
+    let totalEmployerCostLkr = 0;
+
+    let prevAuditHash: string | undefined;
+
+    for (const s of staffProfiles) {
+      const payslipRes = generateEmployeePayslip(
+        {
+          tenantId: TEST_TENANT,
+          employeeId: s.employeeId,
+          employeeName: s.name,
+          basicSalaryLkr: s.basic,
+          budgetaryReliefAllowanceLkr: s.bra,
+        },
+        {
+          billingPeriod: TEST_PERIOD,
+          daysWorked: 26,
+          overtimeHours: s.otHours,
+          mealDeductionsLkr: s.meals,
+          salaryAdvanceDeductionsLkr: s.advance,
+        },
+        s.scShare,
+      );
+
+      assert.equal(payslipRes.ok, true);
+      if (!payslipRes.ok) return;
+
+      const p = payslipRes.value;
+      verifyStaffPayslipStatutory(p, s);
+
+      // Chain audit log
+      const auditRes = createPayslipAuditEntry(
+        TEST_TENANT,
+        "actor-payroll-officer",
+        p,
+        "2026-10-21T07:15:00.000Z",
+        prevAuditHash,
+      );
+      assert.equal(auditRes.ok, true);
+      if (auditRes.ok) {
+        assert.equal(auditRes.value.entryHash.length, 64);
+        if (prevAuditHash) {
+          assert.equal(auditRes.value.prevHash, prevAuditHash);
+        }
+        prevAuditHash = auditRes.value.entryHash;
+      }
+
+      // Aggregate totals
+      totalPayrollGrossLkr += p.grossEarningsLkr;
+      totalEmployeeEpfLkr += p.employeeEpfLkr;
+      totalEmployerEpfLkr += p.employerEpfLkr;
+      totalEmployerEtfLkr += p.employerEtfLkr;
+      totalApitWithheldLkr += p.apitTaxLkr;
+      totalNetTakeHomeLkr += p.netPayLkr;
+      totalEmployerCostLkr += p.totalEmployerCostLkr;
+    }
+
+    // Verify aggregate company payroll equation
+    assert.equal(
+      Math.round(totalEmployerCostLkr * 100) / 100,
+      Math.round((totalPayrollGrossLkr + totalEmployerEpfLkr + totalEmployerEtfLkr) * 100) / 100,
+    );
+
+    assert.ok(totalPayrollGrossLkr > 2000000);
+    assert.ok(totalEmployeeEpfLkr > 50000);
+    assert.ok(totalEmployerEpfLkr > 75000);
+    assert.ok(totalEmployerEtfLkr > 18000);
+    assert.ok(totalApitWithheldLkr > 100000);
+    assert.ok(totalNetTakeHomeLkr > 1800000);
   });
 });
