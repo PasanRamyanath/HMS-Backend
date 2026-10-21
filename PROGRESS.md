@@ -212,6 +212,7 @@ This file tracks the sequential completion of backend implementation steps defin
 
 ## Phase 18: Sri Lankan Hotel Staff Attendance, 10% Service Charge Pool Distribution, EPF (8%/12%), ETF (3%) & Payroll
 - [x] Step 426: Implement Sri Lankan APIT (Advance Personal Income Tax) Monthly Tax Table Calculator (`calculateSriLankaApit`) (`packages/core/src/payroll.ts`)
+- [x] Step 427: Implement Complete Monthly Hotel Payslip Generator (`generateEmployeePayslip`) (`packages/core/src/payroll.ts`)
 
 
 

@@ -721,3 +721,325 @@ export function createApitAuditEntry(
     prevHash,
   });
 }
+
+/**
+ * Standard monthly divisor for calculating normal hourly rate in Sri Lankan commercial establishments
+ * under the Shop and Office Employees Act No. 19 of 1954 (25/26 days × 8 hours ≈ 200 hours).
+ */
+export const SRI_LANKA_STANDARD_MONTHLY_HOURS = 200;
+
+/**
+ * Statutory overtime multiplier (1.5x regular hourly rate).
+ */
+export const SRI_LANKA_OVERTIME_MULTIPLIER = 1.5;
+
+/**
+ * Employee profile required for payroll calculation.
+ */
+export interface EmployeePayrollProfile {
+  readonly tenantId: string;
+  readonly employeeId: string;
+  readonly employeeName: string;
+  readonly designation?: string | undefined;
+  readonly department?: string | undefined;
+  readonly epfRegistrationNo?: string | undefined;
+  readonly nicOrPassport?: string | undefined;
+  readonly basicSalaryLkr: number;
+  readonly budgetaryReliefAllowanceLkr?: number | undefined;
+  readonly fixedAllowancesLkr?: number | undefined;
+}
+
+/**
+ * Monthly attendance, overtime hours, and non-statutory deduction inputs for an employee.
+ */
+export interface EmployeeMonthlyAttendance {
+  readonly billingPeriod: string; // e.g. '2026-10'
+  readonly daysWorked: number;
+  readonly standardWorkdaysInMonth?: number | undefined;
+  readonly overtimeHours?: number | undefined;
+  readonly overtimeHourlyRateLkr?: number | undefined;
+  readonly unpaidLeaveDays?: number | undefined;
+  readonly mealDeductionsLkr?: number | undefined;
+  readonly salaryAdvanceDeductionsLkr?: number | undefined;
+  readonly otherDeductionsLkr?: number | undefined;
+}
+
+/**
+ * Comprehensive Sri Lankan hotel employee payslip result.
+ */
+export interface EmployeePayslipResult {
+  readonly tenantId: string;
+  readonly employeeId: string;
+  readonly employeeName: string;
+  readonly billingPeriod: string;
+  readonly department?: string | undefined;
+  readonly designation?: string | undefined;
+  readonly epfRegistrationNo?: string | undefined;
+  readonly nicOrPassport?: string | undefined;
+
+  // Earnings Breakdown
+  readonly basicSalaryLkr: number;
+  readonly budgetaryReliefAllowanceLkr: number;
+  readonly epfEligibleEarningsLkr: number;
+  readonly fixedAllowancesLkr: number;
+  readonly overtimeHours: number;
+  readonly overtimeRateLkr: number;
+  readonly overtimeEarningsLkr: number;
+  readonly netServiceChargeShareLkr: number;
+  readonly grossEarningsLkr: number;
+
+  // Employee Deductions Breakdown
+  readonly employeeEpfRatePercent: number;
+  readonly employeeEpfLkr: number;
+  readonly apitTaxLkr: number;
+  readonly mealDeductionsLkr: number;
+  readonly salaryAdvanceDeductionsLkr: number;
+  readonly otherDeductionsLkr: number;
+  readonly totalDeductionsLkr: number;
+
+  // Net Take-Home Pay
+  readonly netPayLkr: number;
+
+  // Employer Statutory Contributions & Cost
+  readonly employerEpfRatePercent: number;
+  readonly employerEpfLkr: number;
+  readonly employerEtfRatePercent: number;
+  readonly employerEtfLkr: number;
+  readonly totalStatutoryRemittanceLkr: number;
+  readonly totalEmployerCostLkr: number;
+}
+
+function validateEmployeeProfile(emp: EmployeePayrollProfile): Result<string, DomainError> {
+  const tenantRes = validateTenantId(emp.tenantId);
+  if (!tenantRes.ok) {
+    return tenantRes;
+  }
+
+  if (!emp.employeeId || emp.employeeId.trim() === "") {
+    return domainErr("VALIDATION_FAILED", "Employee ID cannot be empty");
+  }
+
+  if (!emp.employeeName || emp.employeeName.trim() === "") {
+    return domainErr("VALIDATION_FAILED", "Employee name cannot be empty");
+  }
+
+  if (
+    typeof emp.basicSalaryLkr !== "number" ||
+    !Number.isFinite(emp.basicSalaryLkr) ||
+    emp.basicSalaryLkr < 0
+  ) {
+    return domainErr("VALIDATION_FAILED", "Basic salary must be a non-negative number", {
+      basicSalaryLkr: emp.basicSalaryLkr,
+    });
+  }
+
+  return ok(tenantRes.value);
+}
+
+function validateAttendance(att: EmployeeMonthlyAttendance): Result<void, DomainError> {
+  if (!att.billingPeriod || att.billingPeriod.trim() === "") {
+    return domainErr("VALIDATION_FAILED", "Billing period is required (e.g. '2026-10')");
+  }
+
+  if (
+    typeof att.daysWorked !== "number" ||
+    !Number.isFinite(att.daysWorked) ||
+    att.daysWorked < 0
+  ) {
+    return domainErr("VALIDATION_FAILED", "Days worked must be a non-negative number", {
+      daysWorked: att.daysWorked,
+    });
+  }
+
+  if (
+    att.overtimeHours !== undefined &&
+    (typeof att.overtimeHours !== "number" ||
+      !Number.isFinite(att.overtimeHours) ||
+      att.overtimeHours < 0)
+  ) {
+    return domainErr("VALIDATION_FAILED", "Overtime hours must be a non-negative number", {
+      overtimeHours: att.overtimeHours,
+    });
+  }
+
+  return ok(undefined);
+}
+
+function calculateOvertime(
+  epfEligibleEarningsLkr: number,
+  attendance: EmployeeMonthlyAttendance,
+): { overtimeHours: number; overtimeRateLkr: number; overtimeEarningsLkr: number } {
+  const overtimeHours = attendance.overtimeHours ?? 0;
+  if (overtimeHours <= 0) {
+    return { overtimeHours: 0, overtimeRateLkr: 0, overtimeEarningsLkr: 0 };
+  }
+
+  const overtimeRateLkr =
+    attendance.overtimeHourlyRateLkr !== undefined
+      ? roundLkr(attendance.overtimeHourlyRateLkr)
+      : roundLkr(
+          (epfEligibleEarningsLkr / SRI_LANKA_STANDARD_MONTHLY_HOURS) *
+            SRI_LANKA_OVERTIME_MULTIPLIER,
+        );
+
+  const overtimeEarningsLkr = roundLkr(overtimeHours * overtimeRateLkr);
+  return { overtimeHours, overtimeRateLkr, overtimeEarningsLkr };
+}
+
+/**
+ * Generates an end-to-end Sri Lankan monthly hotel employee payslip:
+ *
+ * Formula:
+ * - `EPF Eligible Earnings = Basic Salary + Budgetary Relief Allowance (BRA)`
+ * - `Overtime Earnings = Overtime Hours × ((Basic + BRA) / 200 × 1.5)`
+ * - `Gross Earnings = EPF Eligible + Fixed Allowances + Overtime Earnings + Net Service Charge Share`
+ * - `Employee EPF = 8% of EPF Eligible Earnings`
+ * - `APIT Withholding = calculateSriLankaApit(grossEarnings)`
+ * - `Total Deductions = Employee EPF + APIT + Staff Meals + Salary Advance + Other Deductions`
+ * - `Net Pay = Gross Earnings - Total Deductions`
+ * - `Employer EPF = 12% of EPF Eligible Earnings`
+ * - `Employer ETF = 3% of EPF Eligible Earnings`
+ * - `Total Statutory Remittance = Employee EPF (8%) + Employer EPF (12%) + Employer ETF (3%)`
+ * - `Total Employer Cost = Gross Earnings + Employer EPF + Employer ETF`
+ */
+export function generateEmployeePayslip(
+  employee: EmployeePayrollProfile,
+  attendance: EmployeeMonthlyAttendance,
+  scPoolShareLkr?: number | undefined,
+  options?: {
+    apitReliefThresholdLkr?: number | undefined;
+    apitSlabs?: readonly SriLankaApitSlab[] | undefined;
+  },
+): Result<EmployeePayslipResult, DomainError> {
+  const empRes = validateEmployeeProfile(employee);
+  if (!empRes.ok) {
+    return empRes;
+  }
+  const tenantId = empRes.value;
+
+  const attRes = validateAttendance(attendance);
+  if (!attRes.ok) {
+    return attRes;
+  }
+
+  const basicSalaryLkr = roundLkr(employee.basicSalaryLkr);
+  const braLkr = roundLkr(employee.budgetaryReliefAllowanceLkr ?? 0);
+  const fixedAllowancesLkr = roundLkr(employee.fixedAllowancesLkr ?? 0);
+  const netScShareLkr = roundLkr(scPoolShareLkr ?? 0);
+
+  const epfEligibleEarningsLkr = roundLkr(basicSalaryLkr + braLkr);
+  const { overtimeHours, overtimeRateLkr, overtimeEarningsLkr } = calculateOvertime(
+    epfEligibleEarningsLkr,
+    attendance,
+  );
+
+  const grossEarningsLkr = roundLkr(
+    epfEligibleEarningsLkr + fixedAllowancesLkr + overtimeEarningsLkr + netScShareLkr,
+  );
+
+  // Employee Statutory EPF (8%)
+  const employeeEpfLkr = roundLkr(epfEligibleEarningsLkr * SRI_LANKA_EPF_EMPLOYEE_RATE);
+
+  // APIT progressive income tax calculation on gross taxable earnings
+  const apitRes = calculateSriLankaApit({
+    monthlyGrossTaxableLkr: grossEarningsLkr,
+    reliefThresholdLkr: options?.apitReliefThresholdLkr,
+    slabs: options?.apitSlabs,
+    tenantId,
+    employeeId: employee.employeeId,
+  });
+  const apitTaxLkr = apitRes.ok ? apitRes.value.totalApitLkr : 0;
+
+  // Deductions
+  const mealDeductionsLkr = roundLkr(attendance.mealDeductionsLkr ?? 0);
+  const salaryAdvanceDeductionsLkr = roundLkr(attendance.salaryAdvanceDeductionsLkr ?? 0);
+  const otherDeductionsLkr = roundLkr(attendance.otherDeductionsLkr ?? 0);
+
+  const totalDeductionsLkr = roundLkr(
+    employeeEpfLkr +
+      apitTaxLkr +
+      mealDeductionsLkr +
+      salaryAdvanceDeductionsLkr +
+      otherDeductionsLkr,
+  );
+
+  const netPayLkr = roundLkr(grossEarningsLkr - totalDeductionsLkr);
+
+  // Employer statutory contributions
+  const employerEpfLkr = roundLkr(epfEligibleEarningsLkr * SRI_LANKA_EPF_EMPLOYER_RATE);
+  const employerEtfLkr = roundLkr(epfEligibleEarningsLkr * SRI_LANKA_ETF_EMPLOYER_RATE);
+  const totalStatutoryRemittanceLkr = roundLkr(employeeEpfLkr + employerEpfLkr + employerEtfLkr);
+  const totalEmployerCostLkr = roundLkr(grossEarningsLkr + employerEpfLkr + employerEtfLkr);
+
+  return ok({
+    tenantId,
+    employeeId: employee.employeeId.trim(),
+    employeeName: employee.employeeName.trim(),
+    billingPeriod: attendance.billingPeriod.trim(),
+    department: employee.department?.trim(),
+    designation: employee.designation?.trim(),
+    epfRegistrationNo: employee.epfRegistrationNo?.trim(),
+    nicOrPassport: employee.nicOrPassport?.trim(),
+
+    basicSalaryLkr,
+    budgetaryReliefAllowanceLkr: braLkr,
+    epfEligibleEarningsLkr,
+    fixedAllowancesLkr,
+    overtimeHours,
+    overtimeRateLkr,
+    overtimeEarningsLkr,
+    netServiceChargeShareLkr: netScShareLkr,
+    grossEarningsLkr,
+
+    employeeEpfRatePercent: SRI_LANKA_EPF_EMPLOYEE_RATE * 100,
+    employeeEpfLkr,
+    apitTaxLkr,
+    mealDeductionsLkr,
+    salaryAdvanceDeductionsLkr,
+    otherDeductionsLkr,
+    totalDeductionsLkr,
+
+    netPayLkr,
+
+    employerEpfRatePercent: SRI_LANKA_EPF_EMPLOYER_RATE * 100,
+    employerEpfLkr,
+    employerEtfRatePercent: SRI_LANKA_ETF_EMPLOYER_RATE * 100,
+    employerEtfLkr,
+    totalStatutoryRemittanceLkr,
+    totalEmployerCostLkr,
+  });
+}
+
+/**
+ * Creates an immutable SHA-256 hash-chained audit log entry for employee monthly payslips.
+ */
+export function createPayslipAuditEntry(
+  tenantId: string,
+  actorUserId: string,
+  payslip: EmployeePayslipResult,
+  isoTs: string,
+  prevHash?: string | undefined,
+): Result<AuditLogEntry, DomainError> {
+  const afterJson = JSON.stringify({
+    employeeId: payslip.employeeId,
+    billingPeriod: payslip.billingPeriod,
+    grossEarningsLkr: payslip.grossEarningsLkr,
+    netPayLkr: payslip.netPayLkr,
+    employeeEpfLkr: payslip.employeeEpfLkr,
+    apitTaxLkr: payslip.apitTaxLkr,
+    employerEpfLkr: payslip.employerEpfLkr,
+    employerEtfLkr: payslip.employerEtfLkr,
+    totalStatutoryRemittanceLkr: payslip.totalStatutoryRemittanceLkr,
+  });
+
+  return createAuditEntry({
+    tenantId,
+    actorUserId,
+    action: "GENERATE_EMPLOYEE_PAYSLIP",
+    entityType: "PayrollPayslip",
+    entityId: `${payslip.billingPeriod}:${payslip.employeeId}`,
+    isoTs,
+    afterJson,
+    prevHash,
+  });
+}

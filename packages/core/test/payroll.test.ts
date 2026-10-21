@@ -7,7 +7,9 @@ import {
   calculateSriLankaEpfEtf,
   createApitAuditEntry,
   createEpfEtfAuditEntry,
+  createPayslipAuditEntry,
   createServiceChargePoolAuditEntry,
+  generateEmployeePayslip,
 } from "../src/payroll.js";
 
 describe("Sri Lankan 10% Service Charge Pool & Breakage Deduction Engine (payroll.ts)", () => {
@@ -509,6 +511,181 @@ describe("Sri Lankan APIT (Advance Personal Income Tax) Progressive Tax Calculat
     assert.equal(audit.action, "CALCULATE_SRI_LANKA_APIT");
     assert.equal(audit.entityType, "PayrollPayslip");
     assert.equal(audit.entityId, "2026-10:EMP-GM-001:APIT");
+    assert.equal(audit.entryHash.length, 64);
+  });
+});
+
+describe("Complete Monthly Hotel Payslip Generator (generateEmployeePayslip)", () => {
+  const TEST_TENANT = "cinnamon-grand-colombo";
+
+  it("generates full payslip combining Basic + BRA + OT (1.5x) + SC share - 8% EPF - Meals - APIT", () => {
+    // Basic: 60,000, BRA: 4,000 -> EPF Eligible: 64,000
+    // Hourly rate = 64,000 / 200 = 320 LKR
+    // OT rate = 320 * 1.5 = 480 LKR
+    // OT hours = 10 -> OT earnings = 4,800 LKR
+    // Fixed allowance = 5,000 LKR
+    // Service Charge share = 35,000 LKR
+    // Gross Earnings = 64,000 + 5,000 + 4,800 + 35,000 = 108,800 LKR
+    // Employee EPF (8%) = 64,000 * 0.08 = 5,120 LKR
+    // APIT: Gross 108,800 -> 8,800 taxable @ 6% = 528 LKR
+    // Meal deduction = 2,500 LKR
+    // Salary advance = 5,000 LKR
+    // Other deduction = 1,000 LKR
+    // Total Deductions = 5,120 + 528 + 2,500 + 5,000 + 1,000 = 14,148 LKR
+    // Net Pay = 108,800 - 14,148 = 94,652 LKR
+    // Employer EPF (12%) = 64,000 * 0.12 = 7,680 LKR
+    // Employer ETF (3%) = 64,000 * 0.03 = 1,920 LKR
+    // Total Statutory Remittance = 5,120 + 7,680 + 1,920 = 14,720 LKR
+    // Total Employer Cost = 108,800 + 7,680 + 1,920 = 118,400 LKR
+    const res = generateEmployeePayslip(
+      {
+        tenantId: TEST_TENANT,
+        employeeId: "EMP-HOTEL-550",
+        employeeName: "Saman Jayawardena",
+        department: "Food & Beverage",
+        designation: "Senior Steward",
+        epfRegistrationNo: "EPF/10928/550",
+        nicOrPassport: "199012345678",
+        basicSalaryLkr: 60000,
+        budgetaryReliefAllowanceLkr: 4000,
+        fixedAllowancesLkr: 5000,
+      },
+      {
+        billingPeriod: "2026-10",
+        daysWorked: 26,
+        overtimeHours: 10,
+        mealDeductionsLkr: 2500,
+        salaryAdvanceDeductionsLkr: 5000,
+        otherDeductionsLkr: 1000,
+      },
+      35000, // Net SC Share
+    );
+
+    assert.equal(res.ok, true);
+    if (!res.ok) return;
+
+    const slip = res.value;
+    assert.equal(slip.tenantId, TEST_TENANT);
+    assert.equal(slip.employeeId, "EMP-HOTEL-550");
+    assert.equal(slip.employeeName, "Saman Jayawardena");
+    assert.equal(slip.department, "Food & Beverage");
+    assert.equal(slip.billingPeriod, "2026-10");
+
+    assert.equal(slip.basicSalaryLkr, 60000);
+    assert.equal(slip.budgetaryReliefAllowanceLkr, 4000);
+    assert.equal(slip.epfEligibleEarningsLkr, 64000);
+    assert.equal(slip.fixedAllowancesLkr, 5000);
+    assert.equal(slip.overtimeHours, 10);
+    assert.equal(slip.overtimeRateLkr, 480);
+    assert.equal(slip.overtimeEarningsLkr, 4800);
+    assert.equal(slip.netServiceChargeShareLkr, 35000);
+    assert.equal(slip.grossEarningsLkr, 108800);
+
+    assert.equal(slip.employeeEpfRatePercent, 8);
+    assert.equal(slip.employeeEpfLkr, 5120);
+    assert.equal(slip.apitTaxLkr, 528);
+    assert.equal(slip.mealDeductionsLkr, 2500);
+    assert.equal(slip.salaryAdvanceDeductionsLkr, 5000);
+    assert.equal(slip.otherDeductionsLkr, 1000);
+    assert.equal(slip.totalDeductionsLkr, 14148);
+
+    assert.equal(slip.netPayLkr, 94652);
+
+    assert.equal(slip.employerEpfRatePercent, 12);
+    assert.equal(slip.employerEpfLkr, 7680);
+    assert.equal(slip.employerEtfRatePercent, 3);
+    assert.equal(slip.employerEtfLkr, 1920);
+    assert.equal(slip.totalStatutoryRemittanceLkr, 14720);
+    assert.equal(slip.totalEmployerCostLkr, 118400);
+  });
+
+  it("handles custom hourly overtime rate override", () => {
+    const res = generateEmployeePayslip(
+      {
+        tenantId: TEST_TENANT,
+        employeeId: "EMP-HOTEL-551",
+        employeeName: "Rohan Perera",
+        basicSalaryLkr: 50000,
+      },
+      {
+        billingPeriod: "2026-10",
+        daysWorked: 25,
+        overtimeHours: 8,
+        overtimeHourlyRateLkr: 600, // Custom contract rate override
+      },
+    );
+
+    assert.equal(res.ok, true);
+    if (!res.ok) return;
+
+    assert.equal(res.value.overtimeRateLkr, 600);
+    assert.equal(res.value.overtimeEarningsLkr, 4800); // 8 * 600
+    assert.equal(res.value.grossEarningsLkr, 54800); // 50,000 + 4,800
+  });
+
+  it("rejects invalid input with missing employee ID or negative salary", () => {
+    const invalidId = generateEmployeePayslip(
+      {
+        tenantId: TEST_TENANT,
+        employeeId: "",
+        employeeName: "Nameless",
+        basicSalaryLkr: 40000,
+      },
+      {
+        billingPeriod: "2026-10",
+        daysWorked: 26,
+      },
+    );
+    assert.equal(invalidId.ok, false);
+
+    const negSalary = generateEmployeePayslip(
+      {
+        tenantId: TEST_TENANT,
+        employeeId: "EMP-001",
+        employeeName: "Name",
+        basicSalaryLkr: -25000,
+      },
+      {
+        billingPeriod: "2026-10",
+        daysWorked: 26,
+      },
+    );
+    assert.equal(negSalary.ok, false);
+  });
+
+  it("creates cryptographically chained audit log for payslip generation", () => {
+    const res = generateEmployeePayslip(
+      {
+        tenantId: TEST_TENANT,
+        employeeId: "EMP-AUDIT-99",
+        employeeName: "Anura Silva",
+        basicSalaryLkr: 75000,
+      },
+      {
+        billingPeriod: "2026-10",
+        daysWorked: 26,
+      },
+      25000,
+    );
+
+    assert.equal(res.ok, true);
+    if (!res.ok) return;
+
+    const auditRes = createPayslipAuditEntry(
+      TEST_TENANT,
+      "actor-hr-officer",
+      res.value,
+      "2026-10-21T07:00:00.000Z",
+    );
+
+    assert.equal(auditRes.ok, true);
+    if (!auditRes.ok) return;
+
+    const audit = auditRes.value;
+    assert.equal(audit.tenantId, TEST_TENANT);
+    assert.equal(audit.action, "GENERATE_EMPLOYEE_PAYSLIP");
+    assert.equal(audit.entityType, "PayrollPayslip");
+    assert.equal(audit.entityId, "2026-10:EMP-AUDIT-99");
     assert.equal(audit.entryHash.length, 64);
   });
 });
