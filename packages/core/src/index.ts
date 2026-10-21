@@ -58,6 +58,7 @@ export * from "./bankSlipsExport.js";
 export * from "./gratuityMath.js";
 export * from "./entitlements.js";
 export * from "./tenant/hasModuleEntitlement.js";
+export * from "./pdpaCompliance.js";
 export {
   SRI_LANKA_TIMEZONE,
   SRI_LANKA_LOCALE,
