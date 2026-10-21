@@ -247,6 +247,8 @@ This file tracks the sequential completion of backend implementation steps defin
 - [x] Step 489: Deploy `SriLankaHmsStack` to `ap-south-1` via AWS CDK (`npx cdk deploy`) (`packages/cdk/`)
 - [x] Step 490: Extract CDK Outputs & Populate `packages/web/.env.production` Automatically (`packages/cdk/scripts/export-outputs.mjs`)
 - [x] Step 491: Sync Built `packages/web/dist` Assets to `HmsAssetBucket` & Invalidate CloudFront `/index.html` (`packages/cdk/scripts/deploy-web.mjs`)
+- [x] Step 492: Seed First Live Production Hotel Tenant & Super-Admin Account (`packages/cdk/scripts/seed-first-hotel.mjs`)
+
 
 
 
