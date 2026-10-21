@@ -5,8 +5,14 @@ import {
   AUTHORIZED_TTL_SECONDS,
   type AppSyncAuthorizerEvent,
   type AppSyncAuthorizerResult,
+  DEFAULT_RATE_LIMIT_CONFIG,
+  type RateLimitConfig,
+  checkRateLimitExceeded,
   extractRawToken,
+  getRateLimitConfig,
   handler,
+  pruneStaleRateLimitBuckets,
+  resetRateLimiter,
 } from "../lambdas/qrAuthorizer.js";
 
 describe("AppSync Custom Lambda Authorizer for Zero-Login Guest QR Access (qrAuthorizer.ts)", () => {
@@ -15,16 +21,32 @@ describe("AppSync Custom Lambda Authorizer for Zero-Login Guest QR Access (qrAut
   const TEST_LOCATION = "ROOM-204";
   const TEST_STAY = "stay-sl-2026-9812";
   const originalEnvSecret = process.env.QR_HMAC_SECRET;
+  const originalBurst = process.env.QR_RATE_LIMIT_BURST;
+  const originalWindow = process.env.QR_RATE_LIMIT_WINDOW_MS;
 
   beforeEach(() => {
     process.env.QR_HMAC_SECRET = TEST_SECRET;
+    resetRateLimiter();
   });
 
   afterEach(() => {
+    resetRateLimiter();
     if (originalEnvSecret !== undefined) {
       process.env.QR_HMAC_SECRET = originalEnvSecret;
     } else {
       Reflect.deleteProperty(process.env, "QR_HMAC_SECRET");
+    }
+
+    if (originalBurst !== undefined) {
+      process.env.QR_RATE_LIMIT_BURST = originalBurst;
+    } else {
+      Reflect.deleteProperty(process.env, "QR_RATE_LIMIT_BURST");
+    }
+
+    if (originalWindow !== undefined) {
+      process.env.QR_RATE_LIMIT_WINDOW_MS = originalWindow;
+    } else {
+      Reflect.deleteProperty(process.env, "QR_RATE_LIMIT_WINDOW_MS");
     }
   });
 
@@ -154,7 +176,6 @@ describe("AppSync Custom Lambda Authorizer for Zero-Login Guest QR Access (qrAut
     assert.ok(signRes.ok);
 
     const parts = signRes.value.split(".");
-    // Tamper with payload portion
     const forgedToken = `forgedPayload.${parts[1]}`;
 
     const result = await handler({ authorizationToken: forgedToken });
@@ -204,5 +225,112 @@ describe("AppSync Custom Lambda Authorizer for Zero-Login Guest QR Access (qrAut
 
     assert.equal(result.isAuthorized, false);
     assert.equal(result.ttlOverride, 0);
+  });
+
+  it("loads default and custom rate limit configurations", () => {
+    assert.equal(DEFAULT_RATE_LIMIT_CONFIG.maxRequestsPerWindow, 60);
+    assert.equal(DEFAULT_RATE_LIMIT_CONFIG.windowDurationMs, 60_000);
+
+    const defaultConfig = getRateLimitConfig();
+    assert.equal(defaultConfig.maxRequestsPerWindow, 60);
+    assert.equal(defaultConfig.windowDurationMs, 60_000);
+
+    process.env.QR_RATE_LIMIT_BURST = "120";
+    process.env.QR_RATE_LIMIT_WINDOW_MS = "30000";
+    const customConfig = getRateLimitConfig();
+    assert.equal(customConfig.maxRequestsPerWindow, 120);
+    assert.equal(customConfig.windowDurationMs, 30_000);
+  });
+
+  it("allows bursts up to capacity and rejects excess requests using token bucket", () => {
+    const testKey = "TENANT#resort-a#ROOM-101#stay-001";
+    const customConfig: RateLimitConfig = {
+      maxRequestsPerWindow: 3,
+      windowDurationMs: 10_000,
+    };
+    const baseTime = 1_000_000;
+
+    // First 3 requests at t = 0 should be permitted
+    assert.equal(checkRateLimitExceeded(testKey, baseTime, customConfig), false);
+    assert.equal(checkRateLimitExceeded(testKey, baseTime, customConfig), false);
+    assert.equal(checkRateLimitExceeded(testKey, baseTime, customConfig), false);
+
+    // 4th request at t = 0 exceeds capacity
+    assert.equal(checkRateLimitExceeded(testKey, baseTime, customConfig), true);
+
+    // After 3,500ms (1 token refilled: 3 / 10_000 * 3500 = 1.05 tokens)
+    assert.equal(checkRateLimitExceeded(testKey, baseTime + 3500, customConfig), false);
+
+    // Immediate next request exhausted the refilled token
+    assert.equal(checkRateLimitExceeded(testKey, baseTime + 3500, customConfig), true);
+  });
+
+  it("isolates rate limit counters between different room sessions and tenants", () => {
+    const customConfig: RateLimitConfig = {
+      maxRequestsPerWindow: 2,
+      windowDurationMs: 60_000,
+    };
+    const now = Date.now();
+
+    const room1 = "TENANT#hotel-a#ROOM-101#stay-1";
+    const room2 = "TENANT#hotel-a#ROOM-102#stay-2";
+    const roomOtherTenant = "TENANT#hotel-b#ROOM-101#stay-3";
+
+    // Exhaust room1
+    assert.equal(checkRateLimitExceeded(room1, now, customConfig), false);
+    assert.equal(checkRateLimitExceeded(room1, now, customConfig), false);
+    assert.equal(checkRateLimitExceeded(room1, now, customConfig), true);
+
+    // room2 and roomOtherTenant are still fresh
+    assert.equal(checkRateLimitExceeded(room2, now, customConfig), false);
+    assert.equal(checkRateLimitExceeded(roomOtherTenant, now, customConfig), false);
+  });
+
+  it("prunes stale rate limit buckets to preserve memory", () => {
+    const customConfig: RateLimitConfig = {
+      maxRequestsPerWindow: 10,
+      windowDurationMs: 1_000,
+    };
+    const t0 = 100_000;
+    checkRateLimitExceeded("stale-1", t0, customConfig);
+    checkRateLimitExceeded("stale-2", t0, customConfig);
+    checkRateLimitExceeded("recent-3", t0 + 50_000, customConfig);
+
+    // Prune buckets older than 10,000ms at t = 160_000
+    const pruned = pruneStaleRateLimitBuckets(t0 + 60_000, 10_000);
+    assert.equal(pruned, 2);
+  });
+
+  it("rejects burst requests in handler when room token exceeds rate limit", async () => {
+    process.env.QR_RATE_LIMIT_BURST = "2";
+    process.env.QR_RATE_LIMIT_WINDOW_MS = "60000";
+
+    const exp = Math.floor(Date.now() / 1000) + 3600;
+    const signRes = signQrSessionToken({
+      tenantId: TEST_TENANT,
+      location: "POOL-CABANA-1",
+      stayId: "stay-cabana-01",
+      exp,
+      secret: TEST_SECRET,
+    });
+    assert.ok(signRes.ok);
+
+    const event: AppSyncAuthorizerEvent = {
+      authorizationToken: signRes.value,
+    };
+
+    // First request: OK
+    const res1 = await handler(event);
+    assert.equal(res1.isAuthorized, true);
+
+    // Second request: OK
+    const res2 = await handler(event);
+    assert.equal(res2.isAuthorized, true);
+
+    // Third request: Burst limit reached -> REJECTED
+    const res3 = await handler(event);
+    assert.equal(res3.isAuthorized, false);
+    assert.equal(res3.ttlOverride, 0);
+    assert.deepEqual(res3.deniedFields, ["*"]);
   });
 });
