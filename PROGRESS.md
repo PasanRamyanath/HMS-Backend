@@ -203,5 +203,8 @@ This file tracks the sequential completion of backend implementation steps defin
 - [x] Step 404: Implement SLTDA Monthly Statistical Return Compiler (`packages/core/src/sltdaReports.ts`)
 - [x] Step 405: Implement SLTDA Quarterly Tourism Development Levy (TDL) Statement Compiler (`packages/core/src/sltdaReports.ts`)
 - [x] Step 406: Write Unit Tests for SLTDA Monthly Occupancy & Quarterly TDL Returns (`packages/core/test/sltdaReports.test.ts`)
+- [x] Step 409: Implement IRD Quarterly SSCL (`2.5%`) & Monthly VAT (`18%`) Output Schedule Compiler (`packages/core/src/irdTaxSchedules.ts`)
+- [x] Step 410: Write Unit Tests for IRD VAT (`18%`) & SSCL (`2.5%`) Schedule Aggregation (`packages/core/test/irdTaxSchedules.test.ts`)
+
 
 
