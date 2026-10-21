@@ -223,6 +223,7 @@ This file tracks the sequential completion of backend implementation steps defin
 
 ## Phase 19: Multi-Property SaaS Super-Admin, Tenant Provisioning, Chain Analytics & Future Flutter SDK Contracts
 - [x] Step 457: Implement Module Entitlement Guard (`hasModuleEntitlement`) (`packages/core/src/tenant/hasModuleEntitlement.ts`)
+- [x] Step 458: Implement Tenant Room Count Quota Enforcement Resolver (`enforceRoomCountQuota.js`) (`packages/graphql/resolvers/enforceRoomCountQuota.ts`)
 
 
 

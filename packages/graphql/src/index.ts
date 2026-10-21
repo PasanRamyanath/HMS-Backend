@@ -23,3 +23,4 @@ export * from "../resolvers/housekeepingOps.js";
 export * from "../resolvers/activities.js";
 export * from "../resolvers/inventoryOps.js";
 export * from "../resolvers/hrPayroll.js";
+export * from "../resolvers/enforceRoomCountQuota.js";
