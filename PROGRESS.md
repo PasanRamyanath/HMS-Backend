@@ -221,6 +221,9 @@ This file tracks the sequential completion of backend implementation steps defin
 - [x] Step 445: Write Unit Tests for Sri Lankan 5-Year Statutory Gratuity Accrual (`packages/core/test/gratuityMath.test.ts`)
 - [x] Step 449: Write End-to-End Monthly SC Collection -> Breakage Deduction -> Payroll -> EPF/ETF -> Bank SLIPS Test (`packages/core/test/payrollLifecycle.test.ts`)
 
+## Phase 19: Multi-Property SaaS Super-Admin, Tenant Provisioning, Chain Analytics & Future Flutter SDK Contracts
+- [x] Step 457: Implement Module Entitlement Guard (`hasModuleEntitlement`) (`packages/core/src/tenant/hasModuleEntitlement.ts`)
+
 
 
 
