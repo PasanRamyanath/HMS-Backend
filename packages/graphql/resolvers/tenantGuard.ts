@@ -94,7 +94,8 @@ export function tenantGuard<TArgs = Record<string, unknown>>(
     return resolveLambdaTenant(resolverContext, targetTenantId);
   }
 
-  if ("accountId" in identity || "userArn" in identity) {
+  const idAny = identity as { accountId?: string; userArn?: string };
+  if (idAny.accountId || idAny.userArn) {
     return targetTenantId;
   }
 

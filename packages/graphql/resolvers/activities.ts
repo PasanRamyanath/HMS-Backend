@@ -152,8 +152,8 @@ export function calculateActivityTaxBreakdown(baseSupplyLkr: number): TaxBreakdo
  */
 export function computeEndTime(startTime: string, durationMinutes: number): string {
   const parts = startTime.split(":");
-  const hours = Number.parseInt(parts[0] || "0", 10);
-  const minutes = Number.parseInt(parts[1] || "0", 10);
+  const hours = Math.floor(+(parts[0] || 0));
+  const minutes = Math.floor(+(parts[1] || 0));
   const totalMins = (hours * 60 + minutes + Math.max(0, durationMinutes)) % (24 * 60);
   const endHours = Math.floor(totalMins / 60);
   const endMinutes = totalMins % 60;
@@ -169,7 +169,7 @@ export function buildExcursionBookingItem(tenantId: string, input: CreateExcursi
   const id = `exc-${util.autoId().slice(0, 8)}`;
   const now = util.time.nowISO8601();
   const taxBreakdown = calculateActivityTaxBreakdown(input.retailRateLkr);
-  const dateCompact = input.excursionDate.replace(/-/g, "");
+  const dateCompact = input.excursionDate.split("-").join("");
   const suffix = id.slice(-4).toUpperCase();
   const bookingNumber = `EXC-${dateCompact}-${suffix}`;
 
@@ -202,7 +202,7 @@ export function buildExcursionBookingItem(tenantId: string, input: CreateExcursi
     taxBreakdown,
     totalGrossLkr: taxBreakdown.totalGrossLkr,
     folioId: null,
-    isBilledToFolio: Boolean(input.chargeToFolio),
+    isBilledToFolio: !!input.chargeToFolio,
     status: "CONFIRMED",
     specialRequirements: input.specialRequirements ?? null,
     createdAt: now,
@@ -217,7 +217,7 @@ export function buildAyurvedaAppointmentItem(
   const id = `ayu-${util.autoId().slice(0, 8)}`;
   const now = util.time.nowISO8601();
   const taxBreakdown = calculateActivityTaxBreakdown(input.rateLkr);
-  const dateCompact = input.appointmentDate.replace(/-/g, "");
+  const dateCompact = input.appointmentDate.split("-").join("");
   const suffix = id.slice(-4).toUpperCase();
   const appointmentNumber = `AYU-${dateCompact}-${suffix}`;
   const endTime = computeEndTime(input.startTime, input.durationMinutes);
@@ -247,7 +247,7 @@ export function buildAyurvedaAppointmentItem(
     taxBreakdown,
     totalGrossLkr: taxBreakdown.totalGrossLkr,
     folioId: null,
-    isBilledToFolio: Boolean(input.chargeToFolio),
+    isBilledToFolio: !!input.chargeToFolio,
     status: "SCHEDULED",
     createdAt: now,
     updatedAt: now,
@@ -282,7 +282,7 @@ export function getExcursionBookingResponse(
 
 export function listExcursionBookingsRequest(ctx: Context<QueryListExcursionBookingsArgs>) {
   const tenantId = tenantGuard(ctx, ctx.args.tenantId);
-  if (ctx.identity && "claims" in ctx.identity && ctx.identity.claims) {
+  if (ctx.identity && (ctx.identity as { claims?: unknown }).claims) {
     requireUserRole(ctx, ACTIVITY_READ_ROLES);
   }
 
@@ -322,7 +322,7 @@ export function listExcursionBookingsResponse(
 
 export function createExcursionBookingRequest(ctx: Context<MutationCreateExcursionBookingArgs>) {
   const tenantId = tenantGuard(ctx, ctx.args.tenantId);
-  if (ctx.identity && "claims" in ctx.identity && ctx.identity.claims) {
+  if (ctx.identity && (ctx.identity as { claims?: unknown }).claims) {
     requireUserRole(ctx, ACTIVITY_WRITE_ROLES);
   }
 
@@ -350,7 +350,7 @@ export function createExcursionBookingResponse(
 
 export function updateExcursionStatusRequest(ctx: Context<MutationUpdateExcursionStatusArgs>) {
   const tenantId = tenantGuard(ctx, ctx.args.tenantId);
-  if (ctx.identity && "claims" in ctx.identity && ctx.identity.claims) {
+  if (ctx.identity && (ctx.identity as { claims?: unknown }).claims) {
     requireUserRole(ctx, ACTIVITY_STATUS_ROLES);
   }
 
@@ -410,7 +410,7 @@ export function getAyurvedaAppointmentResponse(
 
 export function listAyurvedaAppointmentsRequest(ctx: Context<QueryListAyurvedaAppointmentsArgs>) {
   const tenantId = tenantGuard(ctx, ctx.args.tenantId);
-  if (ctx.identity && "claims" in ctx.identity && ctx.identity.claims) {
+  if (ctx.identity && (ctx.identity as { claims?: unknown }).claims) {
     requireUserRole(ctx, ACTIVITY_READ_ROLES);
   }
 
@@ -452,7 +452,7 @@ export function createAyurvedaAppointmentRequest(
   ctx: Context<MutationCreateAyurvedaAppointmentArgs>,
 ) {
   const tenantId = tenantGuard(ctx, ctx.args.tenantId);
-  if (ctx.identity && "claims" in ctx.identity && ctx.identity.claims) {
+  if (ctx.identity && (ctx.identity as { claims?: unknown }).claims) {
     requireUserRole(ctx, ACTIVITY_WRITE_ROLES);
   }
 
@@ -482,7 +482,7 @@ export function updateAyurvedaAppointmentStatusRequest(
   ctx: Context<MutationUpdateAyurvedaAppointmentStatusArgs>,
 ) {
   const tenantId = tenantGuard(ctx, ctx.args.tenantId);
-  if (ctx.identity && "claims" in ctx.identity && ctx.identity.claims) {
+  if (ctx.identity && (ctx.identity as { claims?: unknown }).claims) {
     requireUserRole(ctx, ACTIVITY_STATUS_ROLES);
   }
 
@@ -520,7 +520,7 @@ export function updateAyurvedaAppointmentStatusResponse(
 
 export function createActivityBookingRequest(ctx: Context<MutationCreateActivityBookingArgs>) {
   const tenantId = tenantGuard(ctx, ctx.args.tenantId);
-  if (ctx.identity && "claims" in ctx.identity && ctx.identity.claims) {
+  if (ctx.identity && (ctx.identity as { claims?: unknown }).claims) {
     requireUserRole(ctx, ACTIVITY_WRITE_ROLES);
   }
 

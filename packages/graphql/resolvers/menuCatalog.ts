@@ -89,10 +89,6 @@ function groupItemsByCategoryId(items: MenuItem[]): Record<string, MenuItem[]> {
   return grouped;
 }
 
-function sortMenuItems(items: MenuItem[]): void {
-  items.sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0));
-}
-
 function partitionCatalogRecords(rawRecords: Array<Record<string, unknown>>): {
   categories: MenuCategory[];
   items: MenuItem[];
@@ -114,7 +110,7 @@ function partitionCatalogRecords(rawRecords: Array<Record<string, unknown>>): {
 /**
  * Response handler for Query.listMenuCatalog.
  * Combines MenuCategory and MenuItem entities into hierarchical categories
- * with nested items, sorted by displayOrder.
+ * with nested items.
  */
 export function listMenuCatalogResponse(
   ctx: Context<
@@ -133,12 +129,8 @@ export function listMenuCatalogResponse(
   const { categories, items } = partitionCatalogRecords(rawRecords);
   const itemsByCat = groupItemsByCategoryId(items);
 
-  categories.sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0));
-
   for (const cat of categories) {
-    const catItems = itemsByCat[cat.id] ?? [];
-    sortMenuItems(catItems);
-    cat.items = catItems;
+    cat.items = itemsByCat[cat.id] ?? [];
   }
 
   return categories;
@@ -172,9 +164,7 @@ export function listMenuCategoriesResponse(
   if (ctx.error) {
     util.error(ctx.error.message, ctx.error.type);
   }
-  const categories = ctx.result?.items ?? [];
-  categories.sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0));
-  return categories;
+  return ctx.result?.items ?? [];
 }
 
 /**
@@ -217,7 +207,5 @@ export function listMenuItemsResponse(
   if (ctx.error) {
     util.error(ctx.error.message, ctx.error.type);
   }
-  const items = ctx.result?.items ?? [];
-  sortMenuItems(items);
-  return items;
+  return ctx.result?.items ?? [];
 }

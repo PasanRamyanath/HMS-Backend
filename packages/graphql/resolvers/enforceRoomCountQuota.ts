@@ -73,7 +73,7 @@ export function enforceRoomCountQuotaRequest(ctx: Context<MutationUpsertRoomArgs
 
   // Stash tenant and input details for response evaluation
   ctx.stash.validatedTenantId = validatedTenantId;
-  ctx.stash.isUpdate = Boolean(input.id && input.id.trim().length > 0);
+  ctx.stash.isUpdate = !!(input.id && input.id.trim().length > 0);
 
   // If updating an existing room, retrieve existing room item
   if (ctx.stash.isUpdate) {

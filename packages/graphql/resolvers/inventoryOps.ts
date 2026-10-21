@@ -359,7 +359,7 @@ export function recordGrnRequest(ctx: Context<MutationRecordGrnArgs>) {
   const voucherId = `grn-${util.autoId().slice(0, 8)}`;
   const now = util.time.nowISO8601();
   const dateStr = input.grnDate || now.slice(0, 10);
-  const voucherNumber = `GRN-${dateStr.replace(/-/g, "")}-${util.autoId().slice(0, 4).toUpperCase()}`;
+  const voucherNumber = `GRN-${dateStr.split("-").join("")}-${util.autoId().slice(0, 4).toUpperCase()}`;
 
   let totalValueLkr = 0;
   const voucherItems = [];
@@ -444,7 +444,7 @@ export function createGoodsIssueNoteRequest(ctx: Context<MutationCreateGoodsIssu
   const voucherId = `gin-${util.autoId().slice(0, 8)}`;
   const now = util.time.nowISO8601();
   const dateStr = input.issueDate || now.slice(0, 10);
-  const voucherNumber = `GIN-${dateStr.replace(/-/g, "")}-${util.autoId().slice(0, 4).toUpperCase()}`;
+  const voucherNumber = `GIN-${dateStr.split("-").join("")}-${util.autoId().slice(0, 4).toUpperCase()}`;
 
   const voucherItems = [];
   for (const it of input.items) {

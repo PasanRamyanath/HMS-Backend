@@ -93,7 +93,13 @@ export function listActiveOrdersByDepartmentResponse(
   }
 
   const rawOrders = ctx.result?.items ?? [];
-  return rawOrders.filter((order) => isActiveOrderStatus(order.status));
+  const activeOrders: ServiceOrder[] = [];
+  for (const order of rawOrders) {
+    if (isActiveOrderStatus(order.status)) {
+      activeOrders.push(order);
+    }
+  }
+  return activeOrders;
 }
 
 /**
@@ -140,16 +146,17 @@ export function listActiveServiceOrdersResponse(
 
   const rawOrders = ctx.result?.items ?? [];
   const diningTypeFilter = ctx.args.diningType;
+  const filteredOrders: ServiceOrder[] = [];
 
-  return rawOrders.filter((order) => {
-    if (!isActiveOrderStatus(order.status)) {
-      return false;
+  for (const order of rawOrders) {
+    if (isActiveOrderStatus(order.status)) {
+      if (!diningTypeFilter || order.diningType === diningTypeFilter) {
+        filteredOrders.push(order);
+      }
     }
-    if (diningTypeFilter && order.diningType !== diningTypeFilter) {
-      return false;
-    }
-    return true;
-  });
+  }
+
+  return filteredOrders;
 }
 
 /**

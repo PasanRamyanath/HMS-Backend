@@ -708,8 +708,11 @@ function createCognitoUserGroups(
 function registerDirectJsResolvers(dataSource: DynamoDbDataSource, resolversDir: string): void {
   for (const r of DIRECT_JS_RESOLVERS) {
     const codePath = resolve(resolversDir, r.file);
-    const rawCode = readFileSync(codePath, "utf8");
-    const adaptedCode = `${rawCode}\nexport const request = ${r.reqFn};\nexport const response = ${r.resFn};\n`;
+    const rawCode = readFileSync(codePath, "utf8").replaceAll(
+      "@aws-appsync/utils/dynamodb.js",
+      "@aws-appsync/utils/dynamodb",
+    );
+    const adaptedCode = `${rawCode}\nexport function request(ctx) {\n  return ${r.reqFn}(ctx);\n}\nexport function response(ctx) {\n  return ${r.resFn}(ctx);\n}\n`;
     dataSource.createResolver(`Resolver${r.typeName}${r.fieldName}`, {
       typeName: r.typeName,
       fieldName: r.fieldName,

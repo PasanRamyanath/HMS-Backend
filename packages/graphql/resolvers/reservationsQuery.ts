@@ -140,7 +140,13 @@ export function listReservationsResponse(
   const rawItems = ctx.result?.items ?? [];
 
   if (statusFilter) {
-    return rawItems.filter((res) => res.status === statusFilter);
+    const filtered: Reservation[] = [];
+    for (const res of rawItems) {
+      if (res.status === statusFilter) {
+        filtered.push(res);
+      }
+    }
+    return filtered;
   }
   return rawItems;
 }

@@ -141,19 +141,18 @@ export function processBitePlates(
   const items: BitePlateItem[] = [];
 
   for (const b of rawBites) {
-    if (!b) {
-      continue;
+    if (b) {
+      const itemTotal = roundLkr(b.quantityKgOrPlates * b.ratePerUnitLkr);
+      totalLkr = roundLkr(totalLkr + itemTotal);
+      items.push({
+        id: util.autoId(),
+        name: b.name,
+        quantityKgOrPlates: b.quantityKgOrPlates,
+        unitOfMeasure: b.unitOfMeasure,
+        ratePerUnitLkr: b.ratePerUnitLkr,
+        totalAmountLkr: itemTotal,
+      });
     }
-    const itemTotal = roundLkr(b.quantityKgOrPlates * b.ratePerUnitLkr);
-    totalLkr = roundLkr(totalLkr + itemTotal);
-    items.push({
-      id: util.autoId(),
-      name: b.name,
-      quantityKgOrPlates: b.quantityKgOrPlates,
-      unitOfMeasure: b.unitOfMeasure,
-      ratePerUnitLkr: b.ratePerUnitLkr,
-      totalAmountLkr: itemTotal,
-    });
   }
 
   return { items, totalLkr };
@@ -337,7 +336,7 @@ function buildBanquetEventPut(
   const advanceDeposit = roundLkr(input.advanceDepositPaidLkr ?? 0);
   const balanceDueLkr = roundLkr(taxBreakdown.totalGrossLkr - advanceDeposit);
   const eventNumber =
-    input.eventNumber ?? `BEO-${input.eventDate.replace(/-/g, "")}-${eventId.slice(-6)}`;
+    input.eventNumber ?? `BEO-${input.eventDate.split("-").join("")}-${eventId.slice(-6)}`;
 
   const item = {
     ...key,
