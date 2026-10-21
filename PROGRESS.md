@@ -250,6 +250,7 @@ This file tracks the sequential completion of backend implementation steps defin
 - [x] Step 492: Seed First Live Production Hotel Tenant & Super-Admin Account (`packages/cdk/scripts/seed-first-hotel.mjs`)
 - [x] Step 493: Verify Live PayHere Sandbox Webhook Callback Against Deployed `webhooksIngress` Function URL (`packages/cdk/scripts/smoke-test-webhooks.mjs`)
 - [x] Step 494: Verify Live Guest Room QR Scan -> AppSync WebSocket -> KDS Chime Latency (<150 ms) (`packages/cdk/scripts/smoke-test-qr-order.mjs`)
+- [x] Step 495: Verify Live 4-Stage Sri Lankan Tax Invoice & LankaQR Payload Generation (`packages/core/test/tax.test.ts`, `packages/core/test/lankaQr.test.ts`)
 
 
 
