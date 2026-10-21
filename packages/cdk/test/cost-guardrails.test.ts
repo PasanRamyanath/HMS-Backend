@@ -593,4 +593,32 @@ describe("CloudFormation Permanent Free-Tier Cost-Ceiling Guardrails", () => {
       });
     }
   });
+
+  it("provisions exactly 3 CloudWatch Free-Tier metric alarms (<= 10 Free Tier limit)", () => {
+    hmsTemplate.resourceCountIs("AWS::CloudWatch::Alarm", 3);
+
+    hmsTemplate.hasResourceProperties("AWS::CloudWatch::Alarm", {
+      AlarmName: "SriLankaHms-LambdaErrors",
+      MetricName: "Errors",
+      Namespace: "AWS/Lambda",
+      ComparisonOperator: "GreaterThanOrEqualToThreshold",
+      Threshold: 1,
+    });
+
+    hmsTemplate.hasResourceProperties("AWS::CloudWatch::Alarm", {
+      AlarmName: "SriLankaHms-DynamoReadThrottle",
+      MetricName: "ReadThrottleEvents",
+      Namespace: "AWS/DynamoDB",
+      ComparisonOperator: "GreaterThanOrEqualToThreshold",
+      Threshold: 1,
+    });
+
+    hmsTemplate.hasResourceProperties("AWS::CloudWatch::Alarm", {
+      AlarmName: "SriLankaHms-DynamoWriteThrottle",
+      MetricName: "WriteThrottleEvents",
+      Namespace: "AWS/DynamoDB",
+      ComparisonOperator: "GreaterThanOrEqualToThreshold",
+      Threshold: 1,
+    });
+  });
 });

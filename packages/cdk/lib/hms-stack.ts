@@ -28,6 +28,7 @@ import {
   ViewerProtocolPolicy,
 } from "aws-cdk-lib/aws-cloudfront";
 import { S3BucketOrigin } from "aws-cdk-lib/aws-cloudfront-origins";
+import { Alarm, ComparisonOperator, Metric, TreatMissingData } from "aws-cdk-lib/aws-cloudwatch";
 import {
   AccountRecovery,
   CfnUserPoolGroup,
@@ -748,6 +749,9 @@ export class SriLankaHmsStack extends Stack {
   public readonly distribution: Distribution;
   public readonly securityHeadersPolicy: ResponseHeadersPolicy;
   public readonly costBudget: CfnBudget;
+  public readonly lambdaErrorsAlarm: Alarm;
+  public readonly dynamoReadThrottleAlarm: Alarm;
+  public readonly dynamoWriteThrottleAlarm: Alarm;
 
   constructor(scope: Construct, id: string, props?: SriLankaHmsStackProps) {
     super(scope, id, props);
@@ -1191,6 +1195,48 @@ export class SriLankaHmsStack extends Stack {
       ],
     });
 
+    // Step 496: CloudWatch Free-Tier Alarms (Up to 10 Always Free metric alarms)
+    this.lambdaErrorsAlarm = new Alarm(this, "LambdaErrorsAlarm", {
+      alarmName: "SriLankaHms-LambdaErrors",
+      alarmDescription: "Alerts when any Lambda invocation encounters an unhandled error",
+      metric: new Metric({
+        namespace: "AWS/Lambda",
+        metricName: "Errors",
+        statistic: "Sum",
+        period: Duration.minutes(5),
+      }),
+      threshold: 1,
+      evaluationPeriods: 1,
+      comparisonOperator: ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
+      treatMissingData: TreatMissingData.NOT_BREACHING,
+    });
+
+    this.dynamoReadThrottleAlarm = new Alarm(this, "DynamoReadThrottleAlarm", {
+      alarmName: "SriLankaHms-DynamoReadThrottle",
+      alarmDescription: "Alerts when DynamoDB HmsTable read capacity is throttled",
+      metric: this.hmsTable.metric("ReadThrottleEvents", {
+        statistic: "Sum",
+        period: Duration.minutes(5),
+      }),
+      threshold: 1,
+      evaluationPeriods: 1,
+      comparisonOperator: ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
+      treatMissingData: TreatMissingData.NOT_BREACHING,
+    });
+
+    this.dynamoWriteThrottleAlarm = new Alarm(this, "DynamoWriteThrottleAlarm", {
+      alarmName: "SriLankaHms-DynamoWriteThrottle",
+      alarmDescription: "Alerts when DynamoDB HmsTable write capacity is throttled",
+      metric: this.hmsTable.metric("WriteThrottleEvents", {
+        statistic: "Sum",
+        period: Duration.minutes(5),
+      }),
+      threshold: 1,
+      evaluationPeriods: 1,
+      comparisonOperator: ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
+      treatMissingData: TreatMissingData.NOT_BREACHING,
+    });
+
     // Stack Outputs for automated CI/CD and Frontend environment configuration
     new CfnOutput(this, "HmsTableArn", {
       value: this.hmsTable.tableArn,
@@ -1316,6 +1362,24 @@ export class SriLankaHmsStack extends Stack {
       value: this.costBudget.ref,
       description: "AWS Budgets Zero-Spend $1.00 Cost Alert ID",
       exportName: "HmsBudgetId",
+    });
+
+    new CfnOutput(this, "LambdaErrorsAlarmArn", {
+      value: this.lambdaErrorsAlarm.alarmArn,
+      description: "CloudWatch Free-Tier Lambda Errors Alarm ARN",
+      exportName: "LambdaErrorsAlarmArn",
+    });
+
+    new CfnOutput(this, "DynamoReadThrottleAlarmArn", {
+      value: this.dynamoReadThrottleAlarm.alarmArn,
+      description: "CloudWatch Free-Tier DynamoDB Read Throttle Alarm ARN",
+      exportName: "DynamoReadThrottleAlarmArn",
+    });
+
+    new CfnOutput(this, "DynamoWriteThrottleAlarmArn", {
+      value: this.dynamoWriteThrottleAlarm.alarmArn,
+      description: "CloudWatch Free-Tier DynamoDB Write Throttle Alarm ARN",
+      exportName: "DynamoWriteThrottleAlarmArn",
     });
   }
 }
