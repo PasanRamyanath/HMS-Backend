@@ -1,0 +1,92 @@
+{
+  "UserAgent": "aws-amplify-cli/2.0",
+  "Version": "1.0",
+  "auth": {
+    "plugins": {
+      "awsCognitoAuthPlugin": {
+        "UserAgent": "aws-amplify-cli/0.1.0",
+        "Version": "0.1.0",
+        "IdentityManager": {
+          "Default": {}
+        },
+        "CredentialsProvider": {
+          "CognitoIdentity": {
+            "Default": {
+              "Region": "ap-south-1"
+            }
+          }
+        },
+        "CognitoUserPool": {
+          "Default": {
+            "PoolId": "ap-south-1_dummyPoolId",
+            "AppClientId": "dummyAppClientId",
+            "Region": "ap-south-1"
+          }
+        },
+        "Auth": {
+          "Default": {
+            "authenticationFlowType": "USER_SRP_AUTH",
+            "socialProviders": [],
+            "usernameAttributes": ["EMAIL", "PHONE_NUMBER"],
+            "signupAttributes": ["EMAIL", "NAME", "PHONE_NUMBER"],
+            "passwordProtectionSettings": {
+              "passwordPolicyMinLength": 8,
+              "passwordPolicyCharacters": []
+            },
+            "mfaConfiguration": "OFF",
+            "mfaTypes": ["SMS"],
+            "verificationMechanisms": ["EMAIL"]
+          }
+        }
+      }
+    }
+  },
+  "api": {
+    "plugins": {
+      "awsAPIPlugin": {
+        "hmsAppSyncApi": {
+          "endpointType": "GraphQL",
+          "endpoint": "https://dummy-appsync-api-id.appsync-api.ap-south-1.amazonaws.com/graphql",
+          "region": "ap-south-1",
+          "authorizationType": "AMAZON_COGNITO_USER_POOLS",
+          "apiKey": "da2-dummy-guest-qr-api-key"
+        }
+      }
+    }
+  },
+  "hmsCustom": {
+    "platform": "Sri Lanka Cloud SaaS HMS",
+    "defaultAwsRegion": "ap-south-1",
+    "realtimeEndpoint": "wss://dummy-appsync-api-id.appsync-realtime-api.ap-south-1.amazonaws.com/graphql",
+    "qrHmacScheme": "slhms://qr/:tenantId/:locationId?t=<hmac>",
+    "currency": "LKR",
+    "statutoryTaxSequence": [
+      {
+        "code": "SC",
+        "ratePct": 10,
+        "description": "Mandatory Hospitality Service Charge"
+      },
+      {
+        "code": "TDL",
+        "ratePct": 1,
+        "description": "Tourism Development Levy on (Base + SC)"
+      },
+      {
+        "code": "SSCL",
+        "ratePct": 2.5,
+        "description": "Social Security Contribution Levy on (Base + SC)"
+      },
+      {
+        "code": "VAT",
+        "ratePct": 18,
+        "description": "Value Added Tax on compounded total"
+      }
+    ],
+    "freeTierGuardrails": {
+      "dynamoDbMaxStorageGb": 25,
+      "appSyncMonthlyOperationsLimit": 250000,
+      "lambdaMonthlyInvocationsLimit": 1000000,
+      "cloudFrontMonthlyEgressGb": 1000
+    }
+  }
+}

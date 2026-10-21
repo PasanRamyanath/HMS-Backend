@@ -1,0 +1,4796 @@
+# ==============================================================================
+# Sri Lanka Hotel Management System (HMS) - Mobile SDK GraphQL Schema
+# Purpose-built for Flutter / Dart Client Code Generation (Artemis / Ferry / Codegen)
+# Architecture: Single-Table DynamoDB (PK = TENANT#<id>), CBSL LankaQR, 4-Stage Tax
+# Target Region: AWS ap-south-1 (Mumbai) • Always Free Tier Compliant
+# ==============================================================================
+
+# ==============================================================================
+# Sri Lankan Cloud SaaS Hotel Management System (HMS) & Contactless QR Platform.
+# Single-Table Multi-Tenant 42-Entity AppSync GraphQL Schema (APPSYNC_JS_1_0_0).
+#
+# Complies with:
+# 1. Sri Lankan Inland Revenue Department (IRD) & SLTDA statutory requirements.
+# 2. Central Bank of Sri Lanka (CBSL) LankaQR EMVCo standards.
+# 3. Apple Human Interface Guidelines (HIG) responsive tokens and states.
+# 4. AWS AppSync native scalars and multi-auth directives.
+# ==============================================================================
+
+# ==============================================================================
+# AWS AppSync Native Custom Scalars
+# ==============================================================================
+
+"""
+An extended ISO 8601 date string in the format YYYY-MM-DD.
+"""
+scalar AWSDate
+
+"""
+An extended ISO 8601 time string in the format hh:mm:ss.sss.
+"""
+scalar AWSTime
+
+"""
+An extended ISO 8601 date and time string in the format YYYY-MM-DDThh:mm:ss.sssZ.
+Evaluated in or normalized to Asia/Colombo (UTC+05:30) for statutory records.
+"""
+scalar AWSDateTime
+
+"""
+An integer value representing seconds past unix epoch (1970-01-01T00:00:00Z).
+"""
+scalar AWSTimestamp
+
+"""
+An RFC 5322 compliant email address string.
+"""
+scalar AWSEmail
+
+"""
+A string containing serialized JSON data.
+"""
+scalar AWSJSON
+
+"""
+An RFC 3986 compliant Uniform Resource Locator string.
+"""
+scalar AWSURL
+
+"""
+An E.164 compliant phone number string (e.g. +94771234567 for Sri Lankan mobile).
+"""
+scalar AWSPhone
+
+"""
+An IPv4 or IPv6 network address string.
+"""
+scalar AWSIPAddress
+
+# ==============================================================================
+# AWS AppSync Authorization & Real-Time Subscription Directives
+# ==============================================================================
+
+directive @aws_subscribe(mutations: [String!]!) on FIELD_DEFINITION
+directive @aws_auth(cognito_groups: [String!]!) on FIELD_DEFINITION
+directive @aws_cognito_user_pools(
+  cognito_groups: [String!]
+) on OBJECT | FIELD_DEFINITION | INTERFACE | UNION
+directive @aws_iam on OBJECT | FIELD_DEFINITION | INTERFACE | UNION
+directive @aws_lambda on OBJECT | FIELD_DEFINITION | INTERFACE | UNION
+directive @aws_api_key on OBJECT | FIELD_DEFINITION | INTERFACE | UNION
+
+# ==============================================================================
+# Core Sri Lankan Hospitality & Multi-Tenant SaaS Enums
+# ==============================================================================
+
+"""
+Hospitality property classification under Sri Lanka Tourism Development Authority (SLTDA).
+"""
+enum BusinessType {
+  """
+  Full-service urban commercial hotel with 24/7 reception and banqueting.
+  """
+  CITY_HOTEL
+  """
+  Coastal resort property with direct beach frontage or lagoon access.
+  """
+  BEACH_RESORT
+  """
+  Exclusive low-density boutique luxury villa or private estate.
+  """
+  BOUTIQUE_VILLA
+  """
+  Traditional Sri Lankan heritage bungalow or hill-country tea plantation bungalow.
+  """
+  HERITAGE_BUNGALOW
+  """
+  Eco-friendly nature lodge or wildlife safari tented retreat.
+  """
+  ECO_LODGE
+  """
+  Government or private rest house catering to domestic and transit travelers.
+  """
+  REST_HOUSE
+  """
+  Modern tourist guest house or bed & breakfast (under 10 rooms).
+  """
+  GUEST_HOUSE
+  """
+  Serviced apartment or long-stay holiday residence.
+  """
+  SERVICED_APARTMENT
+}
+
+"""
+Hotel operating departments for task allocation, kitchen routing, and service charge distribution.
+"""
+enum Department {
+  """
+  Front Office, reception, reservations, concierge, and guest relations.
+  """
+  FRONT_OFFICE
+  """
+  Housekeeping, linen management, laundry, and room inspection.
+  """
+  HOUSEKEEPING
+  """
+  Main hot kitchen, pantry, pastry, and prep stations.
+  """
+  KITCHEN
+  """
+  Food & Beverage dining room, table service, and banquet service.
+  """
+  RESTAURANT
+  """
+  Main lounge bar, pool bar, and beverage dispense.
+  """
+  BAR
+  """
+  Banquet sales, event coordination, and function floor operations.
+  """
+  BANQUET
+  """
+  Ayurveda wellness pavilion, therapeutic spa, and herbal treatment suites.
+  """
+  SPA
+  """
+  Engineering, facilities maintenance, and utilities monitoring.
+  """
+  MAINTENANCE
+  """
+  Finance, night audit, cashiering, and revenue management.
+  """
+  ACCOUNTS
+  """
+  Property security, loss prevention, and gate pass management.
+  """
+  SECURITY
+  """
+  General management, executive office, and SaaS tenant administration.
+  """
+  MANAGEMENT
+  """
+  Driver quarters, chauffeur lounge, and transport coordination.
+  """
+  TRANSPORT
+}
+
+"""
+Standard international and Sri Lankan hotel meal plan arrangements.
+"""
+enum MealPlan {
+  """
+  Room Only — European Plan (no meals included).
+  """
+  RO
+  """
+  Bed & Breakfast — Continental or Sri Lankan breakfast included.
+  """
+  BB
+  """
+  Half Board — Modified American Plan (Breakfast and Dinner included).
+  """
+  HB
+  """
+  Full Board — American Plan (Breakfast, Lunch, and Dinner included).
+  """
+  FB
+  """
+  All Inclusive — All meals, local beverages, and selected excursions included.
+  """
+  AI
+}
+
+"""
+Dual-tier pricing and statutory tax residency tiers for Sri Lankan tourism.
+"""
+enum ResidencyRateTier {
+  """
+  Sri Lankan citizens holding NIC and permanent resident visa holders (billed in LKR).
+  """
+  SRI_LANKAN_RESIDENT
+  """
+  International foreign passport holders and tourists (contracted in USD, locked to LKR).
+  """
+  FOREIGN_NON_RESIDENT
+  """
+  Diplomatic mission staff and tax-exempt international agencies.
+  """
+  DIPLOMATIC_EXEMPT
+}
+
+"""
+Room and public area housekeeping turnover status for Apple HIG PMS tape chart.
+"""
+enum HousekeepingStatus {
+  """
+  Clean, sanitized, and ready for immediate guest check-in.
+  """
+  CLEAN
+  """
+  Occupied or checked-out room requiring full changeover and linen refresh.
+  """
+  DIRTY
+  """
+  Inspected and certified by housekeeping supervisor / executive housekeeper.
+  """
+  INSPECTED
+  """
+  Temporarily blocked for deep cleaning, pest control, or minor repair.
+  """
+  OUT_OF_SERVICE
+  """
+  Blocked for major refurbishment, water damage, or electrical works.
+  """
+  OUT_OF_ORDER
+  """
+  Quick freshen-up / evening turndown service required.
+  """
+  TOUCH_UP
+  """
+  Do Not Disturb active — guest requested privacy.
+  """
+  DO_NOT_DISTURB
+}
+
+"""
+Real-time Kitchen Display System (KDS) and Room Service order lifecycle status.
+"""
+enum OrderStatus {
+  """
+  Order submitted by guest QR or waiter POS, awaiting kitchen acknowledgment.
+  """
+  SUBMITTED
+  """
+  Order received and acknowledged by the kitchen chef / expediter.
+  """
+  ACKNOWLEDGED
+  """
+  Dishes currently being prepared or cooked on specific kitchen stations.
+  """
+  IN_PREPARATION
+  """
+  Order plated, checked, and ready for runner pickup / food server delivery.
+  """
+  READY_FOR_PICKUP
+  """
+  Order in transit with runner to guest room, cabana, or dining table.
+  """
+  IN_TRANSIT
+  """
+  Order successfully delivered to guest table or room.
+  """
+  DELIVERED
+  """
+  Order rejected or cancelled prior to preparation with audit justification.
+  """
+  CANCELLED
+}
+
+"""
+Dining channel classification for KDS routing, BOT printing, and Service Charge rules.
+"""
+enum DiningType {
+  """
+  Contactless guest ordering directly from guest room via room QR token.
+  """
+  IN_ROOM_DINING
+  """
+  Dine-in table service in hotel restaurant or dining pavilion.
+  """
+  TABLE_SERVICE
+  """
+  Takeaway or packed lunch for safari / day excursion.
+  """
+  TAKEAWAY
+  """
+  Poolside sun lounger or outdoor terrace service.
+  """
+  POOL_SIDE
+  """
+  Private beach cabana or romantic dinner setup.
+  """
+  BEACH_CABANA
+  """
+  Banquet function, wedding buffet, or corporate conference dining.
+  """
+  BANQUET_SERVICE
+  """
+  Staff canteen or complimentary crew dining.
+  """
+  STAFF_DINING
+}
+
+"""
+Settlement payment methods supported by the Sri Lankan PMS folio engine.
+"""
+enum PaymentMethod {
+  """
+  Sri Lankan Rupee cash paid directly at cashier.
+  """
+  CASH_LKR
+  """
+  Foreign currency banknotes accepted and locked using CBSL exchange rate.
+  """
+  CASH_FOREIGN
+  """
+  Visa / Mastercard / Amex processed via POS terminal or merchant gateway.
+  """
+  CREDIT_CARD
+  """
+  Central Bank of Sri Lanka (CBSL) LankaQR EMVCo dynamic dynamic merchant payment.
+  """
+  LANKA_QR
+  """
+  PayHere Sri Lankan payment gateway (Cards, Genie, FriMi, eZ Cash, mCash).
+  """
+  PAYHERE
+  """
+  WebXPay Sri Lankan payment gateway with recurring subscription support.
+  """
+  WEBXPAY
+  """
+  Direct bank wire transfer or Sri Lankan SLIPS / CEFT fast electronic transfer.
+  """
+  BANK_TRANSFER
+  """
+  City Ledger billing to Destination Management Company (DMC) credit account.
+  """
+  CITY_LEDGER_DMC
+  """
+  Authorized management complimentary folio (Zero charge, non-taxable).
+  """
+  COMPLIMENTARY
+}
+
+"""
+Sri Lankan statutory tax registration status and compounding preset.
+"""
+enum TaxCategory {
+  """
+  Full-service registered hotel charging 10% SC + 1% TDL + 2.5641% SSCL + 18% VAT.
+  """
+  FULL_SERVICE_HOTEL_VAT
+  """
+  Boutique villa under LKR 60M annual VAT threshold (10% SC + 1% TDL + 2.5641% SSCL).
+  """
+  BOUTIQUE_NON_VAT
+  """
+  Small guest house under LKR 12M annual turnover (0.5% TDL only).
+  """
+  SMALL_GUESTHOUSE_TDL
+  """
+  Special statutory economic zone or export development tax-exempt status.
+  """
+  TAX_EXEMPT
+}
+
+"""
+Reservation lifecycle states for front desk tape chart and booking engine.
+"""
+enum ReservationStatus {
+  """
+  Provisional reservation inquiry awaiting advance deposit or payment link.
+  """
+  INQUIRY
+  """
+  Confirmed reservation with secured advance deposit or DMC voucher.
+  """
+  CONFIRMED
+  """
+  Guest checked-in, room key issued, active folio open.
+  """
+  CHECKED_IN
+  """
+  Guest settled all folios and checked out.
+  """
+  CHECKED_OUT
+  """
+  Reservation cancelled by guest, OTA, or property.
+  """
+  CANCELLED
+  """
+  Guest failed to arrive by night audit cutoff.
+  """
+  NO_SHOW
+}
+
+"""
+Guest folio settlement status.
+"""
+enum FolioStatus {
+  """
+  Active open folio accepting room charges, F&B orders, and payments.
+  """
+  OPEN
+  """
+  Fully settled folio with zero balance, locked for editing.
+  """
+  SETTLED
+  """
+  Charges transferred to master company folio or DMC City Ledger.
+  """
+  TRANSFERRED
+  """
+  Voided or reversed folio under managerial audit control.
+  """
+  VOIDED
+}
+
+"""
+Immutable audit trail action types for tamper-evident SHA-256 event chaining.
+"""
+enum AuditAction {
+  """
+  New record inserted.
+  """
+  CREATE
+  """
+  Existing record updated.
+  """
+  UPDATE
+  """
+  Record deleted or soft-deleted.
+  """
+  DELETE
+  """
+  State machine or lifecycle status transition.
+  """
+  STATUS_CHANGE
+  """
+  Security violation, authentication failure, or token mismatch.
+  """
+  SECURITY_ALERT
+  """
+  Financial payment recorded or folio settled.
+  """
+  PAYMENT_RECORDED
+}
+
+"""
+Multi-tenant Role-Based Access Control (RBAC) user roles.
+"""
+enum UserRole {
+  """
+  Platform super-admin with global tenant management permissions.
+  """
+  SUPER_ADMIN
+  """
+  Property owner or tenant administrator with full property access.
+  """
+  TENANT_ADMIN
+  """
+  General Manager with property-wide operational and financial oversight.
+  """
+  GENERAL_MANAGER
+  """
+  Front desk agent handling check-ins, check-outs, and guest folios.
+  """
+  FRONT_DESK
+  """
+  Food & Beverage server handling restaurant and bar POS orders.
+  """
+  RESTAURANT_POS
+  """
+  Kitchen expeditor / chef viewing and bumping KDS orders.
+  """
+  KITCHEN_KDS
+  """
+  Housekeeping room attendant updating room cleanliness status.
+  """
+  HOUSEKEEPING_RUNNER
+  """
+  Financial controller / accountant managing folios and tax returns.
+  """
+  ACCOUNTANT
+  """
+  Night auditor executing daily financial close and room rollover.
+  """
+  NIGHT_AUDITOR
+  """
+  Contactless guest accessing room QR ordering without password.
+  """
+  GUEST_QR
+}
+
+# ==============================================================================
+# Hotel Tenant & Statutory Tax Configuration Types
+# ==============================================================================
+
+"""
+Multi-tenant hotel property configuration representing a distinct hotel, resort, or villa.
+"""
+type HotelTenant @aws_cognito_user_pools @aws_iam @aws_lambda @aws_api_key {
+  """
+  Unique SaaS tenant identifier (e.g. 'tenant-sigiriya-luxury-001').
+  """
+  id: ID!
+  """
+  Display property trade name.
+  """
+  name: String!
+  """
+  SLTDA property classification tier.
+  """
+  businessType: BusinessType!
+  """
+  Physical postal street address.
+  """
+  address: String!
+  """
+  City or town in Sri Lanka.
+  """
+  city: String!
+  """
+  Sri Lankan postal code.
+  """
+  postalCode: String
+  """
+  Main contact telephone / mobile number in E.164 format.
+  """
+  phone: AWSPhone!
+  """
+  Official contact email address.
+  """
+  email: AWSEmail!
+  """
+  Official Sri Lanka Tourism Development Authority registration reference.
+  """
+  sltdaRegNo: String
+  """
+  Sri Lankan Inland Revenue Department 9-digit Tax Identification Number.
+  """
+  tinNo: String
+  """
+  Sri Lankan Inland Revenue Department 12-digit VAT registration number.
+  """
+  vatRegNo: String
+  """
+  Central Bank of Sri Lanka (CBSL) LankaQR EMVCo merchant identifier.
+  """
+  lankaQrMerchantId: String
+  """
+  High-resolution banner hero image URL for guest QR portal (16:9).
+  """
+  bannerUrl: AWSURL
+  """
+  Square brand mark or logo image URL for folios, receipts, and KDS (1:1).
+  """
+  logoUrl: AWSURL
+  """
+  Official CBSL benchmark or hotel locked USD-to-LKR buying exchange rate.
+  """
+  cbslUsdRateLkr: Float!
+  """
+  Base accounting currency (defaults to 'LKR').
+  """
+  currency: String!
+  """
+  Statutory Sri Lankan tax calculation configuration for this property.
+  """
+  taxConfig: TaxConfig!
+  """
+  ISO timestamp of tenant creation.
+  """
+  createdAt: AWSDateTime!
+  """
+  ISO timestamp of tenant configuration update.
+  """
+  updatedAt: AWSDateTime!
+}
+
+"""
+Sri Lankan 4-stage compounding statutory tax parameters.
+"""
+type TaxConfig @aws_cognito_user_pools @aws_iam @aws_lambda @aws_api_key {
+  """
+  Mandatory hotel service charge percentage (typically 10.0%).
+  """
+  scPercent: Float!
+  """
+  Tourism Development Levy percentage under Tourism Act (typically 1.0% or 0.5%).
+  """
+  tdlPercent: Float!
+  """
+  Social Security Contribution Levy standard rate (typically 2.5641%).
+  """
+  ssclPercent: Float!
+  """
+  Value Added Tax standard rate under Inland Revenue Act (typically 18.0%).
+  """
+  vatPercent: Float!
+  """
+  Flag indicating whether 10% Service Charge is applied.
+  """
+  applySc: Boolean!
+  """
+  Flag indicating whether Tourism Development Levy is applied.
+  """
+  applyTdl: Boolean!
+  """
+  Flag indicating whether Social Security Contribution Levy is applied.
+  """
+  applySscl: Boolean!
+  """
+  Flag indicating whether Value Added Tax is applied.
+  """
+  applyVat: Boolean!
+  """
+  Statutory tax preset category.
+  """
+  taxCategory: TaxCategory!
+}
+
+"""
+Granular 4-stage compounding tax itemization for folios, bills, and IRD reporting.
+"""
+type TaxBreakdown @aws_cognito_user_pools @aws_iam @aws_lambda @aws_api_key {
+  """
+  Net supply base amount prior to any service charge or statutory tax.
+  """
+  baseSupplyLkr: Float!
+  """
+  10% Service charge component.
+  """
+  serviceChargeLkr: Float!
+  """
+  1% Tourism Development Levy component.
+  """
+  tdlLkr: Float!
+  """
+  2.5641% Social Security Contribution Levy component.
+  """
+  ssclLkr: Float!
+  """
+  18% Value Added Tax component.
+  """
+  vatLkr: Float!
+  """
+  Combined sum of service charge and all statutory government levies.
+  """
+  totalTaxAndServiceLkr: Float!
+  """
+  Final gross payable amount inclusive of base supply, service charge, and taxes.
+  """
+  totalGrossLkr: Float!
+  """
+  Effective compounding tax rate percentage over net base supply.
+  """
+  effectiveTaxRate: Float!
+}
+
+"""
+Input payload for configuring Sri Lankan statutory tax parameters.
+"""
+input TaxConfigInput {
+  scPercent: Float
+  tdlPercent: Float
+  ssclPercent: Float
+  vatPercent: Float
+  applySc: Boolean!
+  applyTdl: Boolean!
+  applySscl: Boolean!
+  applyVat: Boolean!
+  taxCategory: TaxCategory!
+}
+
+"""
+Input payload for creating or updating a multi-tenant hotel profile.
+"""
+input UpsertHotelTenantInput {
+  """
+  Tenant identifier (omitted for new tenant auto-provisioning).
+  """
+  id: ID
+  name: String!
+  businessType: BusinessType!
+  address: String!
+  city: String!
+  postalCode: String
+  phone: AWSPhone!
+  email: AWSEmail!
+  sltdaRegNo: String
+  tinNo: String
+  vatRegNo: String
+  lankaQrMerchantId: String
+  bannerUrl: AWSURL
+  logoUrl: AWSURL
+  cbslUsdRateLkr: Float!
+  taxConfig: TaxConfigInput!
+}
+
+# ==============================================================================
+# Room Inventory, Dual-Tier Rates & Driver Accommodation Types
+# ==============================================================================
+
+"""
+Seasonal pricing window with dual-tier rates (Sri Lankan Resident LKR vs Foreign Non-Resident USD).
+"""
+type SeasonalRateBand @aws_cognito_user_pools @aws_iam @aws_lambda @aws_api_key {
+  """
+  Unique seasonal band identifier.
+  """
+  id: ID!
+  """
+  Season label (e.g. 'Peak Winter Season', 'Kandy Esala Perahera', 'Shoulder Season').
+  """
+  name: String!
+  """
+  Start date of the seasonal rate window (inclusive).
+  """
+  startDate: AWSDate!
+  """
+  End date of the seasonal rate window (inclusive).
+  """
+  endDate: AWSDate!
+  """
+  Nightly room rate in Sri Lankan Rupees for domestic residents (NIC verified).
+  """
+  residentRateLkr: Float!
+  """
+  Nightly room rate in US Dollars for international tourists.
+  """
+  foreignRateUsd: Float!
+  """
+  Minimum stay duration in nights during this seasonal period.
+  """
+  minimumStayNights: Int!
+}
+
+"""
+Room category classification modeling capacity, amenities, base pricing, and seasonal bands.
+"""
+type RoomType @aws_cognito_user_pools @aws_iam @aws_lambda @aws_api_key {
+  """
+  Unique room type identifier.
+  """
+  id: ID!
+  """
+  Multi-tenant property identifier.
+  """
+  tenantId: ID!
+  """
+  Property-unique short code (e.g. 'DLX-OCN', 'VIL-POOL', 'STE-PRES').
+  """
+  code: String!
+  """
+  Marketing display name (e.g. 'Deluxe Ocean View Villa', 'Heritage Tea Suite').
+  """
+  name: String!
+  """
+  Detailed descriptive summary of the room category.
+  """
+  description: String!
+  """
+  Maximum adult guest capacity.
+  """
+  maxOccupancyAdults: Int!
+  """
+  Maximum child guest capacity.
+  """
+  maxOccupancyChildren: Int!
+  """
+  Default standard night rate in LKR for Sri Lankan residents.
+  """
+  baseRateResidentLkr: Float!
+  """
+  Default standard night rate in USD for international guests.
+  """
+  baseRateForeignUsd: Float!
+  """
+  Configured seasonal pricing bands overriding base rate during special periods.
+  """
+  rateBands: [SeasonalRateBand!]!
+  """
+  List of room features and amenities (e.g. 'Private Plunge Pool', 'Ceylon Tea Bar').
+  """
+  amenities: [String!]!
+  """
+  Gallery photos for guest booking engine and room QR showcase.
+  """
+  photos: [AWSURL!]!
+  """
+  Total count of physical rooms belonging to this category.
+  """
+  totalRoomCount: Int!
+  """
+  Whether this room category is currently bookable.
+  """
+  isActive: Boolean!
+  """
+  Timestamp of creation.
+  """
+  createdAt: AWSDateTime!
+  """
+  Timestamp of latest update.
+  """
+  updatedAt: AWSDateTime!
+}
+
+"""
+Physical room or standalone villa within the property with live housekeeping and occupancy status.
+"""
+type Room @aws_cognito_user_pools @aws_iam @aws_lambda @aws_api_key {
+  """
+  Unique physical room identifier.
+  """
+  id: ID!
+  """
+  Multi-tenant property identifier.
+  """
+  tenantId: ID!
+  """
+  Human-readable room or villa number (e.g. '101', 'Villa 4', 'Tea Cottage 2').
+  """
+  roomNumber: String!
+  """
+  Associated room category identifier.
+  """
+  roomTypeId: ID!
+  """
+  Expanded room type details.
+  """
+  roomType: RoomType
+  """
+  Floor number or level within the building.
+  """
+  floor: String
+  """
+  Building wing, block name, or garden sector.
+  """
+  building: String
+  """
+  Current housekeeping and cleanliness inspection status.
+  """
+  housekeepingStatus: HousekeepingStatus!
+  """
+  Whether a guest is currently checked in to this room.
+  """
+  isOccupied: Boolean!
+  """
+  Identifier of active checked-in reservation folio.
+  """
+  currentReservationId: ID
+  """
+  Cryptographic secret salt for contactless guest room QR tokens.
+  """
+  qrTokenSecret: String
+  """
+  Internal front desk or housekeeping maintenance notes.
+  """
+  notes: String
+  """
+  Timestamp of creation.
+  """
+  createdAt: AWSDateTime!
+  """
+  Timestamp of latest update.
+  """
+  updatedAt: AWSDateTime!
+}
+
+"""
+Dedicated chauffeur accommodation bed in staff/driver quarters.
+Essential for Sri Lankan round-trip DMC and private guide logistics.
+"""
+type DriverDormBed @aws_cognito_user_pools @aws_iam @aws_lambda @aws_api_key {
+  """
+  Unique dorm bed identifier.
+  """
+  id: ID!
+  """
+  Multi-tenant property identifier.
+  """
+  tenantId: ID!
+  """
+  Physical bed / cubicle number (e.g. 'DORM-01', 'CHAUFFEUR-B4').
+  """
+  bedNumber: String!
+  """
+  Dormitory wing or building section.
+  """
+  dormSection: String!
+  """
+  Nightly bed charge in LKR (or 0.00 if complimentary under DMC agreement).
+  """
+  ratePerNightLkr: Float!
+  """
+  Whether driver accommodation is provided complimentary.
+  """
+  isComplimentary: Boolean!
+  """
+  Whether this dorm bed is currently occupied.
+  """
+  isOccupied: Boolean!
+  """
+  Full name of the currently staying driver / chauffeur.
+  """
+  currentDriverName: String
+  """
+  Contact mobile number of the staying chauffeur.
+  """
+  currentDriverPhone: AWSPhone
+  """
+  National Identity Card (NIC) number of the staying chauffeur.
+  """
+  currentDriverNic: String
+  """
+  Associated tour operator or DMC account identifier.
+  """
+  currentTourOperatorId: ID
+  """
+  Room number of the tourist guest the driver is escorting.
+  """
+  associatedGuestRoomNumber: String
+  """
+  Special notes (e.g. early safari departure, meal preferences).
+  """
+  notes: String
+  """
+  Timestamp of creation.
+  """
+  createdAt: AWSDateTime!
+  """
+  Timestamp of latest update.
+  """
+  updatedAt: AWSDateTime!
+}
+
+"""
+Input for seasonal pricing window configuration.
+"""
+input SeasonalRateBandInput {
+  id: ID
+  name: String!
+  startDate: AWSDate!
+  endDate: AWSDate!
+  residentRateLkr: Float!
+  foreignRateUsd: Float!
+  minimumStayNights: Int!
+}
+
+"""
+Input for creating or updating a room category.
+"""
+input UpsertRoomTypeInput {
+  id: ID
+  code: String!
+  name: String!
+  description: String!
+  maxOccupancyAdults: Int!
+  maxOccupancyChildren: Int!
+  baseRateResidentLkr: Float!
+  baseRateForeignUsd: Float!
+  rateBands: [SeasonalRateBandInput!]
+  amenities: [String!]
+  photos: [AWSURL!]
+  totalRoomCount: Int!
+  isActive: Boolean!
+}
+
+"""
+Input for configuring a physical room.
+"""
+input UpsertRoomInput {
+  id: ID
+  roomNumber: String!
+  roomTypeId: ID!
+  floor: String
+  building: String
+  housekeepingStatus: HousekeepingStatus
+  isOccupied: Boolean
+  notes: String
+}
+
+"""
+Input for managing driver dorm bed inventory.
+"""
+input UpsertDriverDormBedInput {
+  id: ID
+  bedNumber: String!
+  dormSection: String!
+  ratePerNightLkr: Float!
+  isComplimentary: Boolean!
+  isOccupied: Boolean
+  currentDriverName: String
+  currentDriverPhone: AWSPhone
+  currentDriverNic: String
+  currentTourOperatorId: ID
+  associatedGuestRoomNumber: String
+  notes: String
+}
+
+# ==============================================================================
+# DMC Tour Contracts, Chauffeurs, Groups & Guest Reservations
+# ==============================================================================
+
+"""
+Destination Management Company (DMC) or Tour Operator wholesale credit agreement.
+Supports major Sri Lankan inbound operators (Aitken Spence, Walkers Tours, Jetwing, etc.).
+"""
+type TourOperatorContract @aws_cognito_user_pools @aws_iam @aws_lambda @aws_api_key {
+  """
+  Unique DMC contract identifier.
+  """
+  id: ID!
+  """
+  Multi-tenant property identifier.
+  """
+  tenantId: ID!
+  """
+  Corporate legal name of the tour company.
+  """
+  companyName: String!
+  """
+  Property-assigned contract code (e.g. 'DMC-AITKEN-2026', 'DMC-WALKERS').
+  """
+  contractCode: String!
+  """
+  Approved credit limit in Sri Lankan Rupees for City Ledger charging.
+  """
+  creditLimitLkr: Float!
+  """
+  Agreed payment terms window in days (typically 30, 45, or 60 days).
+  """
+  creditDays: Int!
+  """
+  Primary account manager contact person.
+  """
+  contactPerson: String!
+  """
+  Official billing and voucher submission email.
+  """
+  contactEmail: AWSEmail!
+  """
+  Primary telephone number for operations dispatch.
+  """
+  contactPhone: AWSPhone!
+  """
+  Contracted wholesale discount percentage off standard rates.
+  """
+  discountPercent: Float!
+  """
+  Whether the credit contract is in active good standing.
+  """
+  isActive: Boolean!
+  """
+  Timestamp of contract creation.
+  """
+  createdAt: AWSDateTime!
+  """
+  Timestamp of latest modification.
+  """
+  updatedAt: AWSDateTime!
+}
+
+"""
+Chauffeur / Tour Driver accommodation record linked to a guest reservation or group tour.
+"""
+type DriverAccommodation @aws_cognito_user_pools @aws_iam @aws_lambda @aws_api_key {
+  """
+  Unique driver accommodation assignment identifier.
+  """
+  id: ID!
+  """
+  Multi-tenant property identifier.
+  """
+  tenantId: ID!
+  """
+  Parent guest reservation identifier.
+  """
+  reservationId: ID!
+  """
+  Assigned driver dorm bed identifier.
+  """
+  driverDormBedId: ID!
+  """
+  Expanded dorm bed details.
+  """
+  driverDormBed: DriverDormBed
+  """
+  Full name of the chauffeur / tour guide.
+  """
+  driverName: String!
+  """
+  Contact phone number for emergency concierge dispatch.
+  """
+  driverPhone: AWSPhone!
+  """
+  Sri Lankan National Identity Card (NIC) number.
+  """
+  driverNic: String!
+  """
+  Vehicle registration number (e.g. 'WP-CAD-8921').
+  """
+  vehicleNumber: String!
+  """
+  Check-in date for driver quarters.
+  """
+  checkInDate: AWSDate!
+  """
+  Check-out date for driver quarters.
+  """
+  checkOutDate: AWSDate!
+  """
+  Meal arrangement provided for driver (e.g. BB or FB).
+  """
+  mealEntitlement: MealPlan
+  """
+  Whether accommodation is complimentary under DMC contract.
+  """
+  isComplimentary: Boolean!
+  """
+  Nightly fee in LKR (0.00 if complimentary).
+  """
+  costPerNightLkr: Float!
+  """
+  Timestamp of check-in.
+  """
+  createdAt: AWSDateTime!
+  """
+  Timestamp of latest update.
+  """
+  updatedAt: AWSDateTime!
+}
+
+"""
+Multi-room group reservation or DMC coach tour series.
+"""
+type GroupBooking @aws_cognito_user_pools @aws_iam @aws_lambda @aws_api_key {
+  """
+  Unique group booking identifier.
+  """
+  id: ID!
+  """
+  Multi-tenant property identifier.
+  """
+  tenantId: ID!
+  """
+  Group tour reference name (e.g. 'German Photographic Tour - Oct 2026').
+  """
+  groupName: String!
+  """
+  Associated tour operator contract if booked via DMC.
+  """
+  tourOperatorContractId: ID
+  """
+  Expanded tour operator contract details.
+  """
+  tourOperatorContract: TourOperatorContract
+  """
+  Lead tour leader / organizer name.
+  """
+  primaryContactName: String!
+  """
+  Organizer contact email.
+  """
+  primaryContactEmail: AWSEmail!
+  """
+  Organizer contact phone number.
+  """
+  primaryContactPhone: AWSPhone!
+  """
+  Total count of allocated rooms across room types.
+  """
+  totalRoomsBooked: Int!
+  """
+  Total adult and child guests in group party.
+  """
+  totalGuests: Int!
+  """
+  Group arrival date.
+  """
+  checkInDate: AWSDate!
+  """
+  Group departure date.
+  """
+  checkOutDate: AWSDate!
+  """
+  Master group folio identifier for consolidated charges.
+  """
+  masterFolioId: ID
+  """
+  Special banquet, meal, or baggage handling instructions.
+  """
+  notes: String
+  """
+  Timestamp of creation.
+  """
+  createdAt: AWSDateTime!
+  """
+  Timestamp of latest update.
+  """
+  updatedAt: AWSDateTime!
+}
+
+"""
+Primary guest room reservation record tracking lifecycle, rates, guests, and folios.
+"""
+type Reservation @aws_cognito_user_pools @aws_iam @aws_lambda @aws_api_key {
+  """
+  Unique reservation identifier.
+  """
+  id: ID!
+  """
+  Multi-tenant property identifier.
+  """
+  tenantId: ID!
+  """
+  Human-friendly reservation confirmation code (e.g. 'RES-58192').
+  """
+  confirmationCode: String!
+  """
+  Current reservation lifecycle status.
+  """
+  status: ReservationStatus!
+  """
+  Sri Lankan Resident (LKR) or Foreign Non-Resident (USD) rate category.
+  """
+  rateTier: ResidencyRateTier!
+  """
+  Contracted meal plan arrangement.
+  """
+  mealPlan: MealPlan!
+  """
+  Scheduled arrival date.
+  """
+  checkInDate: AWSDate!
+  """
+  Scheduled departure date.
+  """
+  checkOutDate: AWSDate!
+  """
+  Actual front desk check-in timestamp.
+  """
+  actualCheckInTime: AWSDateTime
+  """
+  Actual front desk check-out timestamp.
+  """
+  actualCheckOutTime: AWSDateTime
+  """
+  Number of adult guests staying.
+  """
+  adultsCount: Int!
+  """
+  Number of child guests staying.
+  """
+  childrenCount: Int!
+  """
+  Booked room type identifier.
+  """
+  roomTypeId: ID!
+  """
+  Expanded room type details.
+  """
+  roomType: RoomType
+  """
+  Physically allocated room identifier (set at check-in or pre-allocated).
+  """
+  assignedRoomId: ID
+  """
+  Expanded allocated room details.
+  """
+  assignedRoom: Room
+  """
+  Primary guest display name.
+  """
+  guestName: String!
+  """
+  Guest notification email.
+  """
+  guestEmail: AWSEmail!
+  """
+  Guest contact phone.
+  """
+  guestPhone: AWSPhone!
+  """
+  National Identity Card (NIC) number for Sri Lankan residents.
+  """
+  guestNic: String
+  """
+  Passport number for foreign non-resident tourists.
+  """
+  guestPassportNumber: String
+  """
+  Guest nationality country string.
+  """
+  guestNationality: String
+  """
+  Sri Lanka Tourist Police B-Card registration serial number.
+  """
+  touristPoliceBCardNumber: String
+  """
+  Associated tour operator / DMC contract if agency booking.
+  """
+  tourOperatorContractId: ID
+  """
+  Expanded tour operator contract.
+  """
+  tourOperatorContract: TourOperatorContract
+  """
+  Physical tour voucher number issued by the DMC.
+  """
+  tourVoucherNumber: String
+  """
+  Parent group booking identifier if part of tour series.
+  """
+  groupBookingId: ID
+  """
+  Expanded group booking.
+  """
+  groupBooking: GroupBooking
+  """
+  Associated chauffeur accommodation details.
+  """
+  driverAccommodation: DriverAccommodation
+  """
+  Quoted total base rate amount.
+  """
+  quotedRateAmount: Float!
+  """
+  Quoted currency ('LKR' for residents, 'USD' for foreign tourists).
+  """
+  quotedRateCurrency: String!
+  """
+  Locked CBSL USD-to-LKR buying exchange rate at booking creation.
+  """
+  lockedExchangeRate: Float
+  """
+  Special dietary, honeymoon, or accessibility requests.
+  """
+  specialRequests: String
+  """
+  Inbound flight number and estimated arrival time.
+  """
+  flightDetails: String
+  """
+  Contactless room QR session HMAC token.
+  """
+  qrSessionToken: String
+  """
+  Timestamp of creation.
+  """
+  createdAt: AWSDateTime!
+  """
+  Timestamp of latest update.
+  """
+  updatedAt: AWSDateTime!
+}
+
+"""
+Input for chauffeur accommodation assignment.
+"""
+input DriverAccommodationInput {
+  driverDormBedId: ID!
+  driverName: String!
+  driverPhone: AWSPhone!
+  driverNic: String!
+  vehicleNumber: String!
+  checkInDate: AWSDate!
+  checkOutDate: AWSDate!
+  mealEntitlement: MealPlan
+  isComplimentary: Boolean!
+  costPerNightLkr: Float
+}
+
+"""
+Input for creating a new individual or tour reservation.
+"""
+input CreateReservationInput {
+  rateTier: ResidencyRateTier!
+  mealPlan: MealPlan!
+  checkInDate: AWSDate!
+  checkOutDate: AWSDate!
+  adultsCount: Int!
+  childrenCount: Int!
+  roomTypeId: ID!
+  assignedRoomId: ID
+  guestName: String!
+  guestEmail: AWSEmail!
+  guestPhone: AWSPhone!
+  guestNic: String
+  guestPassportNumber: String
+  guestNationality: String
+  tourOperatorContractId: ID
+  tourVoucherNumber: String
+  groupBookingId: ID
+  driverAccommodation: DriverAccommodationInput
+  quotedRateAmount: Float!
+  quotedRateCurrency: String!
+  specialRequests: String
+  flightDetails: String
+}
+
+"""
+Input for front desk guest check-in with statutory identity verification.
+"""
+input CheckInGuestInput {
+  tenantId: ID!
+  reservationId: ID!
+  assignedRoomId: ID!
+  guestNic: String
+  guestPassportNumber: String
+  guestNationality: String
+  touristPoliceBCardNumber: String
+  driverAccommodation: DriverAccommodationInput
+}
+
+"""
+Input for registering or updating a Tour Operator / DMC credit agreement.
+"""
+input UpsertTourOperatorContractInput {
+  id: ID
+  companyName: String!
+  contractCode: String!
+  creditLimitLkr: Float!
+  creditDays: Int!
+  contactPerson: String!
+  contactEmail: AWSEmail!
+  contactPhone: AWSPhone!
+  discountPercent: Float!
+  isActive: Boolean!
+}
+
+"""
+Input for creating a multi-room group tour booking.
+"""
+input CreateGroupBookingInput {
+  groupName: String!
+  tourOperatorContractId: ID
+  primaryContactName: String!
+  primaryContactEmail: AWSEmail!
+  primaryContactPhone: AWSPhone!
+  totalRoomsBooked: Int!
+  totalGuests: Int!
+  checkInDate: AWSDate!
+  checkOutDate: AWSDate!
+  notes: String
+}
+
+# ==============================================================================
+# Guest Folios, Split Routing & Statutory IRD Tax Invoices
+# ==============================================================================
+
+"""
+Split folio charge routing rule directing specific departments or amounts to separate folios.
+Enables standard Sri Lankan practice: Room and contracted meals to DMC voucher folio, Extras / Minibar / Spa to Guest folio.
+"""
+type SplitFolioRouting @aws_cognito_user_pools @aws_iam @aws_lambda @aws_api_key {
+  """
+  Unique routing rule identifier.
+  """
+  id: ID!
+  """
+  Target sub-folio designation (e.g. 'GUEST_EXTRAS', 'DMC_MASTER').
+  """
+  targetFolioType: String!
+  """
+  Department charges to automatically route (null routes all unassigned).
+  """
+  department: Department
+  """
+  Percentage of charge to route to this folio (1.0 to 100.0).
+  """
+  percentage: Float
+  """
+  Fixed cap amount in LKR to route.
+  """
+  fixedAmountLkr: Float
+  """
+  DMC credit agreement identifier if billing to tour operator City Ledger.
+  """
+  billToTourOperatorContractId: ID
+}
+
+"""
+Granular line item charged to a guest or DMC folio with full 4-stage tax compounding.
+"""
+type FolioLineItem @aws_cognito_user_pools @aws_iam @aws_lambda @aws_api_key {
+  """
+  Unique line item identifier.
+  """
+  id: ID!
+  """
+  Multi-tenant property identifier.
+  """
+  tenantId: ID!
+  """
+  Parent folio identifier.
+  """
+  folioId: ID!
+  """
+  Originating department (Front Desk, Restaurant POS, KDS, Bar, Spa).
+  """
+  department: Department!
+  """
+  Itemized description (e.g. 'Deluxe Room Night', 'Devilled Prawns KOT #42').
+  """
+  description: String!
+  """
+  Quantity consumed.
+  """
+  quantity: Int!
+  """
+  Unit price in LKR prior to service charge and taxes.
+  """
+  unitPriceLkr: Float!
+  """
+  Total net supply base in LKR (quantity * unitPriceLkr).
+  """
+  baseSupplyLkr: Float!
+  """
+  Full itemized 4-stage tax and service charge compounding breakdown.
+  """
+  taxBreakdown: TaxBreakdown!
+  """
+  Final gross billable amount inclusive of service charge and taxes.
+  """
+  totalGrossLkr: Float!
+  """
+  Originating KDS or QR service order identifier if applicable.
+  """
+  serviceOrderId: ID
+  """
+  Whether this charge has been voided by a manager.
+  """
+  isVoided: Boolean!
+  """
+  Audit justification for charge reversal or void.
+  """
+  voidReason: String
+  """
+  Timestamp when charge was posted.
+  """
+  createdAt: AWSDateTime!
+}
+
+"""
+Guest or Tour Operator ledger folio aggregating line item charges, taxes, and settlements.
+"""
+type Folio @aws_cognito_user_pools @aws_iam @aws_lambda @aws_api_key {
+  """
+  Unique folio identifier.
+  """
+  id: ID!
+  """
+  Multi-tenant property identifier.
+  """
+  tenantId: ID!
+  """
+  Associated reservation identifier.
+  """
+  reservationId: ID!
+  """
+  Official folio serial number (e.g. 'FOL-2026-00412').
+  """
+  folioNumber: String!
+  """
+  Folio billing channel ('MAIN', 'GUEST_EXTRAS', 'DMC_CITY_LEDGER').
+  """
+  folioType: String!
+  """
+  Current lifecycle and settlement status.
+  """
+  status: FolioStatus!
+  """
+  Active split routing rules configured for this folio.
+  """
+  splitRouting: [SplitFolioRouting!]
+  """
+  Active and historical line item postings.
+  """
+  lineItems: [FolioLineItem!]!
+  """
+  Sum of net supply bases across all active line items.
+  """
+  totalBaseSupplyLkr: Float!
+  """
+  Sum of 10% Service Charge across all active line items.
+  """
+  totalServiceChargeLkr: Float!
+  """
+  Sum of 1% TDL across all active line items.
+  """
+  totalTdlLkr: Float!
+  """
+  Sum of 2.5641% SSCL across all active line items.
+  """
+  totalSsclLkr: Float!
+  """
+  Sum of 18% VAT across all active line items.
+  """
+  totalVatLkr: Float!
+  """
+  Grand total gross payable amount in Sri Lankan Rupees.
+  """
+  totalGrossLkr: Float!
+  """
+  Total payments and credits applied against this folio.
+  """
+  totalPaidLkr: Float!
+  """
+  Outstanding balance due in LKR.
+  """
+  balanceDueLkr: Float!
+  """
+  Settlement currency.
+  """
+  currency: String!
+  """
+  Whether folio is fully balanced and settled.
+  """
+  isSettled: Boolean!
+  """
+  Timestamp of final settlement.
+  """
+  settledAt: AWSDateTime
+  """
+  Generated official tax invoice identifier once settled.
+  """
+  invoiceId: ID
+  """
+  Timestamp of creation.
+  """
+  createdAt: AWSDateTime!
+  """
+  Timestamp of latest update.
+  """
+  updatedAt: AWSDateTime!
+}
+
+"""
+Official Sri Lankan Inland Revenue Department (IRD) Tax Invoice issued on folio settlement.
+Cryptographically sealed with SHA-256 hash chaining.
+"""
+type FolioInvoice @aws_cognito_user_pools @aws_iam @aws_lambda @aws_api_key {
+  """
+  Unique invoice identifier.
+  """
+  id: ID!
+  """
+  Multi-tenant property identifier.
+  """
+  tenantId: ID!
+  """
+  Settled folio identifier.
+  """
+  folioId: ID!
+  """
+  Statutory sequential tax invoice number (e.g. 'INV-2026-00084').
+  """
+  invoiceNumber: String!
+  """
+  Hotel IRD 9-digit Tax Identification Number.
+  """
+  tinNo: String!
+  """
+  Hotel IRD 12-digit VAT Registration Number.
+  """
+  vatRegNo: String
+  """
+  Billed party legal name (Guest or Tour Operator).
+  """
+  guestName: String!
+  """
+  Billed party billing address.
+  """
+  guestAddress: String
+  """
+  Guest NIC (Sri Lankan resident) or Passport Number (foreign tourist).
+  """
+  guestNicOrPassport: String
+  """
+  Invoice settlement currency ('LKR' or 'USD').
+  """
+  currency: String!
+  """
+  CBSL benchmark conversion rate applied for foreign currency invoices.
+  """
+  exchangeRateToLkr: Float!
+  """
+  Comprehensive 4-stage compounding tax itemization.
+  """
+  taxBreakdown: TaxBreakdown!
+  """
+  Gross invoice amount in Sri Lankan Rupees.
+  """
+  totalGrossLkr: Float!
+  """
+  Gross invoice amount in foreign currency if contracted in USD/EUR.
+  """
+  totalGrossForeign: Float
+  """
+  Final settlement payment instrument.
+  """
+  paymentMethod: PaymentMethod!
+  """
+  Merchant gateway or bank transaction reference.
+  """
+  paymentReference: String
+  """
+  Central Bank LankaQR EMVCo dynamic merchant payment payload string.
+  """
+  lankaQrPayload: String
+  """
+  Timestamp of official tax invoice issuance.
+  """
+  issuedAt: AWSDateTime!
+  """
+  SHA-256 tamper-evident hash chaining value.
+  """
+  hashChainSha256: String!
+}
+
+"""
+Input for posting a charge to an open folio.
+"""
+input AddFolioChargeInput {
+  folioId: ID!
+  department: Department!
+  description: String!
+  quantity: Int!
+  unitPriceLkr: Float!
+  serviceOrderId: ID
+}
+
+"""
+Input for configuring a split-folio routing rule.
+"""
+input CreateSplitFolioRoutingInput {
+  folioId: ID!
+  targetFolioType: String!
+  department: Department
+  percentage: Float
+  fixedAmountLkr: Float
+  billToTourOperatorContractId: ID
+}
+
+"""
+Input for settling an open folio and producing an official IRD tax invoice.
+"""
+input SettleFolioInput {
+  folioId: ID!
+  paymentMethod: PaymentMethod!
+  amountLkr: Float!
+  paymentReference: String
+  guestNicOrPassport: String
+  guestAddress: String
+}
+
+# ==============================================================================
+# Trilingual F&B Menus, Modifiers, KDS Routing & Recipe BOMs
+# ==============================================================================
+
+"""
+Trilingual text representation supporting English, Sinhala, and Tamil for Sri Lankan hospitality menus.
+"""
+type TrilingualText @aws_cognito_user_pools @aws_iam @aws_lambda @aws_api_key {
+  """
+  English text.
+  """
+  en: String!
+  """
+  Sinhala translation (e.g. 'දෙවල් ඉස්සෝ').
+  """
+  si: String
+  """
+  Tamil translation (e.g. 'டெவில்ட் இறால்').
+  """
+  ta: String
+}
+
+"""
+Bill of Materials recipe ingredient linking menu dishes to FIFO kitchen store batches.
+"""
+type RecipeBomIngredient @aws_cognito_user_pools @aws_iam @aws_lambda @aws_api_key {
+  """
+  Stock inventory item identifier.
+  """
+  stockItemId: ID!
+  """
+  Stock item display name (e.g. 'Jumbo Tiger Prawns Grade A', 'Coconut Milk 1L').
+  """
+  stockItemName: String!
+  """
+  Quantity consumed per portion.
+  """
+  quantityRequired: Float!
+  """
+  Unit of measure (KG, L, PORTION, G).
+  """
+  unitOfMeasure: String!
+  """
+  Estimated replacement cost per unit in LKR for live food costing.
+  """
+  costPerUnitLkr: Float!
+}
+
+"""
+Dish customization modifier (e.g. Spice level, Rice type, Salad dressing, Add-ons).
+"""
+type ModifierOption @aws_cognito_user_pools @aws_iam @aws_lambda @aws_api_key {
+  """
+  Unique modifier identifier.
+  """
+  id: ID!
+  """
+  Trilingual modifier option name.
+  """
+  name: TrilingualText!
+  """
+  Price surcharge in LKR (0.00 for no charge).
+  """
+  priceAdjustmentLkr: Float!
+  """
+  Whether selected by default in QR ordering.
+  """
+  isDefault: Boolean!
+}
+
+"""
+Individual food, beverage, or room service menu item.
+"""
+type MenuItem @aws_cognito_user_pools @aws_iam @aws_lambda @aws_api_key {
+  """
+  Unique menu item identifier.
+  """
+  id: ID!
+  """
+  Multi-tenant property identifier.
+  """
+  tenantId: ID!
+  """
+  Parent menu category identifier.
+  """
+  categoryId: ID!
+  """
+  Stock keeping or POS dish short code (e.g. 'KOT-402').
+  """
+  code: String!
+  """
+  Trilingual dish title.
+  """
+  title: TrilingualText!
+  """
+  Trilingual culinary description.
+  """
+  description: TrilingualText!
+  """
+  High-resolution square 1:1 image URL for Apple HIG guest QR ordering.
+  """
+  imageUrl: AWSURL
+  """
+  Menu selling price in Sri Lankan Rupees prior to service charge and statutory tax.
+  """
+  priceLkr: Float!
+  """
+  Target department for BOT / KDS order routing (KITCHEN, BAR).
+  """
+  department: Department!
+  """
+  Physical kitchen station (e.g. 'Hot Wok', 'Pantry', 'Curry Station', 'Grill').
+  """
+  kitchenStation: String
+  """
+  Dietary classification: Vegetarian.
+  """
+  isVegetarian: Boolean!
+  """
+  Dietary classification: Vegan.
+  """
+  isVegan: Boolean!
+  """
+  Dietary classification: Halal certified.
+  """
+  isHalal: Boolean!
+  """
+  Dietary classification: Gluten-free.
+  """
+  isGlutenFree: Boolean!
+  """
+  Sri Lankan spice heat rating (0 = Mild, 1 = Medium, 2 = Hot, 3 = Sri Lankan Extra Hot).
+  """
+  spicyLevel: Int!
+  """
+  Whether item is currently in stock and available on QR ordering.
+  """
+  isAvailable: Boolean!
+  """
+  Customization modifier groups.
+  """
+  modifiers: [ModifierOption!]
+  """
+  Recipe Bill of Materials ingredients for automatic FIFO inventory depletion.
+  """
+  recipeBom: [RecipeBomIngredient!]
+  """
+  Display sort sequence.
+  """
+  displayOrder: Int!
+  """
+  Timestamp of creation.
+  """
+  createdAt: AWSDateTime!
+  """
+  Timestamp of latest update.
+  """
+  updatedAt: AWSDateTime!
+}
+
+"""
+Menu section grouping (e.g. 'Traditional Sri Lankan Curries', 'Ceylon Seafood', 'Desserts').
+"""
+type MenuCategory @aws_cognito_user_pools @aws_iam @aws_lambda @aws_api_key {
+  """
+  Unique category identifier.
+  """
+  id: ID!
+  """
+  Multi-tenant property identifier.
+  """
+  tenantId: ID!
+  """
+  Trilingual category title.
+  """
+  name: TrilingualText!
+  """
+  Trilingual section description.
+  """
+  description: TrilingualText
+  """
+  Target department (KITCHEN, BAR).
+  """
+  department: Department!
+  """
+  Applicable dining channels for this category.
+  """
+  diningTypes: [DiningType!]!
+  """
+  Display sort sequence.
+  """
+  displayOrder: Int!
+  """
+  Whether category is visible on guest menu.
+  """
+  isActive: Boolean!
+  """
+  Child menu items under this category.
+  """
+  items: [MenuItem!]
+  """
+  Timestamp of creation.
+  """
+  createdAt: AWSDateTime!
+  """
+  Timestamp of latest update.
+  """
+  updatedAt: AWSDateTime!
+}
+
+"""
+Input for trilingual text fields.
+"""
+input TrilingualTextInput {
+  en: String!
+  si: String
+  ta: String
+}
+
+"""
+Input for recipe Bill of Materials ingredient.
+"""
+input RecipeBomIngredientInput {
+  stockItemId: ID!
+  stockItemName: String!
+  quantityRequired: Float!
+  unitOfMeasure: String!
+  costPerUnitLkr: Float!
+}
+
+"""
+Input for dish modifier option.
+"""
+input ModifierOptionInput {
+  id: ID
+  name: TrilingualTextInput!
+  priceAdjustmentLkr: Float!
+  isDefault: Boolean!
+}
+
+"""
+Input for creating or updating a menu item.
+"""
+input UpsertMenuItemInput {
+  id: ID
+  categoryId: ID!
+  code: String!
+  title: TrilingualTextInput!
+  description: TrilingualTextInput!
+  imageUrl: AWSURL
+  priceLkr: Float!
+  department: Department!
+  kitchenStation: String
+  isVegetarian: Boolean!
+  isVegan: Boolean!
+  isHalal: Boolean!
+  isGlutenFree: Boolean!
+  spicyLevel: Int!
+  isAvailable: Boolean!
+  modifiers: [ModifierOptionInput!]
+  recipeBom: [RecipeBomIngredientInput!]
+  displayOrder: Int!
+}
+
+"""
+Input for creating or updating a menu category.
+"""
+input UpsertMenuCategoryInput {
+  id: ID
+  name: TrilingualTextInput!
+  description: TrilingualTextInput
+  department: Department!
+  diningTypes: [DiningType!]!
+  displayOrder: Int!
+  isActive: Boolean!
+}
+
+# ==============================================================================
+# Contactless QR Room Service & Kitchen Display System (KDS)
+# ==============================================================================
+
+"""
+Itemized dish or beverage within a live KDS or Room Service order ticket.
+"""
+type OrderLineItem @aws_cognito_user_pools @aws_iam @aws_lambda @aws_api_key {
+  """
+  Unique line item identifier.
+  """
+  id: ID!
+  """
+  Associated menu item identifier.
+  """
+  menuItemId: ID!
+  """
+  Expanded menu item details.
+  """
+  menuItem: MenuItem
+  """
+  Stock/kitchen dish short code.
+  """
+  dishCode: String!
+  """
+  Dish title in English.
+  """
+  dishTitle: String!
+  """
+  Quantity ordered.
+  """
+  quantity: Int!
+  """
+  Unit price in LKR.
+  """
+  unitPriceLkr: Float!
+  """
+  Selected customer modifier options (e.g. ['Sri Lankan Spicy', 'Extra Papadam']).
+  """
+  selectedModifiers: [String!]
+  """
+  Kitchen prep station.
+  """
+  kitchenStation: String
+  """
+  Specific dietary or allergy preparation notes.
+  """
+  specialNotes: String
+  """
+  Individual dish line preparation status.
+  """
+  lineStatus: OrderStatus!
+}
+
+"""
+Live real-time Food & Beverage service order (Kitchen Order Ticket / Bar Order Ticket).
+Supports dual guest QR (@aws_lambda) and staff (@aws_cognito_user_pools) authorization.
+"""
+type ServiceOrder @aws_cognito_user_pools @aws_iam @aws_lambda @aws_api_key {
+  """
+  Unique service order identifier.
+  """
+  id: ID!
+  """
+  Multi-tenant property identifier.
+  """
+  tenantId: ID!
+  """
+  Sequential daily kitchen order ticket number (e.g. 'KOT-2026-00142').
+  """
+  orderNumber: String!
+  """
+  Dining channel (IN_ROOM_DINING, TABLE_SERVICE, POOL_SIDE, BEACH_CABANA).
+  """
+  diningType: DiningType!
+  """
+  Guest room or villa number if in-room dining.
+  """
+  roomNumber: String
+  """
+  Restaurant table number if dine-in table service.
+  """
+  tableNumber: String
+  """
+  Associated guest room reservation identifier.
+  """
+  reservationId: ID
+  """
+  Guest folio identifier if charged to room folio.
+  """
+  folioId: ID
+  """
+  Current order lifecycle status in kitchen / runner flow.
+  """
+  status: OrderStatus!
+  """
+  Fulfillment department (KITCHEN, BAR).
+  """
+  department: Department!
+  """
+  Ordered dish items and modifiers.
+  """
+  items: [OrderLineItem!]!
+  """
+  Subtotal amount in LKR prior to service charge and taxes.
+  """
+  subtotalLkr: Float!
+  """
+  Statutory 4-stage compounding tax itemization.
+  """
+  taxBreakdown: TaxBreakdown!
+  """
+  Gross order total in Sri Lankan Rupees.
+  """
+  totalGrossLkr: Float!
+  """
+  Customer special delivery instructions.
+  """
+  guestNotes: String
+  """
+  Timestamp when kitchen acknowledged order.
+  """
+  kitchenAcknowledgedAt: AWSDateTime
+  """
+  Timestamp when order was bumped ready for pickup by kitchen runner.
+  """
+  readyForPickupAt: AWSDateTime
+  """
+  Timestamp when order was delivered to guest.
+  """
+  deliveredAt: AWSDateTime
+  """
+  Timestamp when order was cancelled.
+  """
+  cancelledAt: AWSDateTime
+  """
+  Reason for order cancellation.
+  """
+  cancelReason: String
+  """
+  Timestamp when guest or waiter submitted order.
+  """
+  orderPlacedAt: AWSDateTime!
+  """
+  Timestamp of latest status update.
+  """
+  updatedAt: AWSDateTime!
+}
+
+"""
+Input for an individual dish within a service order.
+"""
+input OrderLineItemInput {
+  menuItemId: ID!
+  quantity: Int!
+  selectedModifiers: [String!]
+  specialNotes: String
+}
+
+"""
+Input for submitting a new contactless QR or waiter POS service order.
+"""
+input CreateServiceOrderInput {
+  diningType: DiningType!
+  roomNumber: String
+  tableNumber: String
+  reservationId: ID
+  guestNotes: String
+  items: [OrderLineItemInput!]!
+}
+
+"""
+Input for kitchen expeditor or runner updating order ticket status.
+"""
+input UpdateOrderStatusInput {
+  orderId: ID!
+  status: OrderStatus!
+  cancelReason: String
+}
+
+# ==============================================================================
+# Banquet Functions, Weddings (BEO) & Event Hall Scheduling
+# ==============================================================================
+
+"""
+Cocktail finger food / bite plate item for Sri Lankan banquet and wedding functions.
+"""
+type BitePlateItem @aws_cognito_user_pools @aws_iam @aws_lambda @aws_api_key {
+  """
+  Unique bite plate identifier.
+  """
+  id: ID!
+  """
+  Display name of bite dish (e.g. 'Hot Butter Cuttlefish', 'Devilled Cashew & Chicken').
+  """
+  name: String!
+  """
+  Quantity ordered in Kilograms or Plates.
+  """
+  quantityKgOrPlates: Float!
+  """
+  Unit of measurement ('KG', 'PORTIONS', 'PLATES').
+  """
+  unitOfMeasure: String!
+  """
+  Agreed rate per unit in LKR.
+  """
+  ratePerUnitLkr: Float!
+  """
+  Total amount in LKR for this item.
+  """
+  totalAmountLkr: Float!
+}
+
+"""
+Banquet hall, ballroom, or garden function venue with slot management.
+"""
+type BanquetHall @aws_cognito_user_pools @aws_iam @aws_lambda @aws_api_key {
+  """
+  Unique banquet venue identifier.
+  """
+  id: ID!
+  """
+  Multi-tenant property identifier.
+  """
+  tenantId: ID!
+  """
+  Venue hall name (e.g. 'Grand Ballroom', 'Lotus Pavilion', 'Beachfront Lawn').
+  """
+  name: String!
+  """
+  Maximum seated dining capacity.
+  """
+  maxSeatingCapacity: Int!
+  """
+  Standard rental rate per function slot in Sri Lankan Rupees.
+  """
+  rentalRateLkr: Float!
+  """
+  Venue facilities and AV features.
+  """
+  features: [String!]!
+  """
+  Whether venue is active and bookable.
+  """
+  isActive: Boolean!
+  """
+  Timestamp of creation.
+  """
+  createdAt: AWSDateTime!
+  """
+  Timestamp of latest update.
+  """
+  updatedAt: AWSDateTime!
+}
+
+"""
+Banquet Event Order (BEO) modeling Sri Lankan traditional weddings, homecomings, and galas.
+Captures auspicious times (Poruwa/Ashtaka Nekath), corkage fees, and bite plates.
+"""
+type BanquetEvent @aws_cognito_user_pools @aws_iam @aws_lambda @aws_api_key {
+  """
+  Unique BEO identifier.
+  """
+  id: ID!
+  """
+  Multi-tenant property identifier.
+  """
+  tenantId: ID!
+  """
+  Sequential event serial number (e.g. 'BEO-2026-0048').
+  """
+  eventNumber: String!
+  """
+  Event category ('TRADITIONAL_SINHALA_WEDDING', 'HINDU_WEDDING', 'HOMECOMING', 'CORPORATE_GALA').
+  """
+  eventType: String!
+  """
+  Assigned banquet hall identifier.
+  """
+  hallId: ID!
+  """
+  Expanded hall venue details.
+  """
+  hall: BanquetHall
+  """
+  Date of the banquet function.
+  """
+  eventDate: AWSDate!
+  """
+  Function timing slot ('DAY_SLOT', 'NIGHT_SLOT', 'FULL_DAY').
+  """
+  slot: String!
+  """
+  Scheduled start time.
+  """
+  startTime: AWSTime!
+  """
+  Scheduled end time.
+  """
+  endTime: AWSTime!
+  """
+  Primary booking client name.
+  """
+  clientName: String!
+  """
+  Client contact phone.
+  """
+  clientPhone: AWSPhone!
+  """
+  Client contact email.
+  """
+  clientEmail: AWSEmail!
+  """
+  Bride and groom names for wedding functions.
+  """
+  brideAndGroomNames: String
+  """
+  Auspicious time for traditional Poruwa ceremony (Nekatha).
+  """
+  poruwaCeremonyTime: AWSTime
+  """
+  Auspicious time for Jayamangala Gatha / Ashtaka chanting.
+  """
+  ashtakaChantingTime: AWSTime
+  """
+  Guaranteed minimum guest covers.
+  """
+  guaranteedGuestCount: Int!
+  """
+  Actual attendees on the event day.
+  """
+  actualGuestCount: Int
+  """
+  Agreed per-plate catering rate in Sri Lankan Rupees.
+  """
+  perPlateRateLkr: Float!
+  """
+  Selected wedding buffet menu package name.
+  """
+  selectedMenuPackageName: String!
+  """
+  Finger food and bites itemized list.
+  """
+  bitePlates: [BitePlateItem!]
+  """
+  Total corkage charge for outside liquor / wine bottles.
+  """
+  corkageFeeTotalLkr: Float!
+  """
+  Number of outside alcohol bottles brought.
+  """
+  corkageBottleCount: Int
+  """
+  Hall rental venue hire charge in LKR.
+  """
+  hallRentalChargeLkr: Float!
+  """
+  Net function subtotal prior to service charge and statutory taxes.
+  """
+  subtotalLkr: Float!
+  """
+  Full 4-stage tax compounding itemization (SC -> TDL -> SSCL -> VAT).
+  """
+  taxBreakdown: TaxBreakdown!
+  """
+  Grand gross payable amount for event order in LKR.
+  """
+  totalGrossLkr: Float!
+  """
+  Total advance deposit collected.
+  """
+  advanceDepositPaidLkr: Float!
+  """
+  Remaining balance due.
+  """
+  balanceDueLkr: Float!
+  """
+  Master function folio identifier.
+  """
+  folioId: ID
+  """
+  Function status ('TENTATIVE', 'CONFIRMED', 'IN_PROGRESS', 'CONCLUDED', 'CANCELLED').
+  """
+  status: String!
+  """
+  Table decor, floral Poruwa setup, and DJ audio instructions.
+  """
+  setupNotes: String
+  """
+  Timestamp of creation.
+  """
+  createdAt: AWSDateTime!
+  """
+  Timestamp of latest update.
+  """
+  updatedAt: AWSDateTime!
+}
+
+"""
+Input for cocktail bite plate items.
+"""
+input BitePlateItemInput {
+  name: String!
+  quantityKgOrPlates: Float!
+  unitOfMeasure: String!
+  ratePerUnitLkr: Float!
+}
+
+"""
+Input for managing banquet hall venues.
+"""
+input UpsertBanquetHallInput {
+  id: ID
+  name: String!
+  maxSeatingCapacity: Int!
+  rentalRateLkr: Float!
+  features: [String!]!
+  isActive: Boolean!
+}
+
+"""
+Input for creating a Banquet Event Order (BEO).
+"""
+input CreateBanquetEventInput {
+  eventType: String!
+  hallId: ID!
+  eventDate: AWSDate!
+  slot: String!
+  startTime: AWSTime!
+  endTime: AWSTime!
+  clientName: String!
+  clientPhone: AWSPhone!
+  clientEmail: AWSEmail!
+  brideAndGroomNames: String
+  poruwaCeremonyTime: AWSTime
+  ashtakaChantingTime: AWSTime
+  guaranteedGuestCount: Int!
+  perPlateRateLkr: Float!
+  selectedMenuPackageName: String!
+  bitePlates: [BitePlateItemInput!]
+  corkageFeeTotalLkr: Float!
+  corkageBottleCount: Int
+  hallRentalChargeLkr: Float!
+  setupNotes: String
+}
+
+"""
+Input for creating or updating a Banquet Event Order (BEO).
+"""
+input UpsertBanquetEventInput {
+  id: ID
+  eventNumber: String
+  eventType: String!
+  hallId: ID!
+  eventDate: AWSDate!
+  slot: String!
+  startTime: AWSTime!
+  endTime: AWSTime!
+  clientName: String!
+  clientPhone: AWSPhone!
+  clientEmail: AWSEmail!
+  brideAndGroomNames: String
+  poruwaCeremonyTime: AWSTime
+  ashtakaChantingTime: AWSTime
+  guaranteedGuestCount: Int!
+  perPlateRateLkr: Float!
+  selectedMenuPackageName: String!
+  bitePlates: [BitePlateItemInput!]
+  corkageFeeTotalLkr: Float!
+  corkageBottleCount: Int
+  hallRentalChargeLkr: Float!
+  advanceDepositPaidLkr: Float
+  setupNotes: String
+  status: String
+}
+
+# ==============================================================================
+# Excursions, Safari Jeeps & Ayurveda Appointments (Phase 03.09)
+# ==============================================================================
+
+"""
+Excursion Booking covering Sri Lankan wildlife safaris, whale watching, cultural tours, and airport transfers.
+"""
+type ExcursionBooking @aws_cognito_user_pools @aws_iam @aws_lambda @aws_api_key {
+  """
+  Unique excursion booking identifier.
+  """
+  id: ID!
+  """
+  Multi-tenant property identifier.
+  """
+  tenantId: ID!
+  """
+  Sequential excursion booking reference number (e.g. 'EXC-2026-0129').
+  """
+  bookingNumber: String!
+  """
+  Category of excursion ('SAFARI_JEEP', 'WHALE_WATCHING', 'CULTURAL_TOUR', 'AIRPORT_TRANSFER', 'TEA_PLANTATION', 'BOAT_SAFARI', 'HIKING_TREK').
+  """
+  activityType: String!
+  """
+  Descriptive activity title (e.g. 'Yala National Park Afternoon Safari Jeep 4x4').
+  """
+  title: String!
+  """
+  Primary guest full name.
+  """
+  guestName: String!
+  """
+  Guest contact phone in E.164 format.
+  """
+  guestPhone: AWSPhone!
+  """
+  Optional linked hotel stay reservation identifier.
+  """
+  reservationId: ID
+  """
+  Room number if the guest is an in-house resident.
+  """
+  roomNumber: String
+  """
+  Scheduled date of the excursion.
+  """
+  excursionDate: AWSDate!
+  """
+  Scheduled departure time from the hotel lobby.
+  """
+  departureTime: AWSTime!
+  """
+  Estimated or actual return time to the hotel.
+  """
+  returnTime: AWSTime
+  """
+  Number of adult participants.
+  """
+  numberOfAdults: Int!
+  """
+  Number of child participants.
+  """
+  numberOfChildren: Int!
+  """
+  Vehicle registration number (e.g. 'WP NC-7744').
+  """
+  vehicleRegistrationNo: String
+  """
+  Name of assigned driver, naturalist, or tour guide.
+  """
+  driverOrGuideName: String
+  """
+  Contact phone number of the driver or guide.
+  """
+  driverContactPhone: AWSPhone
+  """
+  Pickup departure point.
+  """
+  pickupLocation: String!
+  """
+  Dropoff destination or return point.
+  """
+  dropoffLocation: String!
+  """
+  Net supplier / operator wholesale cost in Sri Lankan Rupees.
+  """
+  supplierCostLkr: Float!
+  """
+  Retail price charged to guest prior to statutory taxes in LKR.
+  """
+  retailRateLkr: Float!
+  """
+  Itemized 4-stage compounding statutory taxes (SC -> TDL -> SSCL -> VAT).
+  """
+  taxBreakdown: TaxBreakdown!
+  """
+  Grand gross payable amount in Sri Lankan Rupees.
+  """
+  totalGrossLkr: Float!
+  """
+  Optional room folio identifier if billed to guest room.
+  """
+  folioId: ID
+  """
+  Whether the charge has been transferred to the guest stay folio.
+  """
+  isBilledToFolio: Boolean!
+  """
+  Booking operational status ('CONFIRMED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED').
+  """
+  status: String!
+  """
+  Special guest requirements (e.g. packed breakfast box, child booster seat, wildlife lens).
+  """
+  specialRequirements: String
+  """
+  Timestamp of booking creation.
+  """
+  createdAt: AWSDateTime!
+  """
+  Timestamp of latest booking update.
+  """
+  updatedAt: AWSDateTime!
+}
+
+"""
+Ayurveda & Wellness Appointment modeling traditional Sri Lankan herbal medicine and spa treatments.
+"""
+type AyurvedaAppointment @aws_cognito_user_pools @aws_iam @aws_lambda @aws_api_key {
+  """
+  Unique appointment identifier.
+  """
+  id: ID!
+  """
+  Multi-tenant property identifier.
+  """
+  tenantId: ID!
+  """
+  Sequential appointment reference code (e.g. 'AYU-2026-0341').
+  """
+  appointmentNumber: String!
+  """
+  Therapy category ('SHIRODHARA', 'ABHYANGA_MASSAGE', 'HERBAL_STEAM_BATH', 'PINDA_SWEDA', 'CONSULTATION', 'PANCHAKARMA_PACKAGE').
+  """
+  treatmentType: String!
+  """
+  Display name of the treatment (e.g. 'Traditional Shirodhara & Herbal Oil Bath').
+  """
+  treatmentName: String!
+  """
+  Treatment duration in minutes (e.g. 60, 90, 120).
+  """
+  durationMinutes: Int!
+  """
+  Guest full name receiving therapy.
+  """
+  guestName: String!
+  """
+  Linked in-house room reservation ID.
+  """
+  reservationId: ID
+  """
+  Room number of the guest.
+  """
+  roomNumber: String
+  """
+  Scheduled therapy date.
+  """
+  appointmentDate: AWSDate!
+  """
+  Treatment start time.
+  """
+  startTime: AWSTime!
+  """
+  Treatment scheduled end time.
+  """
+  endTime: AWSTime!
+  """
+  Wellness treatment room or cabana identifier.
+  """
+  treatmentRoomId: String
+  """
+  Assigned certified Ayurvedic therapist or physician.
+  """
+  therapistName: String
+  """
+  Guest health contraindications, skin sensitivities, or medical notes.
+  """
+  healthNotesOrAllergies: String
+  """
+  List of traditional herbal oils prescribed or applied (e.g. ['Mahanarayana Taila', 'Pinda Taila']).
+  """
+  herbalOilsUsed: [String!]
+  """
+  Net treatment rate before statutory taxes in LKR.
+  """
+  rateLkr: Float!
+  """
+  Itemized 4-stage compounding statutory taxes (SC -> TDL -> SSCL -> VAT).
+  """
+  taxBreakdown: TaxBreakdown!
+  """
+  Total gross charge in Sri Lankan Rupees.
+  """
+  totalGrossLkr: Float!
+  """
+  Optional room folio identifier if billed to room.
+  """
+  folioId: ID
+  """
+  Flag indicating whether treatment was posted to guest room folio.
+  """
+  isBilledToFolio: Boolean!
+  """
+  Appointment status ('SCHEDULED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED', 'NO_SHOW').
+  """
+  status: String!
+  """
+  Timestamp of appointment booking.
+  """
+  createdAt: AWSDateTime!
+  """
+  Timestamp of latest appointment update.
+  """
+  updatedAt: AWSDateTime!
+}
+
+"""
+Input for booking an excursion, safari jeep, whale watching, or transfer tour.
+"""
+input CreateExcursionBookingInput {
+  activityType: String!
+  title: String!
+  guestName: String!
+  guestPhone: AWSPhone!
+  reservationId: ID
+  roomNumber: String
+  excursionDate: AWSDate!
+  departureTime: AWSTime!
+  returnTime: AWSTime
+  numberOfAdults: Int!
+  numberOfChildren: Int
+  vehicleRegistrationNo: String
+  driverOrGuideName: String
+  driverContactPhone: AWSPhone
+  pickupLocation: String!
+  dropoffLocation: String!
+  supplierCostLkr: Float
+  retailRateLkr: Float!
+  chargeToFolio: Boolean
+  specialRequirements: String
+}
+
+"""
+Input for scheduling an Ayurveda or indigenous wellness therapy appointment.
+"""
+input CreateAyurvedaAppointmentInput {
+  treatmentType: String!
+  treatmentName: String!
+  durationMinutes: Int!
+  guestName: String!
+  reservationId: ID
+  roomNumber: String
+  appointmentDate: AWSDate!
+  startTime: AWSTime!
+  treatmentRoomId: String
+  therapistName: String
+  healthNotesOrAllergies: String
+  herbalOilsUsed: [String!]
+  rateLkr: Float!
+  chargeToFolio: Boolean
+}
+
+"""
+Unified activity booking input covering both safari excursions and Ayurveda therapies.
+"""
+input CreateActivityBookingInput {
+  """
+  Category discriminator ('EXCURSION' or 'AYURVEDA').
+  """
+  activityCategory: String!
+  """
+  Excursion details when category is 'EXCURSION'.
+  """
+  excursionInput: CreateExcursionBookingInput
+  """
+  Ayurveda appointment details when category is 'AYURVEDA'.
+  """
+  ayurvedaInput: CreateAyurvedaAppointmentInput
+}
+
+# ==============================================================================
+# Store Inventory, FIFO Batches & Procurement (Phase 03.10)
+# ==============================================================================
+
+"""
+FIFO stock batch tracking unit cost, GRN origin, and shelf-life expiration.
+"""
+type FifoBatch @aws_cognito_user_pools @aws_iam @aws_lambda @aws_api_key {
+  """
+  Unique batch identifier within stock item.
+  """
+  batchId: String!
+  """
+  Goods receipt date.
+  """
+  receivedDate: AWSDate!
+  """
+  Perishable food/beverage or chemical expiry date.
+  """
+  expiryDate: AWSDate
+  """
+  Initial quantity received upon GRN posting.
+  """
+  initialQuantity: Float!
+  """
+  Remaining unconsumed quantity in store.
+  """
+  remainingQuantity: Float!
+  """
+  Cost per unit of measure in LKR at time of receipt.
+  """
+  unitCostLkr: Float!
+  """
+  Supplier name or trade partner.
+  """
+  supplierName: String
+  """
+  Goods Received Note number referencing the batch intake.
+  """
+  grnNumber: String!
+}
+
+"""
+Store inventory SKU item with multi-department allocation, par levels, and FIFO costing.
+"""
+type StockItem @aws_cognito_user_pools @aws_iam @aws_lambda @aws_api_key {
+  """
+  Unique stock item identifier.
+  """
+  id: ID!
+  """
+  Multi-tenant property identifier.
+  """
+  tenantId: ID!
+  """
+  Stock Keeping Unit code (e.g. 'DRY-BASMATI-001', 'LIQ-ARRACK-0750').
+  """
+  sku: String!
+  """
+  Item trade / display name.
+  """
+  name: String!
+  """
+  Storage category ('FOOD_DRY_GOODS', 'BEVERAGE_SPIRITS', 'FRESH_PRODUCE', 'HOUSEKEEPING_LINEN', 'MAINTENANCE_SPARES').
+  """
+  category: String!
+  """
+  Owning operating department.
+  """
+  department: Department!
+  """
+  Standard inventory unit of measure ('kg', 'liters', 'bottles', 'units', 'packets').
+  """
+  unitOfMeasure: String!
+  """
+  Safety stock threshold triggering automated purchase requisition.
+  """
+  parLevel: Float!
+  """
+  Standard replenishment batch order quantity.
+  """
+  reorderQuantity: Float!
+  """
+  Total physically available quantity across active batches.
+  """
+  currentStock: Float!
+  """
+  Effective FIFO unit cost in LKR (or latest batch cost if depleted).
+  """
+  fifoCostPerUnitLkr: Float!
+  """
+  Total valuation of on-hand inventory (sum of remaining FIFO batch values).
+  """
+  totalValueLkr: Float!
+  """
+  Itemized FIFO layers currently on hand.
+  """
+  batches: [FifoBatch!]!
+  """
+  Active operational item flag.
+  """
+  isActive: Boolean!
+  """
+  Timestamp of stock item creation.
+  """
+  createdAt: AWSDateTime!
+  """
+  Timestamp of latest stock item update.
+  """
+  updatedAt: AWSDateTime!
+}
+
+"""
+Purchase Order line item detailing ordered SKU, agreed rate, and line total.
+"""
+type PurchaseOrderItem @aws_cognito_user_pools @aws_iam @aws_lambda @aws_api_key {
+  """
+  Linked stock item identifier.
+  """
+  stockItemId: ID!
+  """
+  Stock Keeping Unit code.
+  """
+  stockItemSku: String!
+  """
+  Item display name.
+  """
+  stockItemName: String!
+  """
+  Quantity ordered.
+  """
+  quantityOrdered: Float!
+  """
+  Unit of measure.
+  """
+  unitOfMeasure: String!
+  """
+  Agreed purchase unit rate in LKR.
+  """
+  unitPriceLkr: Float!
+  """
+  Total line cost before taxes in LKR.
+  """
+  totalAmountLkr: Float!
+}
+
+"""
+Purchase Order issued to external suppliers for store replenishment.
+"""
+type PurchaseOrder @aws_cognito_user_pools @aws_iam @aws_lambda @aws_api_key {
+  """
+  Unique purchase order identifier.
+  """
+  id: ID!
+  """
+  Multi-tenant property identifier.
+  """
+  tenantId: ID!
+  """
+  Sequential PO reference number (e.g. 'PO-2026-0089').
+  """
+  poNumber: String!
+  """
+  Supplier or vendor trade name.
+  """
+  supplierName: String!
+  """
+  Supplier contact telephone / mobile number.
+  """
+  supplierContactPhone: AWSPhone
+  """
+  Date purchase order was generated.
+  """
+  orderDate: AWSDate!
+  """
+  Target delivery arrival date.
+  """
+  expectedDeliveryDate: AWSDate
+  """
+  Requesting department.
+  """
+  department: Department!
+  """
+  List of ordered inventory SKU line items.
+  """
+  items: [PurchaseOrderItem!]!
+  """
+  Total purchase amount before statutory taxes in LKR.
+  """
+  subtotalLkr: Float!
+  """
+  Statutory tax breakdown (VAT, SSCL where applicable).
+  """
+  taxBreakdown: TaxBreakdown!
+  """
+  Grand gross payable amount to supplier in LKR.
+  """
+  totalGrossLkr: Float!
+  """
+  Procurement workflow status ('DRAFT', 'APPROVED', 'SENT_TO_SUPPLIER', 'PARTIALLY_RECEIVED', 'COMPLETED', 'CANCELLED').
+  """
+  status: String!
+  """
+  User identifier of authorising manager / purchasing manager.
+  """
+  approvedByUserId: ID
+  """
+  Timestamp of purchase order creation.
+  """
+  createdAt: AWSDateTime!
+  """
+  Timestamp of latest PO update.
+  """
+  updatedAt: AWSDateTime!
+}
+
+"""
+Inventory Voucher line item detailing stock movement and valuation.
+"""
+type InventoryVoucherItem @aws_cognito_user_pools @aws_iam @aws_lambda @aws_api_key {
+  """
+  Stock item identifier.
+  """
+  stockItemId: ID!
+  """
+  Stock Keeping Unit code.
+  """
+  stockItemSku: String!
+  """
+  Item display name.
+  """
+  stockItemName: String!
+  """
+  Quantity moved, received, or issued.
+  """
+  quantity: Float!
+  """
+  Unit of measure.
+  """
+  unitOfMeasure: String!
+  """
+  Cost per unit of measure in LKR.
+  """
+  unitCostLkr: Float!
+  """
+  Total line movement valuation in LKR.
+  """
+  totalCostLkr: Float!
+}
+
+"""
+Inventory movement voucher modeling PR (Purchase Requisition), GRN (Goods Received Note), GIN (Goods Issue Note), and Stock Adjustments.
+"""
+type InventoryVoucher @aws_cognito_user_pools @aws_iam @aws_lambda @aws_api_key {
+  """
+  Unique inventory voucher identifier.
+  """
+  id: ID!
+  """
+  Multi-tenant property identifier.
+  """
+  tenantId: ID!
+  """
+  Sequential voucher reference code (e.g. 'GRN-2026-0145', 'GIN-2026-0072').
+  """
+  voucherNumber: String!
+  """
+  Movement category ('GRN_GOODS_RECEIVED_NOTE', 'GIN_GOODS_ISSUE_NOTE', 'PURCHASE_REQUISITION', 'STOCK_ADJUSTMENT', 'WASTAGE_OR_BREAKAGE').
+  """
+  voucherType: String!
+  """
+  Date of inventory transaction.
+  """
+  voucherDate: AWSDate!
+  """
+  Operating department associated with the movement.
+  """
+  department: Department!
+  """
+  Origin warehouse or store bin (e.g. 'Central Stores', 'Receiving Dock').
+  """
+  sourceLocation: String
+  """
+  Destination department or kitchen station (e.g. 'Main Kitchen Hot Line', 'Pool Bar').
+  """
+  destinationLocation: String
+  """
+  Supplier name for GRN intake vouchers.
+  """
+  supplierName: String
+  """
+  Linked purchase order number for GRN intake.
+  """
+  poNumber: String
+  """
+  Itemized list of stock SKUs moved in this voucher.
+  """
+  items: [InventoryVoucherItem!]!
+  """
+  Total valuation of items moved in LKR.
+  """
+  totalValueLkr: Float!
+  """
+  User identifier of storekeeper or chef authorising the transaction.
+  """
+  authorizedByUserId: ID!
+  """
+  Auditable remarks, supplier delivery note number, or reason for breakage/adjustment.
+  """
+  remarks: String
+  """
+  Timestamp of voucher creation.
+  """
+  createdAt: AWSDateTime!
+  """
+  Timestamp of latest voucher update.
+  """
+  updatedAt: AWSDateTime!
+}
+
+"""
+Input line item for recording Goods Received Notes (GRN).
+"""
+input GrnItemInput {
+  stockItemId: ID!
+  quantityReceived: Float!
+  unitCostLkr: Float!
+  expiryDate: AWSDate
+}
+
+"""
+Input for recording Goods Received Notes into FIFO inventory.
+"""
+input RecordGrnInput {
+  poNumber: String
+  supplierName: String!
+  grnDate: AWSDate!
+  department: Department!
+  items: [GrnItemInput!]!
+  remarks: String
+}
+
+"""
+Input for provisioning or editing a stock inventory item.
+"""
+input UpsertStockItemInput {
+  id: ID
+  sku: String!
+  name: String!
+  category: String!
+  department: Department!
+  unitOfMeasure: String!
+  parLevel: Float!
+  reorderQuantity: Float!
+  isActive: Boolean!
+}
+
+"""
+Input line item for Goods Issue Notes (GIN) or kitchen requisitions.
+"""
+input GinItemInput {
+  stockItemId: ID!
+  quantityIssued: Float!
+}
+
+"""
+Input for issuing stock from central stores to kitchen/bar outlets.
+"""
+input CreateGoodsIssueNoteInput {
+  issueDate: AWSDate!
+  sourceLocation: String!
+  destinationDepartment: Department!
+  destinationLocation: String!
+  items: [GinItemInput!]!
+  remarks: String
+}
+
+# ==============================================================================
+# Night Audit & Statutory SLTDA / TDL / Staff SC Pool Statements (Phase 03.11)
+# ==============================================================================
+
+"""
+Daily Night Audit financial close, ledger balancing, and operational day rollover report.
+"""
+type NightAuditReport @aws_cognito_user_pools @aws_iam @aws_lambda @aws_api_key {
+  """
+  Unique night audit record identifier.
+  """
+  id: ID!
+  """
+  Multi-tenant property identifier.
+  """
+  tenantId: ID!
+  """
+  Business operating date audited.
+  """
+  auditDate: AWSDate!
+  """
+  Exact ISO timestamp when audit execution was triggered.
+  """
+  auditedAt: AWSDateTime!
+  """
+  User identifier of duty manager or night auditor.
+  """
+  auditorUserId: ID!
+  """
+  Total rentable rooms inventory on the audit date.
+  """
+  totalRoomsAvailable: Int!
+  """
+  Total rooms occupied during the night.
+  """
+  totalRoomsOccupied: Int!
+  """
+  Calculated property occupancy percentage.
+  """
+  occupancyPercentage: Float!
+  """
+  Total room accommodation net revenue in LKR.
+  """
+  totalRoomRevenueLkr: Float!
+  """
+  Total food and beverage net revenue in LKR.
+  """
+  totalFnBRevenueLkr: Float!
+  """
+  Total other department net revenue (spa, excursions, laundry, banquets) in LKR.
+  """
+  totalOtherRevenueLkr: Float!
+  """
+  Total gross turnover before statutory deductions in LKR.
+  """
+  totalGrossRevenueLkr: Float!
+  """
+  Total 10% staff service charge collected across folios in LKR.
+  """
+  totalServiceChargeCollectedLkr: Float!
+  """
+  Total 1.0% or 0.5% SLTDA Tourism Development Levy collected in LKR.
+  """
+  totalTdlCollectedLkr: Float!
+  """
+  Total 2.5% Social Security Contribution Levy collected in LKR.
+  """
+  totalSsclCollectedLkr: Float!
+  """
+  Total 18% Value Added Tax collected in LKR.
+  """
+  totalVatCollectedLkr: Float!
+  """
+  Guest and city ledger opening balance in LKR.
+  """
+  ledgerOpeningBalanceLkr: Float!
+  """
+  Guest and city ledger closing balance in LKR.
+  """
+  ledgerClosingBalanceLkr: Float!
+  """
+  Count of unposted or unbalanced folio discrepancies identified.
+  """
+  folioDiscrepanciesCount: Int!
+  """
+  Whether the system business date rollover succeeded.
+  """
+  isRolloverSuccessful: Boolean!
+  """
+  Auditor remarks and variance explanations.
+  """
+  notes: String
+  """
+  Timestamp of report generation.
+  """
+  createdAt: AWSDateTime!
+}
+
+"""
+Guest arrival and room-night count by country of residence for SLTDA statutory returns.
+"""
+type NationalityGuestCount @aws_cognito_user_pools @aws_iam @aws_lambda @aws_api_key {
+  """
+  ISO 3166-1 alpha-2 or alpha-3 country code.
+  """
+  countryCode: String!
+  """
+  English country name (e.g. 'United Kingdom', 'Germany', 'India', 'Sri Lanka').
+  """
+  countryName: String!
+  """
+  Total guest arrivals from this nationality during the month.
+  """
+  guestCount: Int!
+  """
+  Total guest nights spent by residents of this nationality.
+  """
+  guestNights: Int!
+}
+
+"""
+Sri Lanka Tourism Development Authority (SLTDA) Monthly Statistical Return (Tourism Act No. 38 of 2005).
+"""
+type SltdaMonthlyReturn @aws_cognito_user_pools @aws_iam @aws_lambda @aws_api_key {
+  """
+  Unique statutory return identifier.
+  """
+  id: ID!
+  """
+  Multi-tenant property identifier.
+  """
+  tenantId: ID!
+  """
+  Official SLTDA hotel/guesthouse registration number.
+  """
+  sltdaRegNo: String!
+  """
+  Calendar year of the return.
+  """
+  year: Int!
+  """
+  Calendar month of the return (1-12).
+  """
+  month: Int!
+  """
+  Total physical guest rooms available for sale.
+  """
+  totalRoomsInInventory: Int!
+  """
+  Available room nights across the entire month.
+  """
+  totalRoomNightsAvailable: Int!
+  """
+  Total room nights sold/occupied during the month.
+  """
+  totalRoomNightsSold: Int!
+  """
+  Average monthly room occupancy percentage.
+  """
+  averageOccupancyRate: Float!
+  """
+  Total guest nights recorded by foreign tourists.
+  """
+  totalForeignGuestNights: Int!
+  """
+  Total guest nights recorded by Sri Lankan resident domestic travelers.
+  """
+  totalDomesticGuestNights: Int!
+  """
+  Total guest check-in arrivals recorded.
+  """
+  totalGuestArrivals: Int!
+  """
+  Itemized foreign and domestic guest breakdown by nationality.
+  """
+  nationalityBreakdown: [NationalityGuestCount!]!
+  """
+  Average Daily Rate (ADR) achieved in LKR.
+  """
+  averageDailyRateLkr: Float!
+  """
+  Revenue Per Available Room (RevPAR) achieved in LKR.
+  """
+  revParLkr: Float!
+  """
+  Gross accommodation revenue subject to SLTDA levy in LKR.
+  """
+  totalGrossAccommodationTurnoverLkr: Float!
+  """
+  Submission status to SLTDA Tourism Information Management System (TIMS).
+  """
+  isSubmitted: Boolean!
+  """
+  Government submission acknowledgement reference code.
+  """
+  submissionReference: String
+  """
+  Timestamp when submitted to SLTDA portal.
+  """
+  submittedAt: AWSDateTime
+  """
+  User identifier of hotel administrator submitting the return.
+  """
+  submittedByUserId: ID
+  """
+  Timestamp of return record creation.
+  """
+  createdAt: AWSDateTime!
+  """
+  Timestamp of latest return update.
+  """
+  updatedAt: AWSDateTime!
+}
+
+"""
+Inland Revenue Department (IRD) & SLTDA Tourism Development Levy (TDL) Quarterly Summary.
+"""
+type TdlQuarterlySummary @aws_cognito_user_pools @aws_iam @aws_lambda @aws_api_key {
+  """
+  Unique quarterly summary identifier.
+  """
+  id: ID!
+  """
+  Multi-tenant property identifier.
+  """
+  tenantId: ID!
+  """
+  Assessment tax year.
+  """
+  taxYear: Int!
+  """
+  Quarter of assessment (1 = Jan-Mar, 2 = Apr-Jun, 3 = Jul-Sep, 4 = Oct-Dec).
+  """
+  quarter: Int!
+  """
+  Official SLTDA registration reference number.
+  """
+  sltdaRegNo: String!
+  """
+  Inland Revenue Department Tax Identification Number (TIN).
+  """
+  tinNo: String!
+  """
+  Month 1 gross turnover in LKR.
+  """
+  month1TurnoverLkr: Float!
+  """
+  Month 1 TDL liability payable in LKR.
+  """
+  month1TdlPayableLkr: Float!
+  """
+  Month 2 gross turnover in LKR.
+  """
+  month2TurnoverLkr: Float!
+  """
+  Month 2 TDL liability payable in LKR.
+  """
+  month2TdlPayableLkr: Float!
+  """
+  Month 3 gross turnover in LKR.
+  """
+  month3TurnoverLkr: Float!
+  """
+  Month 3 TDL liability payable in LKR.
+  """
+  month3TdlPayableLkr: Float!
+  """
+  Total quarterly turnover subject to TDL in LKR.
+  """
+  totalQuarterlyTurnoverLkr: Float!
+  """
+  Grand total TDL liability for the quarter in LKR.
+  """
+  totalQuarterlyTdlPayableLkr: Float!
+  """
+  Bank or LankaPay settlement voucher reference number.
+  """
+  paymentVoucherRef: String
+  """
+  Whether quarterly tax payment has been settled.
+  """
+  isPaid: Boolean!
+  """
+  Date of bank tax payment.
+  """
+  paidDate: AWSDate
+  """
+  Timestamp of statement generation.
+  """
+  createdAt: AWSDateTime!
+  """
+  Timestamp of latest update.
+  """
+  updatedAt: AWSDateTime!
+}
+
+"""
+Individual employee share in the 10% Service Charge monthly distribution pool.
+"""
+type StaffScMemberShare @aws_cognito_user_pools @aws_iam @aws_lambda @aws_api_key {
+  """
+  Staff member unique user identifier.
+  """
+  userId: ID!
+  """
+  Full name of staff member.
+  """
+  staffName: String!
+  """
+  Staff member primary operating department.
+  """
+  department: Department!
+  """
+  Seniority weighting points or rostered working days.
+  """
+  pointsOrHours: Float!
+  """
+  Gross service charge share allocated in LKR.
+  """
+  grossScShareLkr: Float!
+  """
+  Statutory EPF employee 8% deduction from SC share in LKR.
+  """
+  epfDeduction8PctLkr: Float!
+  """
+  Net take-home service charge disbursed in LKR.
+  """
+  netScDisbursedLkr: Float!
+}
+
+"""
+Sri Lankan 10% Hotel Service Charge Monthly Pool Distribution Statement.
+Enforces breakage reserve cap, EPF deduction, and equal or points-weighted distribution.
+"""
+type StaffScPoolStatement @aws_cognito_user_pools @aws_iam @aws_lambda @aws_api_key {
+  """
+  Unique statement identifier.
+  """
+  id: ID!
+  """
+  Multi-tenant property identifier.
+  """
+  tenantId: ID!
+  """
+  Calendar year of the distribution pool.
+  """
+  year: Int!
+  """
+  Calendar month of the distribution pool (1-12).
+  """
+  month: Int!
+  """
+  Total 10% service charge collected across all property folios during the month in LKR.
+  """
+  totalServiceChargeCollectedLkr: Float!
+  """
+  Agreed breakage deduction percentage (e.g. 5.0% or 10.0%).
+  """
+  breakageReserveDeductionPct: Float!
+  """
+  Breakage fund reserve deduction amount retained in LKR.
+  """
+  breakageReserveAmountLkr: Float!
+  """
+  Net distributable pool remaining for staff in LKR.
+  """
+  distributablePoolLkr: Float!
+  """
+  Count of eligible employees participating in the pool.
+  """
+  eligibleStaffCount: Int!
+  """
+  Individual staff member distribution breakdowns.
+  """
+  staffShares: [StaffScMemberShare!]!
+  """
+  Total net amount disbursed to staff in LKR.
+  """
+  totalScDisbursedLkr: Float!
+  """
+  Disbursement authorization status.
+  """
+  isDisbursed: Boolean!
+  """
+  Timestamp when disbursement was completed.
+  """
+  disbursedAt: AWSDateTime
+  """
+  User identifier of General Manager or Financial Controller authorising disbursement.
+  """
+  authorizedByUserId: ID
+  """
+  Timestamp of pool statement creation.
+  """
+  createdAt: AWSDateTime!
+  """
+  Timestamp of latest update.
+  """
+  updatedAt: AWSDateTime!
+}
+
+"""
+Input for executing the daily automated or manual night audit rollover.
+"""
+input RunNightAuditInput {
+  auditDate: AWSDate!
+  notes: String
+}
+
+"""
+Input for generating an SLTDA monthly statistical return.
+"""
+input GenerateSltdaMonthlyReturnInput {
+  year: Int!
+  month: Int!
+}
+
+"""
+Input for generating an IRD/SLTDA quarterly TDL calculation summary.
+"""
+input GenerateTdlQuarterlySummaryInput {
+  taxYear: Int!
+  quarter: Int!
+}
+
+"""
+Input for calculating and disbursing the monthly 10% Service Charge pool to staff.
+"""
+input DistributeStaffScPoolInput {
+  year: Int!
+  month: Int!
+  breakageReserveDeductionPct: Float!
+}
+
+# ==============================================================================
+# Human Resources, Shift Roster, Attendance & Payroll Entities (Phase 18)
+# ==============================================================================
+
+"""
+Operating duty shift classification across hotel departments.
+"""
+enum ShiftDutyType {
+  MORNING
+  EVENING
+  NIGHT_AUDIT
+  SPLIT_SHIFT
+  DAY_OFF
+}
+
+"""
+Shift roster assignment for an individual employee across 7 days of the work week.
+"""
+type DepartmentRosterEntry @aws_cognito_user_pools @aws_iam @aws_lambda @aws_api_key {
+  userId: ID!
+  staffName: String!
+  designation: String!
+  shifts: [ShiftDutyType!]!
+}
+
+"""
+Weekly department duty shift roster for hotel staff.
+"""
+type DepartmentRoster @aws_cognito_user_pools @aws_iam @aws_lambda @aws_api_key {
+  id: ID!
+  tenantId: ID!
+  department: Department!
+  weekStartDate: AWSDate!
+  entries: [DepartmentRosterEntry!]!
+  createdAt: AWSDateTime!
+  updatedAt: AWSDateTime!
+}
+
+"""
+Daily clock-in/out attendance and overtime log record for an employee.
+"""
+type StaffAttendanceRecord @aws_cognito_user_pools @aws_iam @aws_lambda @aws_api_key {
+  id: ID!
+  tenantId: ID!
+  userId: ID!
+  staffName: String!
+  date: AWSDate!
+  shiftType: ShiftDutyType!
+  clockInTime: AWSDateTime
+  clockOutTime: AWSDateTime
+  hoursWorked: Float!
+  overtimeHours: Float!
+  isPoyaOrHoliday: Boolean!
+  attendanceStatus: String!
+}
+
+"""
+Aggregated monthly attendance summary for service charge and payroll calculation.
+"""
+type StaffAttendanceSummary @aws_cognito_user_pools @aws_iam @aws_lambda @aws_api_key {
+  tenantId: ID!
+  userId: ID!
+  year: Int!
+  month: Int!
+  daysWorked: Int!
+  poyaHolidaysWorked: Int!
+  overtimeHours: Float!
+  records: [StaffAttendanceRecord!]!
+}
+
+"""
+Individual employee payslip itemization in a finalized monthly payroll run.
+"""
+type StaffPayslipLineItem @aws_cognito_user_pools @aws_iam @aws_lambda @aws_api_key {
+  userId: ID!
+  staffName: String!
+  epfNo: String!
+  department: Department!
+  basicSalaryLkr: Float!
+  braLkr: Float!
+  epfEligibleBaseLkr: Float!
+  scShareLkr: Float!
+  overtimeEarningsLkr: Float!
+  employeeEpf8Lkr: Float!
+  employerEpf12Lkr: Float!
+  employerEtf3Lkr: Float!
+  totalDeductionsLkr: Float!
+  netPayLkr: Float!
+  bankName: String!
+  bankAccountNo: String!
+}
+
+"""
+Monthly hotel payroll run and statutory remittance summary.
+"""
+type MonthlyPayrollRun @aws_cognito_user_pools @aws_iam @aws_lambda @aws_api_key {
+  id: ID!
+  tenantId: ID!
+  billingPeriod: String!
+  totalGrossEarningsLkr: Float!
+  totalNetPayLkr: Float!
+  totalEmployeeEpf8Lkr: Float!
+  totalEmployerEpf12Lkr: Float!
+  totalEmployerEtf3Lkr: Float!
+  totalServiceChargeDisbursedLkr: Float!
+  slips: [StaffPayslipLineItem!]!
+  isFinalized: Boolean!
+  createdAt: AWSDateTime!
+  updatedAt: AWSDateTime!
+}
+
+"""
+Statutory staff leave request record under the Shop & Office Employees Act.
+"""
+type StaffLeaveRequest @aws_cognito_user_pools @aws_iam @aws_lambda @aws_api_key {
+  id: ID!
+  tenantId: ID!
+  userId: ID!
+  staffName: String!
+  epfNo: String!
+  leaveType: String!
+  startDate: AWSDate!
+  endDate: AWSDate!
+  isHalfDay: Boolean!
+  requestedDays: Float!
+  reason: String!
+  relieverStaffId: ID
+  status: String!
+  appliedAt: AWSDateTime!
+  approvedByName: String
+  approvedAt: AWSDateTime
+}
+
+input DepartmentRosterEntryInput {
+  userId: ID!
+  staffName: String!
+  designation: String!
+  shifts: [ShiftDutyType!]!
+}
+
+input SaveDepartmentRosterInput {
+  department: Department!
+  weekStartDate: AWSDate!
+  entries: [DepartmentRosterEntryInput!]!
+}
+
+input RecordStaffAttendanceInput {
+  userId: ID!
+  staffName: String!
+  date: AWSDate!
+  shiftType: ShiftDutyType!
+  clockInTime: AWSDateTime
+  clockOutTime: AWSDateTime
+  hoursWorked: Float!
+  overtimeHours: Float
+  isPoyaOrHoliday: Boolean
+  attendanceStatus: String!
+}
+
+input RunMonthlyPayrollInput {
+  billingPeriod: String!
+  scPoolStatementId: ID
+}
+
+input SubmitStaffLeaveRequestInput {
+  userId: ID!
+  staffName: String!
+  epfNo: String!
+  leaveType: String!
+  startDate: AWSDate!
+  endDate: AWSDate!
+  isHalfDay: Boolean
+  requestedDays: Float!
+  reason: String!
+  relieverStaffId: ID
+}
+
+input ApproveStaffLeaveRequestInput {
+  leaveRequestId: ID!
+  status: String!
+  managerNotes: String
+}
+
+# ==============================================================================
+# Maintenance Tickets & Lost-and-Found Entities
+# ==============================================================================
+
+"""
+Operating trade category for physical maintenance and engineering tickets.
+"""
+enum MaintenanceCategory {
+  PLUMBING
+  ELECTRICAL
+  HVAC_AIR_CON
+  CARPENTRY_FURNITURE
+  PAINTING_WALLS
+  PEST_CONTROL
+  APPLIANCE_TV
+}
+
+"""
+Priority urgency level for maintenance engineering tickets.
+"""
+enum MaintenanceSeverity {
+  CRITICAL
+  HIGH
+  MEDIUM
+  LOW
+}
+
+"""
+Workflow lifecycle status for room or common area maintenance tickets.
+"""
+enum MaintenanceStatus {
+  REPORTED
+  ASSIGNED
+  IN_PROGRESS
+  WAITING_PARTS
+  RESOLVED
+  CLOSED
+}
+
+"""
+Physical engineering maintenance or repair ticket entity.
+Single-table mapping:
+  PK: TENANT#<tenantId>
+  SK: MAINT#<ticketId>
+  GSI1PK: TENANT#<tenantId>#MAINT
+  GSI1SK: STATUS#<status>#<severity>#<ticketId>
+"""
+type MaintenanceTicket @aws_cognito_user_pools @aws_iam {
+  id: ID!
+  tenantId: ID!
+  roomNumber: String!
+  category: MaintenanceCategory!
+  severity: MaintenanceSeverity!
+  status: MaintenanceStatus!
+  reportedBy: String!
+  assignedTo: String
+  estimatedCostLkr: Float
+  actualCostLkr: Float
+  description: String!
+  reportedAtIso: AWSDateTime!
+  resolvedAtIso: AWSDateTime
+  notes: String
+  createdAt: AWSDateTime!
+  updatedAt: AWSDateTime!
+}
+
+input CreateMaintenanceTicketInput {
+  ticketId: ID
+  roomNumber: String!
+  category: MaintenanceCategory!
+  severity: MaintenanceSeverity!
+  reportedBy: String!
+  assignedTo: String
+  estimatedCostLkr: Float
+  description: String!
+  reportedAtIso: AWSDateTime
+  notes: String
+}
+
+input UpdateMaintenanceTicketStatusInput {
+  status: MaintenanceStatus!
+  assignedTo: String
+  actualCostLkr: Float
+  notes: String
+}
+
+"""
+Classification categories for lost and found guest property.
+"""
+enum LostFoundCategory {
+  ELECTRONICS
+  PASSPORT_WALLET
+  JEWELRY_WATCH
+  CLOTHING_FOOTWEAR
+  TOILETRIES
+  EYEWEAR
+  DOCUMENTS_CARDS
+  OTHER
+}
+
+"""
+Custody and lifecycle status for lost guest property.
+"""
+enum LostFoundStatus {
+  LOGGED_IN_CUSTODY
+  GUEST_CONTACTED
+  CLAIMED_RETURNED
+  DONATED
+  DISPOSED
+}
+
+"""
+Lost and found property register entity.
+Single-table mapping:
+  PK: TENANT#<tenantId>
+  SK: LOSTFOUND#<itemId>
+  GSI1PK: TENANT#<tenantId>#LOSTFOUND
+  GSI1SK: STATUS#<status>#<category>#<itemId>
+"""
+type LostFoundItem @aws_cognito_user_pools @aws_iam {
+  id: ID!
+  tenantId: ID!
+  itemTitle: String!
+  category: LostFoundCategory!
+  locationFound: String!
+  roomNumber: String
+  foundBy: String!
+  foundDateIso: AWSDateTime!
+  guestName: String
+  guestPhone: String
+  guestNicPassport: String
+  status: LostFoundStatus!
+  estimatedValueLkr: Float
+  photoKey: String
+  storageLockerNumber: String!
+  notes: String
+  createdAt: AWSDateTime!
+  updatedAt: AWSDateTime!
+}
+
+input LogLostFoundItemInput {
+  itemId: ID
+  itemTitle: String!
+  category: LostFoundCategory!
+  locationFound: String!
+  roomNumber: String
+  foundBy: String!
+  foundDateIso: AWSDateTime
+  guestName: String
+  guestPhone: String
+  guestNicPassport: String
+  estimatedValueLkr: Float
+  photoKey: String
+  storageLockerNumber: String!
+  notes: String
+}
+
+input UpdateLostFoundStatusInput {
+  status: LostFoundStatus!
+  guestName: String
+  guestPhone: String
+  guestNicPassport: String
+  storageLockerNumber: String
+  notes: String
+}
+
+# ==============================================================================
+# GraphQL Root Types Placeholder
+# ==============================================================================
+
+type Query {
+  """
+  API version ping for AppSync health check.
+  """
+  apiVersion: String! @aws_cognito_user_pools @aws_iam @aws_lambda @aws_api_key
+
+  """
+  Retrieves a hotel tenant configuration by its unique tenantId.
+  """
+  getHotelTenant(tenantId: ID!): HotelTenant
+    @aws_cognito_user_pools
+    @aws_iam
+    @aws_lambda
+    @aws_api_key
+
+  """
+  Lists all room types configured for a tenant property.
+  """
+  listRoomTypes(tenantId: ID!): [RoomType!]!
+    @aws_cognito_user_pools
+    @aws_iam
+    @aws_lambda
+    @aws_api_key
+
+  """
+  Retrieves a specific room type by its identifier.
+  """
+  getRoomType(tenantId: ID!, id: ID!): RoomType
+    @aws_cognito_user_pools
+    @aws_iam
+    @aws_lambda
+    @aws_api_key
+
+  """
+  Lists all physical rooms and live tape-chart statuses for a property.
+  """
+  listRooms(tenantId: ID!): [Room!]! @aws_cognito_user_pools @aws_iam @aws_lambda @aws_api_key
+
+  """
+  Retrieves a single physical room by identifier.
+  """
+  getRoom(tenantId: ID!, id: ID!): Room @aws_cognito_user_pools @aws_iam @aws_lambda @aws_api_key
+
+  """
+  Lists all driver and chauffeur dorm beds for a property.
+  """
+  listDriverDormBeds(tenantId: ID!): [DriverDormBed!]!
+    @aws_cognito_user_pools
+    @aws_iam
+    @aws_lambda
+    @aws_api_key
+
+  """
+  Retrieves a reservation by identifier.
+  """
+  getReservation(tenantId: ID!, id: ID!): Reservation
+    @aws_cognito_user_pools
+    @aws_iam
+    @aws_lambda
+    @aws_api_key
+
+  """
+  Queries reservations with optional status and arrival date filtering.
+  """
+  listReservations(tenantId: ID!, status: ReservationStatus, checkInDate: AWSDate): [Reservation!]!
+    @aws_cognito_user_pools
+    @aws_iam
+    @aws_lambda
+    @aws_api_key
+
+  """
+  Fetches all reservations overlapping a Tape Chart date window using GSI1 date range.
+  """
+  listReservationsByDateRange(
+    tenantId: ID!
+    startDate: AWSDate!
+    endDate: AWSDate!
+  ): [Reservation!]! @aws_cognito_user_pools @aws_iam @aws_lambda @aws_api_key
+
+  """
+  Lists all Tour Operator / DMC credit contracts for a property.
+  """
+  listTourOperatorContracts(tenantId: ID!): [TourOperatorContract!]!
+    @aws_cognito_user_pools
+    @aws_iam
+    @aws_lambda
+    @aws_api_key
+
+  """
+  Retrieves a single group booking by identifier.
+  """
+  getGroupBooking(tenantId: ID!, id: ID!): GroupBooking
+    @aws_cognito_user_pools
+    @aws_iam
+    @aws_lambda
+    @aws_api_key
+
+  """
+  Retrieves a guest or DMC ledger folio with all line items and tax breakdown.
+  """
+  getFolio(tenantId: ID!, id: ID!): Folio @aws_cognito_user_pools @aws_iam @aws_lambda @aws_api_key
+
+  """
+  Single-query fetch returning master folio and all line items in one DynamoDB query.
+  """
+  getFolioWithLines(tenantId: ID!, folioId: ID!): Folio
+    @aws_cognito_user_pools
+    @aws_iam
+    @aws_lambda
+    @aws_api_key
+
+  """
+  Lists all folios associated with a reservation (e.g. Master DMC + Extras).
+  """
+  listFoliosForReservation(tenantId: ID!, reservationId: ID!): [Folio!]!
+    @aws_cognito_user_pools
+    @aws_iam
+    @aws_lambda
+    @aws_api_key
+
+  """
+  Retrieves an issued IRD tax invoice by identifier.
+  """
+  getFolioInvoice(tenantId: ID!, id: ID!): FolioInvoice
+    @aws_cognito_user_pools
+    @aws_iam
+    @aws_lambda
+    @aws_api_key
+
+  """
+  Single-query menu catalog fetching all categories with nested menu items in 1 RRU read.
+  """
+  listMenuCatalog(tenantId: ID!): [MenuCategory!]!
+    @aws_cognito_user_pools
+    @aws_iam
+    @aws_lambda
+    @aws_api_key
+
+  """
+  Lists active F&B menu categories with trilingual titles and dining channels.
+  """
+  listMenuCategories(tenantId: ID!, department: Department): [MenuCategory!]!
+    @aws_cognito_user_pools
+    @aws_iam
+    @aws_lambda
+    @aws_api_key
+
+  """
+  Lists menu items under a category or property with pricing, allergens, and dietary badges.
+  """
+  listMenuItems(tenantId: ID!, categoryId: ID): [MenuItem!]!
+    @aws_cognito_user_pools
+    @aws_iam
+    @aws_lambda
+    @aws_api_key
+
+  """
+  Retrieves a single dish or beverage menu item by identifier.
+  """
+  getMenuItem(tenantId: ID!, id: ID!): MenuItem
+    @aws_cognito_user_pools
+    @aws_iam
+    @aws_lambda
+    @aws_api_key
+
+  """
+  Retrieves a live food/beverage service order ticket by identifier.
+  """
+  getServiceOrder(tenantId: ID!, id: ID!): ServiceOrder @aws_cognito_user_pools @aws_lambda @aws_iam
+
+  """
+  Queries active orders currently displayed on kitchen KDS or bar order screens by department.
+  """
+  listActiveOrdersByDepartment(tenantId: ID!, department: Department!): [ServiceOrder!]!
+    @aws_cognito_user_pools
+    @aws_lambda
+    @aws_iam
+
+  """
+  Queries active orders currently displayed on kitchen KDS or bar order screens.
+  """
+  listActiveServiceOrders(
+    tenantId: ID!
+    department: Department
+    diningType: DiningType
+  ): [ServiceOrder!]! @aws_cognito_user_pools @aws_lambda @aws_iam
+
+  """
+  Lists banquet halls and outdoor lawn venues with guest capacities.
+  """
+  listBanquetHalls(tenantId: ID!): [BanquetHall!]!
+    @aws_cognito_user_pools
+    @aws_iam
+    @aws_lambda
+    @aws_api_key
+
+  """
+  Retrieves a banquet event function sheet (BEO) by identifier.
+  """
+  getBanquetEvent(tenantId: ID!, id: ID!): BanquetEvent
+    @aws_cognito_user_pools
+    @aws_iam
+    @aws_lambda
+    @aws_api_key
+
+  """
+  Lists banquet events and weddings filtered optionally by event date.
+  """
+  listBanquetEvents(tenantId: ID!, eventDate: AWSDate): [BanquetEvent!]!
+    @aws_cognito_user_pools
+    @aws_iam
+    @aws_lambda
+    @aws_api_key
+
+  """
+  Retrieves an excursion booking by identifier.
+  """
+  getExcursionBooking(tenantId: ID!, id: ID!): ExcursionBooking
+    @aws_cognito_user_pools
+    @aws_iam
+    @aws_lambda
+    @aws_api_key
+
+  """
+  Lists excursion bookings optionally filtered by scheduled date.
+  """
+  listExcursionBookings(tenantId: ID!, excursionDate: AWSDate): [ExcursionBooking!]!
+    @aws_cognito_user_pools
+    @aws_iam
+    @aws_lambda
+    @aws_api_key
+
+  """
+  Retrieves an Ayurveda appointment by identifier.
+  """
+  getAyurvedaAppointment(tenantId: ID!, id: ID!): AyurvedaAppointment
+    @aws_cognito_user_pools
+    @aws_iam
+    @aws_lambda
+    @aws_api_key
+
+  """
+  Lists Ayurveda appointments optionally filtered by therapy date.
+  """
+  listAyurvedaAppointments(tenantId: ID!, appointmentDate: AWSDate): [AyurvedaAppointment!]!
+    @aws_cognito_user_pools
+    @aws_iam
+    @aws_lambda
+    @aws_api_key
+
+  """
+  Retrieves a stock item by identifier.
+  """
+  getStockItem(tenantId: ID!, id: ID!): StockItem
+    @aws_cognito_user_pools
+    @aws_iam
+    @aws_lambda
+    @aws_api_key
+
+  """
+  Lists inventory stock items filtered by department and category.
+  """
+  listStockItems(tenantId: ID!, department: Department, category: String): [StockItem!]!
+    @aws_cognito_user_pools
+    @aws_iam
+    @aws_lambda
+    @aws_api_key
+
+  """
+  Retrieves a purchase order by identifier.
+  """
+  getPurchaseOrder(tenantId: ID!, id: ID!): PurchaseOrder
+    @aws_cognito_user_pools
+    @aws_iam
+    @aws_lambda
+    @aws_api_key
+
+  """
+  Lists purchase orders optionally filtered by workflow status.
+  """
+  listPurchaseOrders(tenantId: ID!, status: String): [PurchaseOrder!]!
+    @aws_cognito_user_pools
+    @aws_iam
+    @aws_lambda
+    @aws_api_key
+
+  """
+  Retrieves an inventory movement voucher (GRN, GIN, Adjustment) by identifier.
+  """
+  getInventoryVoucher(tenantId: ID!, id: ID!): InventoryVoucher
+    @aws_cognito_user_pools
+    @aws_iam
+    @aws_lambda
+    @aws_api_key
+
+  """
+  Lists inventory vouchers filtered by type and date range.
+  """
+  listInventoryVouchers(
+    tenantId: ID!
+    voucherType: String
+    fromDate: AWSDate
+    toDate: AWSDate
+  ): [InventoryVoucher!]! @aws_cognito_user_pools @aws_iam @aws_lambda @aws_api_key
+
+  """
+  Retrieves a daily night audit rollover report by business date.
+  """
+  getNightAuditReport(tenantId: ID!, auditDate: AWSDate!): NightAuditReport
+    @aws_cognito_user_pools
+    @aws_iam
+    @aws_lambda
+    @aws_api_key
+
+  """
+  Retrieves an SLTDA monthly statistical return by year and month.
+  """
+  getSltdaMonthlyReturn(tenantId: ID!, year: Int!, month: Int!): SltdaMonthlyReturn
+    @aws_cognito_user_pools
+    @aws_iam
+    @aws_lambda
+    @aws_api_key
+
+  """
+  Lists SLTDA monthly statistical returns optionally filtered by calendar year.
+  """
+  listSltdaMonthlyReports(tenantId: ID!, year: Int): [SltdaMonthlyReturn!]!
+    @aws_cognito_user_pools
+    @aws_iam
+    @aws_lambda
+    @aws_api_key
+
+  """
+  Retrieves an IRD / SLTDA Tourism Development Levy quarterly summary.
+  """
+  getTdlQuarterlySummary(tenantId: ID!, taxYear: Int!, quarter: Int!): TdlQuarterlySummary
+    @aws_cognito_user_pools
+    @aws_iam
+    @aws_lambda
+    @aws_api_key
+
+  """
+  Retrieves the 10% staff service charge monthly pool statement.
+  """
+  getStaffScPoolStatement(tenantId: ID!, year: Int!, month: Int!): StaffScPoolStatement
+    @aws_cognito_user_pools
+    @aws_iam
+    @aws_lambda
+    @aws_api_key
+
+  """
+  Retrieves weekly department duty shift roster for hotel staff.
+  """
+  getDepartmentRoster(
+    tenantId: ID!
+    department: Department!
+    weekStartDate: AWSDate!
+  ): DepartmentRoster @aws_cognito_user_pools @aws_iam
+
+  """
+  Retrieves staff monthly attendance summary and overtime logs.
+  """
+  getStaffAttendance(tenantId: ID!, userId: ID!, year: Int!, month: Int!): StaffAttendanceSummary
+    @aws_cognito_user_pools
+    @aws_iam
+
+  """
+  Retrieves monthly hotel payroll run and statutory remittance summary.
+  """
+  getMonthlyPayroll(tenantId: ID!, billingPeriod: String!): MonthlyPayrollRun
+    @aws_cognito_user_pools
+    @aws_iam
+
+  """
+  Lists staff statutory leave requests, optionally filtered by status.
+  """
+  listStaffLeaveRequests(tenantId: ID!, status: String): [StaffLeaveRequest!]!
+    @aws_cognito_user_pools
+    @aws_iam
+
+  """
+  Retrieves a maintenance engineering ticket by identifier.
+  """
+  getMaintenanceTicket(tenantId: ID!, ticketId: ID!): MaintenanceTicket
+    @aws_cognito_user_pools
+    @aws_iam
+
+  """
+  Lists maintenance tickets for a hotel property, optionally filtered by status or category.
+  """
+  listMaintenanceTickets(
+    tenantId: ID!
+    status: MaintenanceStatus
+    category: MaintenanceCategory
+    limit: Int
+    nextToken: String
+  ): [MaintenanceTicket!]! @aws_cognito_user_pools @aws_iam
+
+  """
+  Retrieves a lost-and-found property register item by identifier.
+  """
+  getLostFoundItem(tenantId: ID!, itemId: ID!): LostFoundItem @aws_cognito_user_pools @aws_iam
+
+  """
+  Lists lost and found registry items, optionally filtered by status or category.
+  """
+  listLostFoundItems(
+    tenantId: ID!
+    status: LostFoundStatus
+    category: LostFoundCategory
+    limit: Int
+    nextToken: String
+  ): [LostFoundItem!]! @aws_cognito_user_pools @aws_iam
+}
+
+type Mutation {
+  """
+  Health check ping mutation for AppSync real-time subscriptions.
+  """
+  ping: String! @aws_cognito_user_pools @aws_iam
+
+  """
+  Provisions or updates a hotel tenant profile, SLTDA registrations, and tax presets.
+  """
+  upsertHotelTenant(input: UpsertHotelTenantInput!): HotelTenant @aws_cognito_user_pools @aws_iam
+
+  """
+  Creates or updates a room type and its seasonal rate bands.
+  """
+  upsertRoomType(tenantId: ID!, input: UpsertRoomTypeInput!): RoomType
+    @aws_cognito_user_pools
+    @aws_iam
+
+  """
+  Creates or updates a physical room's metadata and inventory allocation.
+  """
+  upsertRoom(tenantId: ID!, input: UpsertRoomInput!): Room @aws_cognito_user_pools @aws_iam
+
+  """
+  Updates room housekeeping cleanliness state from staff runner tablet.
+  """
+  updateRoomHousekeepingStatus(tenantId: ID!, roomId: ID!, status: HousekeepingStatus!): Room
+    @aws_cognito_user_pools
+    @aws_iam
+
+  """
+  Provisions or updates a chauffeur / tour driver dorm bed.
+  """
+  upsertDriverDormBed(tenantId: ID!, input: UpsertDriverDormBedInput!): DriverDormBed
+    @aws_cognito_user_pools
+    @aws_iam
+
+  """
+  Creates a new guest room reservation.
+  """
+  createReservation(tenantId: ID!, input: CreateReservationInput!): Reservation
+    @aws_cognito_user_pools
+    @aws_iam
+
+  """
+  Checks in a guest with room allocation and statutory identity records (NIC / Tourist Police B-Card).
+  """
+  checkInGuest(input: CheckInGuestInput!): Reservation @aws_cognito_user_pools @aws_iam
+
+  """
+  Checks out a guest and vacates the room.
+  """
+  checkOutGuest(tenantId: ID!, reservationId: ID!): Reservation @aws_cognito_user_pools @aws_iam
+
+  """
+  Creates or updates a Tour Operator / DMC credit contract.
+  """
+  upsertTourOperatorContract(
+    tenantId: ID!
+    input: UpsertTourOperatorContractInput!
+  ): TourOperatorContract @aws_cognito_user_pools @aws_iam
+
+  """
+  Creates a multi-room group tour booking.
+  """
+  createGroupBooking(tenantId: ID!, input: CreateGroupBookingInput!): GroupBooking
+    @aws_cognito_user_pools
+    @aws_iam
+
+  """
+  Posts an F&B, minibar, laundry, or extra charge to an active folio.
+  """
+  addFolioCharge(tenantId: ID!, input: AddFolioChargeInput!): Folio @aws_cognito_user_pools @aws_iam
+
+  """
+  Managerially voids an erroneously posted folio line item with audit justification.
+  """
+  voidFolioCharge(tenantId: ID!, folioId: ID!, lineItemId: ID!, reason: String!): Folio
+    @aws_cognito_user_pools
+    @aws_iam
+
+  """
+  Settles an outstanding folio and generates a sealed IRD tax invoice.
+  """
+  settleFolio(tenantId: ID!, input: SettleFolioInput!): FolioInvoice
+    @aws_cognito_user_pools
+    @aws_iam
+
+  """
+  Configures split routing for a reservation folio.
+  """
+  createSplitFolioRouting(tenantId: ID!, input: CreateSplitFolioRoutingInput!): Folio
+    @aws_cognito_user_pools
+    @aws_iam
+
+  """
+  Creates or updates a trilingual menu category.
+  """
+  upsertMenuCategory(tenantId: ID!, input: UpsertMenuCategoryInput!): MenuCategory
+    @aws_cognito_user_pools
+    @aws_iam
+
+  """
+  Creates or updates a dish or beverage item with BOM costing and modifier options.
+  """
+  upsertMenuItem(tenantId: ID!, input: UpsertMenuItemInput!): MenuItem
+    @aws_cognito_user_pools
+    @aws_iam
+
+  """
+  Quickly toggles item 86/out-of-stock availability from kitchen runner screen.
+  """
+  toggleMenuItemAvailability(tenantId: ID!, id: ID!, isAvailable: Boolean!): MenuItem
+    @aws_cognito_user_pools
+    @aws_iam
+
+  """
+  Instant 1-tap inStock toggle for Kitchen KDS / Chef screen (<20ms).
+  """
+  toggleMenuItemStock(tenantId: ID!, id: ID!, inStock: Boolean!): MenuItem
+    @aws_cognito_user_pools
+    @aws_iam
+
+  """
+  Places a contactless QR room service order or waiter table service order.
+  """
+  createServiceOrder(tenantId: ID!, input: CreateServiceOrderInput!): ServiceOrder
+    @aws_cognito_user_pools
+    @aws_lambda
+    @aws_iam
+
+  """
+  Kitchen chef or order expediter updates order status on KDS (Acknowledged, Ready, Delivered, Cancelled).
+  """
+  updateOrderStatus(tenantId: ID!, input: UpdateOrderStatusInput!): ServiceOrder
+    @aws_cognito_user_pools
+    @aws_iam
+
+  """
+  Real-time KDS transition mutation alias.
+  """
+  updateServiceOrderStatus(tenantId: ID!, input: UpdateOrderStatusInput!): ServiceOrder
+    @aws_cognito_user_pools
+    @aws_iam
+
+  """
+  Provisions or updates a banquet hall or lawn venue profile.
+  """
+  upsertBanquetHall(tenantId: ID!, input: UpsertBanquetHallInput!): BanquetHall
+    @aws_cognito_user_pools
+    @aws_iam
+
+  """
+  Creates a banquet event or wedding function sheet (BEO).
+  """
+  createBanquetEvent(tenantId: ID!, input: CreateBanquetEventInput!): BanquetEvent
+    @aws_cognito_user_pools
+    @aws_iam
+
+  """
+  Creates or updates a banquet event or wedding function sheet (BEO) enforcing hall and time-slot uniqueness.
+  """
+  upsertBanquetEvent(tenantId: ID!, input: UpsertBanquetEventInput!): BanquetEvent
+    @aws_cognito_user_pools
+    @aws_iam
+
+  """
+  Updates the lifecycle status of a banquet event.
+  """
+  updateBanquetEventStatus(tenantId: ID!, id: ID!, status: String!): BanquetEvent
+    @aws_cognito_user_pools
+    @aws_iam
+
+  """
+  Creates a safari, whale watching, or cultural excursion booking.
+  """
+  createExcursionBooking(tenantId: ID!, input: CreateExcursionBookingInput!): ExcursionBooking
+    @aws_cognito_user_pools
+    @aws_iam
+
+  """
+  Schedules an Ayurveda wellness therapy or doctor consultation appointment.
+  """
+  createAyurvedaAppointment(
+    tenantId: ID!
+    input: CreateAyurvedaAppointmentInput!
+  ): AyurvedaAppointment @aws_cognito_user_pools @aws_iam
+
+  """
+  Creates a unified activity booking (excursion or Ayurveda).
+  """
+  createActivityBooking(tenantId: ID!, input: CreateActivityBookingInput!): Boolean
+    @aws_cognito_user_pools
+    @aws_iam
+
+  """
+  Updates operational status of an excursion booking.
+  """
+  updateExcursionStatus(tenantId: ID!, id: ID!, status: String!): ExcursionBooking
+    @aws_cognito_user_pools
+    @aws_iam
+
+  """
+  Updates appointment lifecycle status of an Ayurveda therapy session.
+  """
+  updateAyurvedaAppointmentStatus(tenantId: ID!, id: ID!, status: String!): AyurvedaAppointment
+    @aws_cognito_user_pools
+    @aws_iam
+
+  """
+  Provisions or edits a stock inventory item, par level, and replenishment settings.
+  """
+  upsertStockItem(tenantId: ID!, input: UpsertStockItemInput!): StockItem
+    @aws_cognito_user_pools
+    @aws_iam
+
+  """
+  Records received inventory stock into FIFO batches via Goods Received Note (GRN).
+  """
+  recordGrn(tenantId: ID!, input: RecordGrnInput!): InventoryVoucher
+    @aws_cognito_user_pools
+    @aws_iam
+
+  """
+  Issues stock items from central store to department or kitchen outlet via Goods Issue Note (GIN).
+  """
+  createGoodsIssueNote(tenantId: ID!, input: CreateGoodsIssueNoteInput!): InventoryVoucher
+    @aws_cognito_user_pools
+    @aws_iam
+
+  """
+  Executes the daily automated or manual night audit close and ledger rollover.
+  """
+  runNightAudit(tenantId: ID!, input: RunNightAuditInput!): NightAuditReport
+    @aws_cognito_user_pools
+    @aws_iam
+
+  """
+  Compiles and validates an SLTDA monthly statistical occupancy and revenue return.
+  """
+  generateSltdaMonthlyReturn(
+    tenantId: ID!
+    input: GenerateSltdaMonthlyReturnInput!
+  ): SltdaMonthlyReturn @aws_cognito_user_pools @aws_iam
+
+  """
+  Calculates quarterly Tourism Development Levy (TDL) liability for IRD compliance.
+  """
+  generateTdlQuarterlySummary(
+    tenantId: ID!
+    input: GenerateTdlQuarterlySummaryInput!
+  ): TdlQuarterlySummary @aws_cognito_user_pools @aws_iam
+
+  """
+  Calculates and distributes monthly 10% Service Charge pool shares with breakage and EPF.
+  """
+  distributeStaffScPool(tenantId: ID!, input: DistributeStaffScPoolInput!): StaffScPoolStatement
+    @aws_cognito_user_pools
+    @aws_iam
+
+  """
+  Saves or updates the weekly department duty shift roster for hotel staff.
+  """
+  saveDepartmentRoster(tenantId: ID!, input: SaveDepartmentRosterInput!): DepartmentRoster
+    @aws_cognito_user_pools
+    @aws_iam
+
+  """
+  Records an individual staff member daily clock-in/out attendance and overtime log.
+  """
+  recordStaffAttendance(tenantId: ID!, input: RecordStaffAttendanceInput!): StaffAttendanceRecord
+    @aws_cognito_user_pools
+    @aws_iam
+
+  """
+  Finalizes and executes the monthly hotel payroll run with statutory remittances.
+  """
+  runMonthlyPayroll(tenantId: ID!, input: RunMonthlyPayrollInput!): MonthlyPayrollRun
+    @aws_cognito_user_pools
+    @aws_iam
+
+  """
+  Submits a statutory staff leave request under the Shop & Office Employees Act.
+  """
+  submitStaffLeaveRequest(tenantId: ID!, input: SubmitStaffLeaveRequestInput!): StaffLeaveRequest
+    @aws_cognito_user_pools
+    @aws_iam
+
+  """
+  Approves or rejects a staff leave application with managerial notes.
+  """
+  approveStaffLeaveRequest(tenantId: ID!, input: ApproveStaffLeaveRequestInput!): StaffLeaveRequest
+    @aws_cognito_user_pools
+    @aws_iam
+
+  """
+  Logs a new engineering maintenance or preventive repair ticket.
+  """
+  createMaintenanceTicket(tenantId: ID!, input: CreateMaintenanceTicketInput!): MaintenanceTicket
+    @aws_cognito_user_pools
+    @aws_iam
+
+  """
+  Updates the workflow status and resolution cost of a maintenance ticket.
+  """
+  updateMaintenanceTicketStatus(
+    tenantId: ID!
+    ticketId: ID!
+    input: UpdateMaintenanceTicketStatusInput!
+  ): MaintenanceTicket @aws_cognito_user_pools @aws_iam
+
+  """
+  Registers a discovered guest lost property item in the secure custody register.
+  """
+  logLostFoundItem(tenantId: ID!, input: LogLostFoundItemInput!): LostFoundItem
+    @aws_cognito_user_pools
+    @aws_iam
+
+  """
+  Updates custody status, guest claim identity, or disposal of a lost-and-found item.
+  """
+  updateLostFoundStatus(
+    tenantId: ID!
+    itemId: ID!
+    input: UpdateLostFoundStatusInput!
+  ): LostFoundItem @aws_cognito_user_pools @aws_iam
+}
+
+type Subscription {
+  """
+  Real-time health check subscription for WebSocket connectivity validation.
+  """
+  onPing: String @aws_subscribe(mutations: ["ping"]) @aws_cognito_user_pools @aws_iam
+
+  """
+  Real-time WebSocket event fired when a new guest QR room service order is placed.
+  """
+  onServiceOrderCreated(tenantId: ID!): ServiceOrder
+    @aws_subscribe(mutations: ["createServiceOrder"])
+    @aws_cognito_user_pools
+    @aws_lambda
+    @aws_iam
+
+  """
+  Real-time WebSocket event fired when an order lifecycle status changes on KDS.
+  """
+  onOrderStatusUpdated(tenantId: ID!): ServiceOrder
+    @aws_subscribe(mutations: ["updateOrderStatus"])
+    @aws_cognito_user_pools
+    @aws_lambda
+    @aws_iam
+
+  """
+  Real-time WebSocket event for kitchen expediter and guest QR order status tracking.
+  """
+  onOrderUpdated(tenantId: ID!): ServiceOrder
+    @aws_subscribe(mutations: ["updateOrderStatus", "updateServiceOrderStatus"])
+    @aws_cognito_user_pools
+    @aws_lambda
+    @aws_iam
+
+  """
+  Real-time WebSocket event fired when room housekeeping status changes or room is modified.
+  """
+  onRoomStatusChanged(tenantId: ID!): Room
+    @aws_subscribe(mutations: ["updateRoomHousekeepingStatus", "upsertRoom"])
+    @aws_cognito_user_pools
+    @aws_iam
+
+  """
+  Real-time WebSocket event fired when a guest folio has new charges posted or updated.
+  """
+  onFolioUpdated(tenantId: ID!): Folio
+    @aws_subscribe(mutations: ["addFolioCharge", "voidFolioCharge", "createSplitFolioRouting"])
+    @aws_cognito_user_pools
+    @aws_lambda
+    @aws_iam
+
+  """
+  Real-time WebSocket event fired when a new reservation is booked, checked in, or checked out.
+  """
+  onReservationUpdated(tenantId: ID!): Reservation
+    @aws_subscribe(mutations: ["createReservation", "checkInGuest", "checkOutGuest"])
+    @aws_cognito_user_pools
+    @aws_iam
+}
+
+schema {
+  query: Query
+  mutation: Mutation
+  subscription: Subscription
+}

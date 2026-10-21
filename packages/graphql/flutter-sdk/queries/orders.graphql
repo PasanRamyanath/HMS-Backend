@@ -1,0 +1,50 @@
+query GetServiceOrder($tenantId: ID!, $id: ID!) {
+  getServiceOrder(tenantId: $tenantId, id: $id) {
+    id
+    orderNumber
+    orderSource
+    orderStatus
+    department
+    roomNumber
+    tableNumber
+    items {
+      id
+      menuItemId
+      name
+      quantity
+      unitPriceLkr
+      itemTotalLkr
+      specialInstructions
+    }
+    subtotalLkr
+    serviceChargeLkr
+    tdlLkr
+    ssclLkr
+    vatLkr
+    totalAmountLkr
+    createdAt
+    updatedAt
+  }
+}
+
+query ListActiveOrdersByDepartment($tenantId: ID!, $department: Department!) {
+  listActiveOrdersByDepartment(tenantId: $tenantId, department: $department) {
+    id
+    orderNumber
+    orderSource
+    orderStatus
+    department
+    roomNumber
+    tableNumber
+    items {
+      id
+      name
+      quantity
+      unitPriceLkr
+      itemTotalLkr
+    }
+    totalAmountLkr
+    createdAt
+    updatedAt
+  }
+}

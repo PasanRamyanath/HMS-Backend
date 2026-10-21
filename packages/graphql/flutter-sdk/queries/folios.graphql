@@ -1,0 +1,66 @@
+query GetFolio($tenantId: ID!, $id: ID!) {
+  getFolio(tenantId: $tenantId, id: $id) {
+    id
+    folioNumber
+    reservationId
+    roomNumber
+    guestId
+    status
+    currency
+    baseAmountLkr
+    serviceChargeLkr
+    tdlLkr
+    ssclLkr
+    vatLkr
+    totalDueLkr
+    totalPaidLkr
+    balanceLkr
+    createdAt
+    updatedAt
+  }
+}
+
+query GetFolioWithLines($tenantId: ID!, $folioId: ID!) {
+  getFolioWithLines(tenantId: $tenantId, folioId: $folioId) {
+    id
+    folioNumber
+    roomNumber
+    status
+    lines {
+      id
+      chargeType
+      description
+      amountLkr
+      serviceChargeLkr
+      tdlLkr
+      ssclLkr
+      vatLkr
+      totalLineLkr
+      createdAt
+    }
+    totalDueLkr
+    balanceLkr
+  }
+}
+
+query GetFolioInvoice($tenantId: ID!, $id: ID!) {
+  getFolioInvoice(tenantId: $tenantId, id: $id) {
+    id
+    invoiceNumber
+    folioId
+    guestName
+    guestNationality
+    guestNicOrPassport
+    legalEntityName
+    sltdaRegNumber
+    vatRegNumber
+    totalTaxExclusiveLkr
+    serviceChargeLkr
+    tdlLkr
+    ssclLkr
+    vatLkr
+    grandTotalLkr
+    paymentMethod
+    issuedAt
+  }
+}

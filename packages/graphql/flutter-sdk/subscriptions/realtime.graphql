@@ -1,0 +1,52 @@
+subscription OnServiceOrderCreated($tenantId: ID!) {
+  onServiceOrderCreated(tenantId: $tenantId) {
+    id
+    orderNumber
+    orderSource
+    orderStatus
+    department
+    roomNumber
+    tableNumber
+    items {
+      id
+      name
+      quantity
+      unitPriceLkr
+    }
+    totalAmountLkr
+    createdAt
+  }
+}
+
+subscription OnOrderStatusUpdated($tenantId: ID!) {
+  onOrderStatusUpdated(tenantId: $tenantId) {
+    id
+    orderNumber
+    orderStatus
+    department
+    roomNumber
+    updatedAt
+  }
+}
+
+subscription OnRoomStatusChanged($tenantId: ID!) {
+  onRoomStatusChanged(tenantId: $tenantId) {
+    id
+    roomNumber
+    status
+    housekeepingStatus
+    updatedAt
+  }
+}
+
+subscription OnFolioUpdated($tenantId: ID!) {
+  onFolioUpdated(tenantId: $tenantId) {
+    id
+    folioNumber
+    status
+    totalDueLkr
+    totalPaidLkr
+    balanceLkr
+    updatedAt
+  }
+}

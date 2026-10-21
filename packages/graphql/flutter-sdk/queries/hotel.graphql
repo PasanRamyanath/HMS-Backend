@@ -1,0 +1,54 @@
+query GetHotelTenant($tenantId: ID!) {
+  getHotelTenant(tenantId: $tenantId) {
+    id
+    name
+    legalEntityName
+    sltdaRegistrationNumber
+    vatRegistrationNumber
+    currency
+    tier
+    roomCount
+    address
+    city
+    contactEmail
+    contactPhone
+    isActive
+    serviceChargePercent
+    tdlPercent
+    ssclPercent
+    vatPercent
+    createdAt
+    updatedAt
+  }
+}
+
+query ListRooms($tenantId: ID!) {
+  listRooms(tenantId: $tenantId) {
+    id
+    roomNumber
+    type
+    floor
+    status
+    housekeepingStatus
+    baseRateLkr
+    maxOccupancy
+    features
+    updatedAt
+  }
+}
+
+query GetRoom($tenantId: ID!, $id: ID!) {
+  getRoom(tenantId: $tenantId, id: $id) {
+    id
+    roomNumber
+    type
+    floor
+    status
+    housekeepingStatus
+    baseRateLkr
+    maxOccupancy
+    features
+    currentReservationId
+    updatedAt
+  }
+}

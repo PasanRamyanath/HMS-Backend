@@ -1,0 +1,358 @@
+# ==============================================================================
+# Sri Lanka HMS Mobile Flutter SDK - Complete Bundled Operation Definitions
+# ==============================================================================
+
+# --- QUERIES ---
+query GetHotelTenant($tenantId: ID!) {
+  getHotelTenant(tenantId: $tenantId) {
+    id
+    name
+    legalEntityName
+    sltdaRegistrationNumber
+    vatRegistrationNumber
+    currency
+    tier
+    roomCount
+    address
+    city
+    contactEmail
+    contactPhone
+    isActive
+    serviceChargePercent
+    tdlPercent
+    ssclPercent
+    vatPercent
+    createdAt
+    updatedAt
+  }
+}
+
+query ListRooms($tenantId: ID!) {
+  listRooms(tenantId: $tenantId) {
+    id
+    roomNumber
+    type
+    floor
+    status
+    housekeepingStatus
+    baseRateLkr
+    maxOccupancy
+    features
+    updatedAt
+  }
+}
+
+query GetRoom($tenantId: ID!, $id: ID!) {
+  getRoom(tenantId: $tenantId, id: $id) {
+    id
+    roomNumber
+    type
+    floor
+    status
+    housekeepingStatus
+    baseRateLkr
+    maxOccupancy
+    features
+    currentReservationId
+    updatedAt
+  }
+}
+
+query ListMenuCatalog($tenantId: ID!) {
+  listMenuCatalog(tenantId: $tenantId) {
+    id
+    name
+    department
+    displayOrder
+    isActive
+    items {
+      id
+      categoryId
+      name
+      description
+      priceLkr
+      dietaryTags
+      isAvailable
+      inStock
+      prepTimeMinutes
+      imageUrl
+    }
+  }
+}
+
+query GetMenuItem($tenantId: ID!, $id: ID!) {
+  getMenuItem(tenantId: $tenantId, id: $id) {
+    id
+    categoryId
+    name
+    description
+    priceLkr
+    dietaryTags
+    isAvailable
+    inStock
+    prepTimeMinutes
+    imageUrl
+  }
+}
+
+query GetServiceOrder($tenantId: ID!, $id: ID!) {
+  getServiceOrder(tenantId: $tenantId, id: $id) {
+    id
+    orderNumber
+    orderSource
+    orderStatus
+    department
+    roomNumber
+    tableNumber
+    items {
+      id
+      menuItemId
+      name
+      quantity
+      unitPriceLkr
+      itemTotalLkr
+      specialInstructions
+    }
+    subtotalLkr
+    serviceChargeLkr
+    tdlLkr
+    ssclLkr
+    vatLkr
+    totalAmountLkr
+    createdAt
+    updatedAt
+  }
+}
+
+query ListActiveOrdersByDepartment($tenantId: ID!, $department: Department!) {
+  listActiveOrdersByDepartment(tenantId: $tenantId, department: $department) {
+    id
+    orderNumber
+    orderSource
+    orderStatus
+    department
+    roomNumber
+    tableNumber
+    items {
+      id
+      name
+      quantity
+      unitPriceLkr
+      itemTotalLkr
+    }
+    totalAmountLkr
+    createdAt
+    updatedAt
+  }
+}
+
+query GetFolio($tenantId: ID!, $id: ID!) {
+  getFolio(tenantId: $tenantId, id: $id) {
+    id
+    folioNumber
+    reservationId
+    roomNumber
+    guestId
+    status
+    currency
+    baseAmountLkr
+    serviceChargeLkr
+    tdlLkr
+    ssclLkr
+    vatLkr
+    totalDueLkr
+    totalPaidLkr
+    balanceLkr
+    createdAt
+    updatedAt
+  }
+}
+
+query GetFolioWithLines($tenantId: ID!, $folioId: ID!) {
+  getFolioWithLines(tenantId: $tenantId, folioId: $folioId) {
+    id
+    folioNumber
+    roomNumber
+    status
+    lines {
+      id
+      chargeType
+      description
+      amountLkr
+      serviceChargeLkr
+      tdlLkr
+      ssclLkr
+      vatLkr
+      totalLineLkr
+      createdAt
+    }
+    totalDueLkr
+    balanceLkr
+  }
+}
+
+query GetFolioInvoice($tenantId: ID!, $id: ID!) {
+  getFolioInvoice(tenantId: $tenantId, id: $id) {
+    id
+    invoiceNumber
+    folioId
+    guestName
+    guestNationality
+    guestNicOrPassport
+    legalEntityName
+    sltdaRegNumber
+    vatRegNumber
+    totalTaxExclusiveLkr
+    serviceChargeLkr
+    tdlLkr
+    ssclLkr
+    vatLkr
+    grandTotalLkr
+    paymentMethod
+    issuedAt
+  }
+}
+
+query GetReservation($tenantId: ID!, $id: ID!) {
+  getReservation(tenantId: $tenantId, id: $id) {
+    id
+    confirmationCode
+    roomNumber
+    guestName
+    guestPhone
+    guestEmail
+    guestNationality
+    checkInDate
+    checkOutDate
+    adultsCount
+    childrenCount
+    status
+    mealPlan
+    totalAmountLkr
+    advancePaymentLkr
+    createdAt
+  }
+}
+
+query ListReservations($tenantId: ID!, $status: ReservationStatus, $checkInDate: AWSDate) {
+  listReservations(tenantId: $tenantId, status: $status, checkInDate: $checkInDate) {
+    id
+    confirmationCode
+    roomNumber
+    guestName
+    guestPhone
+    checkInDate
+    checkOutDate
+    status
+    totalAmountLkr
+  }
+}
+
+# --- MUTATIONS ---
+mutation CreateServiceOrder($tenantId: ID!, $input: CreateServiceOrderInput!) {
+  createServiceOrder(tenantId: $tenantId, input: $input) {
+    id
+    orderNumber
+    orderStatus
+    roomNumber
+    totalAmountLkr
+    createdAt
+  }
+}
+
+mutation UpdateOrderStatus($tenantId: ID!, $input: UpdateOrderStatusInput!) {
+  updateOrderStatus(tenantId: $tenantId, input: $input) {
+    id
+    orderNumber
+    orderStatus
+    updatedAt
+  }
+}
+
+mutation UpdateRoomHousekeepingStatus($tenantId: ID!, $roomId: ID!, $status: HousekeepingStatus!) {
+  updateRoomHousekeepingStatus(tenantId: $tenantId, roomId: $roomId, status: $status) {
+    id
+    roomNumber
+    housekeepingStatus
+    updatedAt
+  }
+}
+
+mutation AddFolioCharge($tenantId: ID!, $input: AddFolioChargeInput!) {
+  addFolioCharge(tenantId: $tenantId, input: $input) {
+    id
+    folioNumber
+    baseAmountLkr
+    serviceChargeLkr
+    tdlLkr
+    ssclLkr
+    vatLkr
+    totalDueLkr
+    balanceLkr
+  }
+}
+
+mutation SettleFolio($tenantId: ID!, $input: SettleFolioInput!) {
+  settleFolio(tenantId: $tenantId, input: $input) {
+    id
+    invoiceNumber
+    folioId
+    grandTotalLkr
+    paymentMethod
+    issuedAt
+  }
+}
+
+# --- REAL-TIME SUBSCRIPTIONS ---
+subscription OnServiceOrderCreated($tenantId: ID!) {
+  onServiceOrderCreated(tenantId: $tenantId) {
+    id
+    orderNumber
+    orderSource
+    orderStatus
+    department
+    roomNumber
+    tableNumber
+    items {
+      id
+      name
+      quantity
+      unitPriceLkr
+    }
+    totalAmountLkr
+    createdAt
+  }
+}
+
+subscription OnOrderStatusUpdated($tenantId: ID!) {
+  onOrderStatusUpdated(tenantId: $tenantId) {
+    id
+    orderNumber
+    orderStatus
+    department
+    roomNumber
+    updatedAt
+  }
+}
+
+subscription OnRoomStatusChanged($tenantId: ID!) {
+  onRoomStatusChanged(tenantId: $tenantId) {
+    id
+    roomNumber
+    status
+    housekeepingStatus
+    updatedAt
+  }
+}
+
+subscription OnFolioUpdated($tenantId: ID!) {
+  onFolioUpdated(tenantId: $tenantId) {
+    id
+    folioNumber
+    status
+    totalDueLkr
+    totalPaidLkr
+    balanceLkr
+    updatedAt
+  }
+}

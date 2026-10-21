@@ -1,0 +1,19 @@
+mutation CreateServiceOrder($tenantId: ID!, $input: CreateServiceOrderInput!) {
+  createServiceOrder(tenantId: $tenantId, input: $input) {
+    id
+    orderNumber
+    orderStatus
+    roomNumber
+    totalAmountLkr
+    createdAt
+  }
+}
+
+mutation UpdateOrderStatus($tenantId: ID!, $input: UpdateOrderStatusInput!) {
+  updateOrderStatus(tenantId: $tenantId, input: $input) {
+    id
+    orderNumber
+    orderStatus
+    updatedAt
+  }
+}

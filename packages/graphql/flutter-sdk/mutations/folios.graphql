@@ -1,0 +1,24 @@
+mutation AddFolioCharge($tenantId: ID!, $input: AddFolioChargeInput!) {
+  addFolioCharge(tenantId: $tenantId, input: $input) {
+    id
+    folioNumber
+    baseAmountLkr
+    serviceChargeLkr
+    tdlLkr
+    ssclLkr
+    vatLkr
+    totalDueLkr
+    balanceLkr
+  }
+}
+
+mutation SettleFolio($tenantId: ID!, $input: SettleFolioInput!) {
+  settleFolio(tenantId: $tenantId, input: $input) {
+    id
+    invoiceNumber
+    folioId
+    grandTotalLkr
+    paymentMethod
+    issuedAt
+  }
+}

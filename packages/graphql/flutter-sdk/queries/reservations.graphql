@@ -1,0 +1,34 @@
+query GetReservation($tenantId: ID!, $id: ID!) {
+  getReservation(tenantId: $tenantId, id: $id) {
+    id
+    confirmationCode
+    roomNumber
+    guestName
+    guestPhone
+    guestEmail
+    guestNationality
+    checkInDate
+    checkOutDate
+    adultsCount
+    childrenCount
+    status
+    mealPlan
+    totalAmountLkr
+    advancePaymentLkr
+    createdAt
+  }
+}
+
+query ListReservations($tenantId: ID!, $status: ReservationStatus, $checkInDate: AWSDate) {
+  listReservations(tenantId: $tenantId, status: $status, checkInDate: $checkInDate) {
+    id
+    confirmationCode
+    roomNumber
+    guestName
+    guestPhone
+    checkInDate
+    checkOutDate
+    status
+    totalAmountLkr
+  }
+}

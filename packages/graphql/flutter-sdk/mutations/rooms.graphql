@@ -1,0 +1,8 @@
+mutation UpdateRoomHousekeepingStatus($tenantId: ID!, $roomId: ID!, $status: HousekeepingStatus!) {
+  updateRoomHousekeepingStatus(tenantId: $tenantId, roomId: $roomId, status: $status) {
+    id
+    roomNumber
+    housekeepingStatus
+    updatedAt
+  }
+}
