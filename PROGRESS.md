@@ -214,6 +214,8 @@ This file tracks the sequential completion of backend implementation steps defin
 - [x] Step 426: Implement Sri Lankan APIT (Advance Personal Income Tax) Monthly Tax Table Calculator (`calculateSriLankaApit`) (`packages/core/src/payroll.ts`)
 - [x] Step 427: Implement Complete Monthly Hotel Payslip Generator (`generateEmployeePayslip`) (`packages/core/src/payroll.ts`)
 - [x] Step 428: Write Unit Tests for Service Charge Points, Breakage Deduction, EPF/ETF & APIT (`packages/core/test/payroll.test.ts`)
+- [x] Step 437: Build Sri Lankan Commercial Bank Salary & Service Charge SLIPS Bulk Transfer CSV Exporter (`packages/core/src/bankSlipsExport.ts`)
+- [x] Step 438: Write Unit Tests for LankaPay SLIPS Bank Transfer CSV Formatting (`packages/core/test/bankSlipsExport.test.ts`)
 
 
 
