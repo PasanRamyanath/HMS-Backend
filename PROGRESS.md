@@ -248,6 +248,8 @@ This file tracks the sequential completion of backend implementation steps defin
 - [x] Step 490: Extract CDK Outputs & Populate `packages/web/.env.production` Automatically (`packages/cdk/scripts/export-outputs.mjs`)
 - [x] Step 491: Sync Built `packages/web/dist` Assets to `HmsAssetBucket` & Invalidate CloudFront `/index.html` (`packages/cdk/scripts/deploy-web.mjs`)
 - [x] Step 492: Seed First Live Production Hotel Tenant & Super-Admin Account (`packages/cdk/scripts/seed-first-hotel.mjs`)
+- [x] Step 493: Verify Live PayHere Sandbox Webhook Callback Against Deployed `webhooksIngress` Function URL (`packages/cdk/scripts/smoke-test-webhooks.mjs`)
+
 
 
 
