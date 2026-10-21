@@ -3628,6 +3628,189 @@ input DistributeStaffScPoolInput {
 }
 
 # ==============================================================================
+# Human Resources, Shift Roster, Attendance & Payroll Entities (Phase 18)
+# ==============================================================================
+
+"""
+Operating duty shift classification across hotel departments.
+"""
+enum ShiftDutyType {
+  MORNING
+  EVENING
+  NIGHT_AUDIT
+  SPLIT_SHIFT
+  DAY_OFF
+}
+
+"""
+Shift roster assignment for an individual employee across 7 days of the work week.
+"""
+type DepartmentRosterEntry @aws_cognito_user_pools @aws_iam @aws_lambda @aws_api_key {
+  userId: ID!
+  staffName: String!
+  designation: String!
+  shifts: [ShiftDutyType!]!
+}
+
+"""
+Weekly department duty shift roster for hotel staff.
+"""
+type DepartmentRoster @aws_cognito_user_pools @aws_iam @aws_lambda @aws_api_key {
+  id: ID!
+  tenantId: ID!
+  department: Department!
+  weekStartDate: AWSDate!
+  entries: [DepartmentRosterEntry!]!
+  createdAt: AWSDateTime!
+  updatedAt: AWSDateTime!
+}
+
+"""
+Daily clock-in/out attendance and overtime log record for an employee.
+"""
+type StaffAttendanceRecord @aws_cognito_user_pools @aws_iam @aws_lambda @aws_api_key {
+  id: ID!
+  tenantId: ID!
+  userId: ID!
+  staffName: String!
+  date: AWSDate!
+  shiftType: ShiftDutyType!
+  clockInTime: AWSDateTime
+  clockOutTime: AWSDateTime
+  hoursWorked: Float!
+  overtimeHours: Float!
+  isPoyaOrHoliday: Boolean!
+  attendanceStatus: String!
+}
+
+"""
+Aggregated monthly attendance summary for service charge and payroll calculation.
+"""
+type StaffAttendanceSummary @aws_cognito_user_pools @aws_iam @aws_lambda @aws_api_key {
+  tenantId: ID!
+  userId: ID!
+  year: Int!
+  month: Int!
+  daysWorked: Int!
+  poyaHolidaysWorked: Int!
+  overtimeHours: Float!
+  records: [StaffAttendanceRecord!]!
+}
+
+"""
+Individual employee payslip itemization in a finalized monthly payroll run.
+"""
+type StaffPayslipLineItem @aws_cognito_user_pools @aws_iam @aws_lambda @aws_api_key {
+  userId: ID!
+  staffName: String!
+  epfNo: String!
+  department: Department!
+  basicSalaryLkr: Float!
+  braLkr: Float!
+  epfEligibleBaseLkr: Float!
+  scShareLkr: Float!
+  overtimeEarningsLkr: Float!
+  employeeEpf8Lkr: Float!
+  employerEpf12Lkr: Float!
+  employerEtf3Lkr: Float!
+  totalDeductionsLkr: Float!
+  netPayLkr: Float!
+  bankName: String!
+  bankAccountNo: String!
+}
+
+"""
+Monthly hotel payroll run and statutory remittance summary.
+"""
+type MonthlyPayrollRun @aws_cognito_user_pools @aws_iam @aws_lambda @aws_api_key {
+  id: ID!
+  tenantId: ID!
+  billingPeriod: String!
+  totalGrossEarningsLkr: Float!
+  totalNetPayLkr: Float!
+  totalEmployeeEpf8Lkr: Float!
+  totalEmployerEpf12Lkr: Float!
+  totalEmployerEtf3Lkr: Float!
+  totalServiceChargeDisbursedLkr: Float!
+  slips: [StaffPayslipLineItem!]!
+  isFinalized: Boolean!
+  createdAt: AWSDateTime!
+  updatedAt: AWSDateTime!
+}
+
+"""
+Statutory staff leave request record under the Shop & Office Employees Act.
+"""
+type StaffLeaveRequest @aws_cognito_user_pools @aws_iam @aws_lambda @aws_api_key {
+  id: ID!
+  tenantId: ID!
+  userId: ID!
+  staffName: String!
+  epfNo: String!
+  leaveType: String!
+  startDate: AWSDate!
+  endDate: AWSDate!
+  isHalfDay: Boolean!
+  requestedDays: Float!
+  reason: String!
+  relieverStaffId: ID
+  status: String!
+  appliedAt: AWSDateTime!
+  approvedByName: String
+  approvedAt: AWSDateTime
+}
+
+input DepartmentRosterEntryInput {
+  userId: ID!
+  staffName: String!
+  designation: String!
+  shifts: [ShiftDutyType!]!
+}
+
+input SaveDepartmentRosterInput {
+  department: Department!
+  weekStartDate: AWSDate!
+  entries: [DepartmentRosterEntryInput!]!
+}
+
+input RecordStaffAttendanceInput {
+  userId: ID!
+  staffName: String!
+  date: AWSDate!
+  shiftType: ShiftDutyType!
+  clockInTime: AWSDateTime
+  clockOutTime: AWSDateTime
+  hoursWorked: Float!
+  overtimeHours: Float
+  isPoyaOrHoliday: Boolean
+  attendanceStatus: String!
+}
+
+input RunMonthlyPayrollInput {
+  billingPeriod: String!
+  scPoolStatementId: ID
+}
+
+input SubmitStaffLeaveRequestInput {
+  userId: ID!
+  staffName: String!
+  epfNo: String!
+  leaveType: String!
+  startDate: AWSDate!
+  endDate: AWSDate!
+  isHalfDay: Boolean
+  requestedDays: Float!
+  reason: String!
+  relieverStaffId: ID
+}
+
+input ApproveStaffLeaveRequestInput {
+  leaveRequestId: ID!
+  status: String!
+  managerNotes: String
+}
+
+# ==============================================================================
 # Maintenance Tickets & Lost-and-Found Entities
 # ==============================================================================
 
@@ -4148,6 +4331,36 @@ type Query {
     @aws_api_key
 
   """
+  Retrieves weekly department duty shift roster for hotel staff.
+  """
+  getDepartmentRoster(
+    tenantId: ID!
+    department: Department!
+    weekStartDate: AWSDate!
+  ): DepartmentRoster @aws_cognito_user_pools @aws_iam
+
+  """
+  Retrieves staff monthly attendance summary and overtime logs.
+  """
+  getStaffAttendance(tenantId: ID!, userId: ID!, year: Int!, month: Int!): StaffAttendanceSummary
+    @aws_cognito_user_pools
+    @aws_iam
+
+  """
+  Retrieves monthly hotel payroll run and statutory remittance summary.
+  """
+  getMonthlyPayroll(tenantId: ID!, billingPeriod: String!): MonthlyPayrollRun
+    @aws_cognito_user_pools
+    @aws_iam
+
+  """
+  Lists staff statutory leave requests, optionally filtered by status.
+  """
+  listStaffLeaveRequests(tenantId: ID!, status: String): [StaffLeaveRequest!]!
+    @aws_cognito_user_pools
+    @aws_iam
+
+  """
   Retrieves a maintenance engineering ticket by identifier.
   """
   getMaintenanceTicket(tenantId: ID!, ticketId: ID!): MaintenanceTicket
@@ -4439,6 +4652,41 @@ type Mutation {
   Calculates and distributes monthly 10% Service Charge pool shares with breakage and EPF.
   """
   distributeStaffScPool(tenantId: ID!, input: DistributeStaffScPoolInput!): StaffScPoolStatement
+    @aws_cognito_user_pools
+    @aws_iam
+
+  """
+  Saves or updates the weekly department duty shift roster for hotel staff.
+  """
+  saveDepartmentRoster(tenantId: ID!, input: SaveDepartmentRosterInput!): DepartmentRoster
+    @aws_cognito_user_pools
+    @aws_iam
+
+  """
+  Records an individual staff member daily clock-in/out attendance and overtime log.
+  """
+  recordStaffAttendance(tenantId: ID!, input: RecordStaffAttendanceInput!): StaffAttendanceRecord
+    @aws_cognito_user_pools
+    @aws_iam
+
+  """
+  Finalizes and executes the monthly hotel payroll run with statutory remittances.
+  """
+  runMonthlyPayroll(tenantId: ID!, input: RunMonthlyPayrollInput!): MonthlyPayrollRun
+    @aws_cognito_user_pools
+    @aws_iam
+
+  """
+  Submits a statutory staff leave request under the Shop & Office Employees Act.
+  """
+  submitStaffLeaveRequest(tenantId: ID!, input: SubmitStaffLeaveRequestInput!): StaffLeaveRequest
+    @aws_cognito_user_pools
+    @aws_iam
+
+  """
+  Approves or rejects a staff leave application with managerial notes.
+  """
+  approveStaffLeaveRequest(tenantId: ID!, input: ApproveStaffLeaveRequestInput!): StaffLeaveRequest
     @aws_cognito_user_pools
     @aws_iam
 

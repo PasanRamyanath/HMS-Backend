@@ -219,7 +219,9 @@ describe("Night Audit & Morning Flash SMS/Email Summary (nightAuditCron.ts)", ()
   });
 
   it("dispatches automated 160-char morning flash SMS and email summary to hotel owner", async () => {
-    let capturedSms: { toMobile: string; text: string; senderId?: string } | undefined;
+    let capturedSms:
+      | { readonly toMobile: string; readonly text: string; readonly senderId?: string | undefined }
+      | undefined;
     let capturedEmail: { to: string; subject: string; html: string; text: string } | undefined;
 
     const { mockClient, sentCommands } = createMockDocClient({

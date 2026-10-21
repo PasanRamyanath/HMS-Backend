@@ -566,6 +566,85 @@ const DIRECT_JS_RESOLVERS: readonly DirectJsResolverMapping[] = [
     reqFn: "createGoodsIssueNoteRequest",
     resFn: "createGoodsIssueNoteResponse",
   },
+
+  // HR, Roster, Attendance & Payroll (hrPayroll.js)
+  {
+    typeName: "Query",
+    fieldName: "getDepartmentRoster",
+    file: "hrPayroll.js",
+    reqFn: "getDepartmentRosterRequest",
+    resFn: "getDepartmentRosterResponse",
+  },
+  {
+    typeName: "Mutation",
+    fieldName: "saveDepartmentRoster",
+    file: "hrPayroll.js",
+    reqFn: "saveDepartmentRosterRequest",
+    resFn: "saveDepartmentRosterResponse",
+  },
+  {
+    typeName: "Query",
+    fieldName: "getStaffAttendance",
+    file: "hrPayroll.js",
+    reqFn: "getStaffAttendanceRequest",
+    resFn: "getStaffAttendanceResponse",
+  },
+  {
+    typeName: "Mutation",
+    fieldName: "recordStaffAttendance",
+    file: "hrPayroll.js",
+    reqFn: "recordStaffAttendanceRequest",
+    resFn: "recordStaffAttendanceResponse",
+  },
+  {
+    typeName: "Query",
+    fieldName: "getStaffScPoolStatement",
+    file: "hrPayroll.js",
+    reqFn: "getStaffScPoolStatementRequest",
+    resFn: "getStaffScPoolStatementResponse",
+  },
+  {
+    typeName: "Mutation",
+    fieldName: "distributeStaffScPool",
+    file: "hrPayroll.js",
+    reqFn: "distributeStaffScPoolRequest",
+    resFn: "distributeStaffScPoolResponse",
+  },
+  {
+    typeName: "Query",
+    fieldName: "getMonthlyPayroll",
+    file: "hrPayroll.js",
+    reqFn: "getMonthlyPayrollRequest",
+    resFn: "getMonthlyPayrollResponse",
+  },
+  {
+    typeName: "Mutation",
+    fieldName: "runMonthlyPayroll",
+    file: "hrPayroll.js",
+    reqFn: "runMonthlyPayrollRequest",
+    resFn: "runMonthlyPayrollResponse",
+  },
+  {
+    typeName: "Query",
+    fieldName: "listStaffLeaveRequests",
+    file: "hrPayroll.js",
+    reqFn: "listStaffLeaveRequestsRequest",
+    resFn: "listStaffLeaveRequestsResponse",
+  },
+  {
+    typeName: "Mutation",
+    fieldName: "submitStaffLeaveRequest",
+    file: "hrPayroll.js",
+    reqFn: "submitStaffLeaveRequestRequest",
+    resFn: "submitStaffLeaveRequestResponse",
+  },
+  {
+    typeName: "Mutation",
+    fieldName: "approveStaffLeaveRequest",
+    file: "hrPayroll.js",
+    reqFn: "approveStaffLeaveRequestRequest",
+    resFn: "approveStaffLeaveRequestResponse",
+  },
 ] as const;
 
 interface LeanLambdaOptions {

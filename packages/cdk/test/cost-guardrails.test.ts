@@ -498,8 +498,8 @@ describe("CloudFormation Permanent Free-Tier Cost-Ceiling Guardrails", () => {
     });
   });
 
-  it("registers all 60 direct AppSync JS DynamoDB resolvers with zero cold starts", () => {
-    hmsTemplate.resourceCountIs("AWS::AppSync::Resolver", 60);
+  it("registers all 71 direct AppSync JS DynamoDB resolvers with zero cold starts", () => {
+    hmsTemplate.resourceCountIs("AWS::AppSync::Resolver", 71);
 
     const sampleResolvers = [
       { type: "Query", field: "getHotelTenant" },
@@ -530,6 +530,17 @@ describe("CloudFormation Permanent Free-Tier Cost-Ceiling Guardrails", () => {
       { type: "Mutation", field: "upsertStockItem" },
       { type: "Mutation", field: "recordGrn" },
       { type: "Mutation", field: "createGoodsIssueNote" },
+      { type: "Query", field: "getDepartmentRoster" },
+      { type: "Mutation", field: "saveDepartmentRoster" },
+      { type: "Query", field: "getStaffAttendance" },
+      { type: "Mutation", field: "recordStaffAttendance" },
+      { type: "Query", field: "getStaffScPoolStatement" },
+      { type: "Mutation", field: "distributeStaffScPool" },
+      { type: "Query", field: "getMonthlyPayroll" },
+      { type: "Mutation", field: "runMonthlyPayroll" },
+      { type: "Query", field: "listStaffLeaveRequests" },
+      { type: "Mutation", field: "submitStaffLeaveRequest" },
+      { type: "Mutation", field: "approveStaffLeaveRequest" },
     ];
 
     for (const r of sampleResolvers) {

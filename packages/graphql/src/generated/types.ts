@@ -40,6 +40,12 @@ export type AddFolioChargeInput = {
   unitPriceLkr: Scalars['Float']['input'];
 };
 
+export type ApproveStaffLeaveRequestInput = {
+  leaveRequestId: Scalars['ID']['input'];
+  managerNotes?: InputMaybe<Scalars['String']['input']>;
+  status: Scalars['String']['input'];
+};
+
 /** Immutable audit trail action types for tamper-evident SHA-256 event chaining. */
 export enum AuditAction {
   /** New record inserted. */
@@ -451,6 +457,34 @@ export enum Department {
   /** Driver quarters, chauffeur lounge, and transport coordination. */
   Transport = 'TRANSPORT'
 }
+
+/** Weekly department duty shift roster for hotel staff. */
+export type DepartmentRoster = {
+  __typename?: 'DepartmentRoster';
+  createdAt: Scalars['AWSDateTime']['output'];
+  department: Department;
+  entries: Array<DepartmentRosterEntry>;
+  id: Scalars['ID']['output'];
+  tenantId: Scalars['ID']['output'];
+  updatedAt: Scalars['AWSDateTime']['output'];
+  weekStartDate: Scalars['AWSDate']['output'];
+};
+
+/** Shift roster assignment for an individual employee across 7 days of the work week. */
+export type DepartmentRosterEntry = {
+  __typename?: 'DepartmentRosterEntry';
+  designation: Scalars['String']['output'];
+  shifts: Array<ShiftDutyType>;
+  staffName: Scalars['String']['output'];
+  userId: Scalars['ID']['output'];
+};
+
+export type DepartmentRosterEntryInput = {
+  designation: Scalars['String']['input'];
+  shifts: Array<ShiftDutyType>;
+  staffName: Scalars['String']['input'];
+  userId: Scalars['ID']['input'];
+};
 
 /** Dining channel classification for KDS routing, BOT printing, and Service Charge rules. */
 export enum DiningType {
@@ -1204,10 +1238,30 @@ export type ModifierOptionInput = {
   priceAdjustmentLkr: Scalars['Float']['input'];
 };
 
+/** Monthly hotel payroll run and statutory remittance summary. */
+export type MonthlyPayrollRun = {
+  __typename?: 'MonthlyPayrollRun';
+  billingPeriod: Scalars['String']['output'];
+  createdAt: Scalars['AWSDateTime']['output'];
+  id: Scalars['ID']['output'];
+  isFinalized: Scalars['Boolean']['output'];
+  slips: Array<StaffPayslipLineItem>;
+  tenantId: Scalars['ID']['output'];
+  totalEmployeeEpf8Lkr: Scalars['Float']['output'];
+  totalEmployerEpf12Lkr: Scalars['Float']['output'];
+  totalEmployerEtf3Lkr: Scalars['Float']['output'];
+  totalGrossEarningsLkr: Scalars['Float']['output'];
+  totalNetPayLkr: Scalars['Float']['output'];
+  totalServiceChargeDisbursedLkr: Scalars['Float']['output'];
+  updatedAt: Scalars['AWSDateTime']['output'];
+};
+
 export type Mutation = {
   __typename?: 'Mutation';
   /** Posts an F&B, minibar, laundry, or extra charge to an active folio. */
   addFolioCharge: Maybe<Folio>;
+  /** Approves or rejects a staff leave application with managerial notes. */
+  approveStaffLeaveRequest: Maybe<StaffLeaveRequest>;
   /** Checks in a guest with room allocation and statutory identity records (NIC / Tourist Police B-Card). */
   checkInGuest: Maybe<Reservation>;
   /** Checks out a guest and vacates the room. */
@@ -1244,10 +1298,18 @@ export type Mutation = {
   ping: Scalars['String']['output'];
   /** Records received inventory stock into FIFO batches via Goods Received Note (GRN). */
   recordGrn: Maybe<InventoryVoucher>;
+  /** Records an individual staff member daily clock-in/out attendance and overtime log. */
+  recordStaffAttendance: Maybe<StaffAttendanceRecord>;
+  /** Finalizes and executes the monthly hotel payroll run with statutory remittances. */
+  runMonthlyPayroll: Maybe<MonthlyPayrollRun>;
   /** Executes the daily automated or manual night audit close and ledger rollover. */
   runNightAudit: Maybe<NightAuditReport>;
+  /** Saves or updates the weekly department duty shift roster for hotel staff. */
+  saveDepartmentRoster: Maybe<DepartmentRoster>;
   /** Settles an outstanding folio and generates a sealed IRD tax invoice. */
   settleFolio: Maybe<FolioInvoice>;
+  /** Submits a statutory staff leave request under the Shop & Office Employees Act. */
+  submitStaffLeaveRequest: Maybe<StaffLeaveRequest>;
   /** Quickly toggles item 86/out-of-stock availability from kitchen runner screen. */
   toggleMenuItemAvailability: Maybe<MenuItem>;
   /** Instant 1-tap inStock toggle for Kitchen KDS / Chef screen (<20ms). */
@@ -1295,6 +1357,12 @@ export type Mutation = {
 
 export type MutationAddFolioChargeArgs = {
   input: AddFolioChargeInput;
+  tenantId: Scalars['ID']['input'];
+};
+
+
+export type MutationApproveStaffLeaveRequestArgs = {
+  input: ApproveStaffLeaveRequestInput;
   tenantId: Scalars['ID']['input'];
 };
 
@@ -1400,14 +1468,38 @@ export type MutationRecordGrnArgs = {
 };
 
 
+export type MutationRecordStaffAttendanceArgs = {
+  input: RecordStaffAttendanceInput;
+  tenantId: Scalars['ID']['input'];
+};
+
+
+export type MutationRunMonthlyPayrollArgs = {
+  input: RunMonthlyPayrollInput;
+  tenantId: Scalars['ID']['input'];
+};
+
+
 export type MutationRunNightAuditArgs = {
   input: RunNightAuditInput;
   tenantId: Scalars['ID']['input'];
 };
 
 
+export type MutationSaveDepartmentRosterArgs = {
+  input: SaveDepartmentRosterInput;
+  tenantId: Scalars['ID']['input'];
+};
+
+
 export type MutationSettleFolioArgs = {
   input: SettleFolioInput;
+  tenantId: Scalars['ID']['input'];
+};
+
+
+export type MutationSubmitStaffLeaveRequestArgs = {
+  input: SubmitStaffLeaveRequestInput;
   tenantId: Scalars['ID']['input'];
 };
 
@@ -1747,6 +1839,8 @@ export type Query = {
   getAyurvedaAppointment: Maybe<AyurvedaAppointment>;
   /** Retrieves a banquet event function sheet (BEO) by identifier. */
   getBanquetEvent: Maybe<BanquetEvent>;
+  /** Retrieves weekly department duty shift roster for hotel staff. */
+  getDepartmentRoster: Maybe<DepartmentRoster>;
   /** Retrieves an excursion booking by identifier. */
   getExcursionBooking: Maybe<ExcursionBooking>;
   /** Retrieves a guest or DMC ledger folio with all line items and tax breakdown. */
@@ -1767,6 +1861,8 @@ export type Query = {
   getMaintenanceTicket: Maybe<MaintenanceTicket>;
   /** Retrieves a single dish or beverage menu item by identifier. */
   getMenuItem: Maybe<MenuItem>;
+  /** Retrieves monthly hotel payroll run and statutory remittance summary. */
+  getMonthlyPayroll: Maybe<MonthlyPayrollRun>;
   /** Retrieves a daily night audit rollover report by business date. */
   getNightAuditReport: Maybe<NightAuditReport>;
   /** Retrieves a purchase order by identifier. */
@@ -1781,6 +1877,8 @@ export type Query = {
   getServiceOrder: Maybe<ServiceOrder>;
   /** Retrieves an SLTDA monthly statistical return by year and month. */
   getSltdaMonthlyReturn: Maybe<SltdaMonthlyReturn>;
+  /** Retrieves staff monthly attendance summary and overtime logs. */
+  getStaffAttendance: Maybe<StaffAttendanceSummary>;
   /** Retrieves the 10% staff service charge monthly pool statement. */
   getStaffScPoolStatement: Maybe<StaffScPoolStatement>;
   /** Retrieves a stock item by identifier. */
@@ -1827,6 +1925,8 @@ export type Query = {
   listRooms: Array<Room>;
   /** Lists SLTDA monthly statistical returns optionally filtered by calendar year. */
   listSltdaMonthlyReports: Array<SltdaMonthlyReturn>;
+  /** Lists staff statutory leave requests, optionally filtered by status. */
+  listStaffLeaveRequests: Array<StaffLeaveRequest>;
   /** Lists inventory stock items filtered by department and category. */
   listStockItems: Array<StockItem>;
   /** Lists all Tour Operator / DMC credit contracts for a property. */
@@ -1843,6 +1943,13 @@ export type QueryGetAyurvedaAppointmentArgs = {
 export type QueryGetBanquetEventArgs = {
   id: Scalars['ID']['input'];
   tenantId: Scalars['ID']['input'];
+};
+
+
+export type QueryGetDepartmentRosterArgs = {
+  department: Department;
+  tenantId: Scalars['ID']['input'];
+  weekStartDate: Scalars['AWSDate']['input'];
 };
 
 
@@ -1905,6 +2012,12 @@ export type QueryGetMenuItemArgs = {
 };
 
 
+export type QueryGetMonthlyPayrollArgs = {
+  billingPeriod: Scalars['String']['input'];
+  tenantId: Scalars['ID']['input'];
+};
+
+
 export type QueryGetNightAuditReportArgs = {
   auditDate: Scalars['AWSDate']['input'];
   tenantId: Scalars['ID']['input'];
@@ -1944,6 +2057,14 @@ export type QueryGetServiceOrderArgs = {
 export type QueryGetSltdaMonthlyReturnArgs = {
   month: Scalars['Int']['input'];
   tenantId: Scalars['ID']['input'];
+  year: Scalars['Int']['input'];
+};
+
+
+export type QueryGetStaffAttendanceArgs = {
+  month: Scalars['Int']['input'];
+  tenantId: Scalars['ID']['input'];
+  userId: Scalars['ID']['input'];
   year: Scalars['Int']['input'];
 };
 
@@ -2094,6 +2215,12 @@ export type QueryListSltdaMonthlyReportsArgs = {
 };
 
 
+export type QueryListStaffLeaveRequestsArgs = {
+  status?: InputMaybe<Scalars['String']['input']>;
+  tenantId: Scalars['ID']['input'];
+};
+
+
 export type QueryListStockItemsArgs = {
   category?: InputMaybe<Scalars['String']['input']>;
   department?: InputMaybe<Department>;
@@ -2137,6 +2264,19 @@ export type RecordGrnInput = {
   poNumber?: InputMaybe<Scalars['String']['input']>;
   remarks?: InputMaybe<Scalars['String']['input']>;
   supplierName: Scalars['String']['input'];
+};
+
+export type RecordStaffAttendanceInput = {
+  attendanceStatus: Scalars['String']['input'];
+  clockInTime?: InputMaybe<Scalars['AWSDateTime']['input']>;
+  clockOutTime?: InputMaybe<Scalars['AWSDateTime']['input']>;
+  date: Scalars['AWSDate']['input'];
+  hoursWorked: Scalars['Float']['input'];
+  isPoyaOrHoliday?: InputMaybe<Scalars['Boolean']['input']>;
+  overtimeHours?: InputMaybe<Scalars['Float']['input']>;
+  shiftType: ShiftDutyType;
+  staffName: Scalars['String']['input'];
+  userId: Scalars['ID']['input'];
 };
 
 /** Primary guest room reservation record tracking lifecycle, rates, guests, and folios. */
@@ -2314,10 +2454,21 @@ export type RoomType = {
   updatedAt: Scalars['AWSDateTime']['output'];
 };
 
+export type RunMonthlyPayrollInput = {
+  billingPeriod: Scalars['String']['input'];
+  scPoolStatementId?: InputMaybe<Scalars['ID']['input']>;
+};
+
 /** Input for executing the daily automated or manual night audit rollover. */
 export type RunNightAuditInput = {
   auditDate: Scalars['AWSDate']['input'];
   notes?: InputMaybe<Scalars['String']['input']>;
+};
+
+export type SaveDepartmentRosterInput = {
+  department: Department;
+  entries: Array<DepartmentRosterEntryInput>;
+  weekStartDate: Scalars['AWSDate']['input'];
 };
 
 /** Seasonal pricing window with dual-tier rates (Sri Lankan Resident LKR vs Foreign Non-Resident USD). */
@@ -2412,6 +2563,15 @@ export type SettleFolioInput = {
   paymentReference?: InputMaybe<Scalars['String']['input']>;
 };
 
+/** Operating duty shift classification across hotel departments. */
+export enum ShiftDutyType {
+  DayOff = 'DAY_OFF',
+  Evening = 'EVENING',
+  Morning = 'MORNING',
+  NightAudit = 'NIGHT_AUDIT',
+  SplitShift = 'SPLIT_SHIFT'
+}
+
 /** Sri Lanka Tourism Development Authority (SLTDA) Monthly Statistical Return (Tourism Act No. 38 of 2005). */
 export type SltdaMonthlyReturn = {
   __typename?: 'SltdaMonthlyReturn';
@@ -2479,6 +2639,78 @@ export type SplitFolioRouting = {
   percentage: Maybe<Scalars['Float']['output']>;
   /** Target sub-folio designation (e.g. 'GUEST_EXTRAS', 'DMC_MASTER'). */
   targetFolioType: Scalars['String']['output'];
+};
+
+/** Daily clock-in/out attendance and overtime log record for an employee. */
+export type StaffAttendanceRecord = {
+  __typename?: 'StaffAttendanceRecord';
+  attendanceStatus: Scalars['String']['output'];
+  clockInTime: Maybe<Scalars['AWSDateTime']['output']>;
+  clockOutTime: Maybe<Scalars['AWSDateTime']['output']>;
+  date: Scalars['AWSDate']['output'];
+  hoursWorked: Scalars['Float']['output'];
+  id: Scalars['ID']['output'];
+  isPoyaOrHoliday: Scalars['Boolean']['output'];
+  overtimeHours: Scalars['Float']['output'];
+  shiftType: ShiftDutyType;
+  staffName: Scalars['String']['output'];
+  tenantId: Scalars['ID']['output'];
+  userId: Scalars['ID']['output'];
+};
+
+/** Aggregated monthly attendance summary for service charge and payroll calculation. */
+export type StaffAttendanceSummary = {
+  __typename?: 'StaffAttendanceSummary';
+  daysWorked: Scalars['Int']['output'];
+  month: Scalars['Int']['output'];
+  overtimeHours: Scalars['Float']['output'];
+  poyaHolidaysWorked: Scalars['Int']['output'];
+  records: Array<StaffAttendanceRecord>;
+  tenantId: Scalars['ID']['output'];
+  userId: Scalars['ID']['output'];
+  year: Scalars['Int']['output'];
+};
+
+/** Statutory staff leave request record under the Shop & Office Employees Act. */
+export type StaffLeaveRequest = {
+  __typename?: 'StaffLeaveRequest';
+  appliedAt: Scalars['AWSDateTime']['output'];
+  approvedAt: Maybe<Scalars['AWSDateTime']['output']>;
+  approvedByName: Maybe<Scalars['String']['output']>;
+  endDate: Scalars['AWSDate']['output'];
+  epfNo: Scalars['String']['output'];
+  id: Scalars['ID']['output'];
+  isHalfDay: Scalars['Boolean']['output'];
+  leaveType: Scalars['String']['output'];
+  reason: Scalars['String']['output'];
+  relieverStaffId: Maybe<Scalars['ID']['output']>;
+  requestedDays: Scalars['Float']['output'];
+  staffName: Scalars['String']['output'];
+  startDate: Scalars['AWSDate']['output'];
+  status: Scalars['String']['output'];
+  tenantId: Scalars['ID']['output'];
+  userId: Scalars['ID']['output'];
+};
+
+/** Individual employee payslip itemization in a finalized monthly payroll run. */
+export type StaffPayslipLineItem = {
+  __typename?: 'StaffPayslipLineItem';
+  bankAccountNo: Scalars['String']['output'];
+  bankName: Scalars['String']['output'];
+  basicSalaryLkr: Scalars['Float']['output'];
+  braLkr: Scalars['Float']['output'];
+  department: Department;
+  employeeEpf8Lkr: Scalars['Float']['output'];
+  employerEpf12Lkr: Scalars['Float']['output'];
+  employerEtf3Lkr: Scalars['Float']['output'];
+  epfEligibleBaseLkr: Scalars['Float']['output'];
+  epfNo: Scalars['String']['output'];
+  netPayLkr: Scalars['Float']['output'];
+  overtimeEarningsLkr: Scalars['Float']['output'];
+  scShareLkr: Scalars['Float']['output'];
+  staffName: Scalars['String']['output'];
+  totalDeductionsLkr: Scalars['Float']['output'];
+  userId: Scalars['ID']['output'];
 };
 
 /** Individual employee share in the 10% Service Charge monthly distribution pool. */
@@ -2575,6 +2807,19 @@ export type StockItem = {
   unitOfMeasure: Scalars['String']['output'];
   /** Timestamp of latest stock item update. */
   updatedAt: Scalars['AWSDateTime']['output'];
+};
+
+export type SubmitStaffLeaveRequestInput = {
+  endDate: Scalars['AWSDate']['input'];
+  epfNo: Scalars['String']['input'];
+  isHalfDay?: InputMaybe<Scalars['Boolean']['input']>;
+  leaveType: Scalars['String']['input'];
+  reason: Scalars['String']['input'];
+  relieverStaffId?: InputMaybe<Scalars['ID']['input']>;
+  requestedDays: Scalars['Float']['input'];
+  staffName: Scalars['String']['input'];
+  startDate: Scalars['AWSDate']['input'];
+  userId: Scalars['ID']['input'];
 };
 
 export type Subscription = {
