@@ -219,6 +219,7 @@ This file tracks the sequential completion of backend implementation steps defin
 - [x] Step 442: Implement AppSync JS Resolvers for Roster, Attendance, SC Pool & Payroll (`packages/graphql/resolvers/hrPayroll.ts`)
 - [x] Step 444: Build Gratuity Accrual Estimator (`Payment of Gratuity Act No. 12 of 1983`) (`packages/core/src/gratuityMath.ts`)
 - [x] Step 445: Write Unit Tests for Sri Lankan 5-Year Statutory Gratuity Accrual (`packages/core/test/gratuityMath.test.ts`)
+- [x] Step 449: Write End-to-End Monthly SC Collection -> Breakage Deduction -> Payroll -> EPF/ETF -> Bank SLIPS Test (`packages/core/test/payrollLifecycle.test.ts`)
 
 
 
