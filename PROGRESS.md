@@ -242,6 +242,8 @@ This file tracks the sequential completion of backend implementation steps defin
 - [x] Step 482: Run Complete Native Node Unit & Integration Test Suite with Coverage Report (1,058 tests passing)
 - [x] Step 484: Verify Trilingual (`English` / `සිංහල` / `தமிழ்`) Key Parity in `i18n.ts`
 - [x] Step 486: Synthesize Production AWS CloudFormation Template (`npx cdk synth`) (`packages/cdk/cdk.out/SriLankaHmsStack.template.json`)
+- [x] Step 487: Run Automated CloudFormation Free-Tier & Zero-NAT/Zero-RDS Guardrail Test (`packages/cdk/test/cost-guardrails.test.ts`)
+
 
 
 
