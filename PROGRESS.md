@@ -217,6 +217,8 @@ This file tracks the sequential completion of backend implementation steps defin
 - [x] Step 437: Build Sri Lankan Commercial Bank Salary & Service Charge SLIPS Bulk Transfer CSV Exporter (`packages/core/src/bankSlipsExport.ts`)
 - [x] Step 438: Write Unit Tests for LankaPay SLIPS Bank Transfer CSV Formatting (`packages/core/test/bankSlipsExport.test.ts`)
 - [x] Step 442: Implement AppSync JS Resolvers for Roster, Attendance, SC Pool & Payroll (`packages/graphql/resolvers/hrPayroll.ts`)
+- [x] Step 444: Build Gratuity Accrual Estimator (`Payment of Gratuity Act No. 12 of 1983`) (`packages/core/src/gratuityMath.ts`)
+- [x] Step 445: Write Unit Tests for Sri Lankan 5-Year Statutory Gratuity Accrual (`packages/core/test/gratuityMath.test.ts`)
 
 
 
