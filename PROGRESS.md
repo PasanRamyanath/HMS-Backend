@@ -230,6 +230,7 @@ This file tracks the sequential completion of backend implementation steps defin
 - [x] Step 464: Document Future Flutter App Integration Guide (`docs/flutter-integration-contract.md`)
 - [x] Step 469: Implement Tenant Rate-Limiting & Abuse Guard in `qrAuthorizer.ts` (`packages/cdk/lambdas/qrAuthorizer.ts`)
 - [x] Step 470: Implement CloudFront Security Headers Policy (CSP, HSTS, X-Frame-Options) in `hms-stack.ts` (`packages/cdk/lib/hms-stack.ts`)
+- [x] Step 472: Write End-to-End Multi-Tenant Isolation Security Test (`packages/core/test/tenantIsolation.test.ts`)
 
 
 
