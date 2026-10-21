@@ -197,3 +197,6 @@ This file tracks the sequential completion of backend implementation steps defin
 - [x] Step 393: Implement AppSync JS Resolvers for Stock, PR, PO, GRN & GIN (`packages/graphql/resolvers/inventoryOps.ts`)
 - [x] Step 399: Write End-to-End PO -> GRN Batch -> GIN Kitchen -> QR Order BOM Depletion -> Variance Test (`packages/core/test/inventoryLifecycle.test.ts`)
 
+## Phase 17: Night Audit Automation, SLTDA Monthly Occupancy Returns, TDL Quarterly Statements & IRD Tax Schedules
+- [x] Step 401: Implement Pure Night Audit Aggregation Engine (`packages/core/src/nightAudit.ts`)
+
