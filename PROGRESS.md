@@ -199,4 +199,5 @@ This file tracks the sequential completion of backend implementation steps defin
 
 ## Phase 17: Night Audit Automation, SLTDA Monthly Occupancy Returns, TDL Quarterly Statements & IRD Tax Schedules
 - [x] Step 401: Implement Pure Night Audit Aggregation Engine (`packages/core/src/nightAudit.ts`)
+- [x] Step 402: Write Unit Tests for Night Audit ADR, RevPAR & Foreign/Local Guest-Night Splitting (`packages/core/test/nightAudit.test.ts`)
 
