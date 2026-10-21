@@ -21,7 +21,10 @@ import { CfnBudget } from "aws-cdk-lib/aws-budgets";
 import {
   CachePolicy,
   Distribution,
+  HeadersFrameOption,
+  HeadersReferrerPolicy,
   PriceClass,
+  ResponseHeadersPolicy,
   ViewerProtocolPolicy,
 } from "aws-cdk-lib/aws-cloudfront";
 import { S3BucketOrigin } from "aws-cdk-lib/aws-cloudfront-origins";
@@ -743,6 +746,7 @@ export class SriLankaHmsStack extends Stack {
   public readonly presignMediaUploadFn: NodejsFunction;
   public readonly assetBucket: Bucket;
   public readonly distribution: Distribution;
+  public readonly securityHeadersPolicy: ResponseHeadersPolicy;
   public readonly costBudget: CfnBudget;
 
   constructor(scope: Construct, id: string, props?: SriLankaHmsStackProps) {
@@ -836,11 +840,49 @@ export class SriLankaHmsStack extends Stack {
     // - CachingOptimized policy for /assets/* and /media/*
     const s3Origin = S3BucketOrigin.withOriginAccessControl(this.assetBucket as unknown as IBucket);
 
+    // Native CloudFront ResponseHeadersPolicy (100% Free Tier, zero Lambda@Edge cost)
+    // Enforces strict CSP, HSTS (365 days), X-Frame-Options DENY, XSS protection, and referrer policy
+    this.securityHeadersPolicy = new ResponseHeadersPolicy(this, "HmsSecurityHeadersPolicy", {
+      responseHeadersPolicyName: "HmsStrictSecurityHeadersPolicy",
+      comment:
+        "Strict security headers (CSP, HSTS, X-Frame-Options, XSS, Referrer) for Sri Lanka HMS Free Tier",
+      securityHeadersBehavior: {
+        contentSecurityPolicy: {
+          contentSecurityPolicy:
+            "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https: wss:; frame-ancestors 'none'; base-uri 'self'; form-action 'self';",
+          override: true,
+        },
+        strictTransportSecurity: {
+          accessControlMaxAge: Duration.days(365),
+          includeSubdomains: true,
+          preload: true,
+          override: true,
+        },
+        contentTypeOptions: {
+          override: true,
+        },
+        frameOptions: {
+          frameOption: HeadersFrameOption.DENY,
+          override: true,
+        },
+        xssProtection: {
+          protection: true,
+          modeBlock: true,
+          override: true,
+        },
+        referrerPolicy: {
+          referrerPolicy: HeadersReferrerPolicy.STRICT_ORIGIN_WHEN_CROSS_ORIGIN,
+          override: true,
+        },
+      },
+    });
+
     this.distribution = new Distribution(this, "HmsCloudFront", {
       defaultBehavior: {
         origin: s3Origin,
         viewerProtocolPolicy: ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
         cachePolicy: CachePolicy.CACHING_OPTIMIZED,
+        responseHeadersPolicy: this.securityHeadersPolicy,
       },
       defaultRootObject: "index.html",
       priceClass: PriceClass.PRICE_CLASS_ALL,
@@ -863,11 +905,13 @@ export class SriLankaHmsStack extends Stack {
           origin: s3Origin,
           viewerProtocolPolicy: ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
           cachePolicy: CachePolicy.CACHING_OPTIMIZED,
+          responseHeadersPolicy: this.securityHeadersPolicy,
         },
         "/media/*": {
           origin: s3Origin,
           viewerProtocolPolicy: ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
           cachePolicy: CachePolicy.CACHING_OPTIMIZED,
+          responseHeadersPolicy: this.securityHeadersPolicy,
         },
       },
     });
@@ -1260,6 +1304,12 @@ export class SriLankaHmsStack extends Stack {
       value: `https://${this.distribution.distributionDomainName}`,
       description: "CloudFront Distribution Web URL",
       exportName: "HmsCloudFrontUrl",
+    });
+
+    new CfnOutput(this, "HmsSecurityHeadersPolicyId", {
+      value: this.securityHeadersPolicy.responseHeadersPolicyId,
+      description: "CloudFront Security Headers Policy ID for Sri Lanka HMS",
+      exportName: "HmsSecurityHeadersPolicyId",
     });
 
     new CfnOutput(this, "HmsBudgetId", {

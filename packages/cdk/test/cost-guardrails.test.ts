@@ -421,6 +421,45 @@ describe("CloudFormation Permanent Free-Tier Cost-Ceiling Guardrails", () => {
     hmsTemplate.hasOutput("HmsCloudFrontUrl", {
       Export: { Name: "HmsCloudFrontUrl" },
     });
+    hmsTemplate.hasOutput("HmsSecurityHeadersPolicyId", {
+      Export: { Name: "HmsSecurityHeadersPolicyId" },
+    });
+  });
+
+  it("provisions CloudFront security headers policy (CSP, HSTS, X-Frame-Options, XSS, Referrer)", () => {
+    hmsTemplate.resourceCountIs("AWS::CloudFront::ResponseHeadersPolicy", 1);
+    hmsTemplate.hasResourceProperties("AWS::CloudFront::ResponseHeadersPolicy", {
+      ResponseHeadersPolicyConfig: {
+        Name: "HmsStrictSecurityHeadersPolicy",
+        SecurityHeadersConfig: {
+          ContentSecurityPolicy: {
+            Override: true,
+          },
+          StrictTransportSecurity: {
+            AccessControlMaxAgeSec: 31536000,
+            IncludeSubdomains: true,
+            Override: true,
+            Preload: true,
+          },
+          FrameOptions: {
+            FrameOption: "DENY",
+            Override: true,
+          },
+          ContentTypeOptions: {
+            Override: true,
+          },
+          XSSProtection: {
+            ModeBlock: true,
+            Override: true,
+            Protection: true,
+          },
+          ReferrerPolicy: {
+            Override: true,
+            ReferrerPolicy: "strict-origin-when-cross-origin",
+          },
+        },
+      },
+    });
   });
 
   it("provisions EventBridge daily scheduled rule at 23:59 Sri Lanka Standard Time (18:29 UTC)", () => {
