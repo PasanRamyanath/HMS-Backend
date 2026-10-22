@@ -856,7 +856,6 @@ export class SriLankaHmsStack extends Stack {
     // Native CloudFront ResponseHeadersPolicy (100% Free Tier, zero Lambda@Edge cost)
     // Enforces strict CSP, HSTS (365 days), X-Frame-Options DENY, XSS protection, and referrer policy
     this.securityHeadersPolicy = new ResponseHeadersPolicy(this, "HmsSecurityHeadersPolicy", {
-      responseHeadersPolicyName: "HmsStrictSecurityHeadersPolicy",
       comment:
         "Strict security headers (CSP, HSTS, X-Frame-Options, XSS, Referrer) for Sri Lanka HMS Free Tier",
       securityHeadersBehavior: {
