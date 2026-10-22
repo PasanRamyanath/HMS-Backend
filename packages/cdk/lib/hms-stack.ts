@@ -762,6 +762,7 @@ export class SriLankaHmsStack extends Stack {
 
     this.deploymentRegion = this.region;
     const stage = props?.stage ?? process.env.DEPLOY_ENV ?? "dev";
+    const exportName = (name: string): string => `${this.stackName}-${name}`;
     const isDefaultDev = stage === "dev" || stage === "main";
     const tableName = isDefaultDev ? "HmsSingleTable" : `HmsSingleTable-${stage}`;
     const userPoolName = isDefaultDev ? "HmsUserPool" : `HmsUserPool-${stage}`;
@@ -1255,145 +1256,145 @@ export class SriLankaHmsStack extends Stack {
     new CfnOutput(this, "HmsTableArn", {
       value: this.hmsTable.tableArn,
       description: "DynamoDB Single-Table ARN",
-      exportName: "HmsTableArn",
+      exportName: exportName("HmsTableArn"),
     });
 
     new CfnOutput(this, "HmsTableName", {
       value: this.hmsTable.tableName,
       description: "DynamoDB Single-Table Name",
-      exportName: "HmsTableName",
+      exportName: exportName("HmsTableName"),
     });
 
     new CfnOutput(this, "HmsAssetBucketName", {
       value: this.assetBucket.bucketName,
       description: "S3 Asset & Tenant WebP Media Bucket Name",
-      exportName: "HmsAssetBucketName",
+      exportName: exportName("HmsAssetBucketName"),
     });
 
     new CfnOutput(this, "HmsAssetBucketArn", {
       value: this.assetBucket.bucketArn,
       description: "S3 Asset & Tenant WebP Media Bucket ARN",
-      exportName: "HmsAssetBucketArn",
+      exportName: exportName("HmsAssetBucketArn"),
     });
 
     new CfnOutput(this, "HmsUserPoolId", {
       value: this.userPool.userPoolId,
       description: "Cognito User Pool ID for Sri Lanka HMS",
-      exportName: "HmsUserPoolId",
+      exportName: exportName("HmsUserPoolId"),
     });
 
     new CfnOutput(this, "HmsUserPoolArn", {
       value: this.userPool.userPoolArn,
       description: "Cognito User Pool ARN for Sri Lanka HMS",
-      exportName: "HmsUserPoolArn",
+      exportName: exportName("HmsUserPoolArn"),
     });
 
     new CfnOutput(this, "HmsUserPoolClientId", {
       value: this.userPoolClient.userPoolClientId,
       description: "Cognito User Pool Web Client ID for Sri Lanka HMS",
-      exportName: "HmsUserPoolClientId",
+      exportName: exportName("HmsUserPoolClientId"),
     });
 
     new CfnOutput(this, "HmsGraphQLApiId", {
       value: this.api.apiId,
       description: "AppSync GraphQL API ID for Sri Lanka HMS",
-      exportName: "HmsGraphQLApiId",
+      exportName: exportName("HmsGraphQLApiId"),
     });
 
     new CfnOutput(this, "HmsGraphQLApiUrl", {
       value: this.api.graphqlUrl,
       description: "AppSync GraphQL API Endpoint URL",
-      exportName: "HmsGraphQLApiUrl",
+      exportName: exportName("HmsGraphQLApiUrl"),
     });
 
     new CfnOutput(this, "HmsGraphQLApiArn", {
       value: this.api.arn,
       description: "AppSync GraphQL API ARN",
-      exportName: "HmsGraphQLApiArn",
+      exportName: exportName("HmsGraphQLApiArn"),
     });
 
     new CfnOutput(this, "OrderAndFolioTxFnArn", {
       value: this.orderAndFolioTxFn.functionArn,
       description: "Transactional Order & Folio Posting Lambda ARN",
-      exportName: "OrderAndFolioTxFnArn",
+      exportName: exportName("OrderAndFolioTxFnArn"),
     });
 
     new CfnOutput(this, "ReservationAndCheckInTxFnArn", {
       value: this.reservationAndCheckInTxFn.functionArn,
       description: "Reservation & Check-In/Check-Out Lambda ARN",
-      exportName: "ReservationAndCheckInTxFnArn",
+      exportName: exportName("ReservationAndCheckInTxFnArn"),
     });
 
     new CfnOutput(this, "WebhooksIngressUrl", {
       value: this.webhooksUrl.url,
       description: "Unified Webhook Ingress Lambda Function URL",
-      exportName: "WebhooksIngressUrl",
+      exportName: exportName("WebhooksIngressUrl"),
     });
 
     new CfnOutput(this, "NightAuditCronFnArn", {
       value: this.nightAuditCronFn.functionArn,
       description: "Night Audit & CBSL Exchange Rate Rollover Lambda ARN",
-      exportName: "NightAuditCronFnArn",
+      exportName: exportName("NightAuditCronFnArn"),
     });
 
     new CfnOutput(this, "NightAuditRuleArn", {
       value: this.nightAuditRule.ruleArn,
       description: "EventBridge Night Audit Daily Scheduled Rule ARN",
-      exportName: "NightAuditRuleArn",
+      exportName: exportName("NightAuditRuleArn"),
     });
 
     new CfnOutput(this, "PresignMediaUploadFnArn", {
       value: this.presignMediaUploadFn.functionArn,
       description: "S3 Presigned WebP Media Upload Lambda ARN",
-      exportName: "PresignMediaUploadFnArn",
+      exportName: exportName("PresignMediaUploadFnArn"),
     });
 
     new CfnOutput(this, "HmsDistributionId", {
       value: this.distribution.distributionId,
       description: "CloudFront Distribution ID for Sri Lanka HMS",
-      exportName: "HmsDistributionId",
+      exportName: exportName("HmsDistributionId"),
     });
 
     new CfnOutput(this, "HmsDistributionDomainName", {
       value: this.distribution.distributionDomainName,
       description: "CloudFront Distribution Domain Name",
-      exportName: "HmsDistributionDomainName",
+      exportName: exportName("HmsDistributionDomainName"),
     });
 
     new CfnOutput(this, "HmsCloudFrontUrl", {
       value: `https://${this.distribution.distributionDomainName}`,
       description: "CloudFront Distribution Web URL",
-      exportName: "HmsCloudFrontUrl",
+      exportName: exportName("HmsCloudFrontUrl"),
     });
 
     new CfnOutput(this, "HmsSecurityHeadersPolicyId", {
       value: this.securityHeadersPolicy.responseHeadersPolicyId,
       description: "CloudFront Security Headers Policy ID for Sri Lanka HMS",
-      exportName: "HmsSecurityHeadersPolicyId",
+      exportName: exportName("HmsSecurityHeadersPolicyId"),
     });
 
     new CfnOutput(this, "HmsBudgetId", {
       value: this.costBudget.ref,
       description: "AWS Budgets Zero-Spend $1.00 Cost Alert ID",
-      exportName: "HmsBudgetId",
+      exportName: exportName("HmsBudgetId"),
     });
 
     new CfnOutput(this, "LambdaErrorsAlarmArn", {
       value: this.lambdaErrorsAlarm.alarmArn,
       description: "CloudWatch Free-Tier Lambda Errors Alarm ARN",
-      exportName: "LambdaErrorsAlarmArn",
+      exportName: exportName("LambdaErrorsAlarmArn"),
     });
 
     new CfnOutput(this, "DynamoReadThrottleAlarmArn", {
       value: this.dynamoReadThrottleAlarm.alarmArn,
       description: "CloudWatch Free-Tier DynamoDB Read Throttle Alarm ARN",
-      exportName: "DynamoReadThrottleAlarmArn",
+      exportName: exportName("DynamoReadThrottleAlarmArn"),
     });
 
     new CfnOutput(this, "DynamoWriteThrottleAlarmArn", {
       value: this.dynamoWriteThrottleAlarm.alarmArn,
       description: "CloudWatch Free-Tier DynamoDB Write Throttle Alarm ARN",
-      exportName: "DynamoWriteThrottleAlarmArn",
+      exportName: exportName("DynamoWriteThrottleAlarmArn"),
     });
   }
 }
