@@ -31,17 +31,21 @@ const oidcProps: GitHubOidcStackProps = {
 
 export const oidcStack = new GitHubOidcStack(app, "HmsGitHubOidcStack", oidcProps);
 
+const deployEnv = process.env.DEPLOY_ENV ?? "dev";
+const isDefaultDev = deployEnv === "dev" || deployEnv === "main";
+const stackName = isDefaultDev ? "SriLankaHmsStack" : `SriLankaHmsStack-${deployEnv}`;
+
 const hmsProps: SriLankaHmsStackProps = {
   env,
-  description:
-    "Sri Lankan Cloud SaaS Hotel Management System & Contactless QR Platform Serverless Infrastructure (Mumbai ap-south-1)",
+  stage: deployEnv,
+  description: `Sri Lankan Cloud SaaS Hotel Management System & Contactless QR Platform Serverless Infrastructure (${deployEnv.toUpperCase()} - Mumbai ap-south-1)`,
 };
 
-export const hmsStack = new SriLankaHmsStack(app, "SriLankaHmsStack", hmsProps);
+export const hmsStack = new SriLankaHmsStack(app, stackName, hmsProps);
 
 // Cost-allocation & operational tags across all synthesized constructs
 Tags.of(app).add("Project", "SriLankaHMS");
-Tags.of(app).add("Environment", process.env.NODE_ENV ?? "production");
+Tags.of(app).add("Environment", deployEnv);
 Tags.of(app).add("ManagedBy", "AWS-CDK");
 Tags.of(app).add("Region", region);
 Tags.of(app).add("Compliance", "SLTDA-TourismAct-No38-2005");

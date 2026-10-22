@@ -80,7 +80,7 @@ jobs:
       - name: Deploy AWS CDK Stacks
         run: |
           cd packages/cdk
-          npx cdk deploy SriLankaHmsStack --require-approval never
+          npx cdk deploy SriLankaHmsStack-uat --require-approval never
 
       - name: Deployment Step Summary
         run: |
@@ -88,5 +88,5 @@ jobs:
           echo "- **Target Environment**: UAT" >> $GITHUB_STEP_SUMMARY
           echo "- **Triggered Branch**: \`${{ github.ref_name }}\`" >> $GITHUB_STEP_SUMMARY
           echo "- **AWS Region**: \`$AWS_REGION\`" >> $GITHUB_STEP_SUMMARY
-          echo "- **CDK Stack**: \`SriLankaHmsStack\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **CDK Stack**: \`SriLankaHmsStack-uat\`" >> $GITHUB_STEP_SUMMARY
           echo "- **Commit SHA**: \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY

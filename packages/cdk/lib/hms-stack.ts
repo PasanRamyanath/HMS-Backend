@@ -67,6 +67,7 @@ const __dirname = dirname(__filename);
 
 export interface SriLankaHmsStackProps extends StackProps {
   readonly budgetAlertEmail?: string;
+  readonly stage?: string;
 }
 
 interface HmsUserGroupConfig {
@@ -760,11 +761,15 @@ export class SriLankaHmsStack extends Stack {
     super(scope, id, props);
 
     this.deploymentRegion = this.region;
+    const stage = props?.stage ?? process.env.DEPLOY_ENV ?? "dev";
+    const isDefaultDev = stage === "dev" || stage === "main";
+    const tableName = isDefaultDev ? "HmsSingleTable" : `HmsSingleTable-${stage}`;
+    const userPoolName = isDefaultDev ? "HmsUserPool" : `HmsUserPool-${stage}`;
 
     // Single-table DynamoDB for all 42 multi-tenant SaaS entities
     // Base table allocated 10 RCU / 10 WCU
     this.hmsTable = new Table(this, "HmsTable", {
-      tableName: "HmsSingleTable",
+      tableName,
       partitionKey: {
         name: "PK",
         type: AttributeType.STRING,
@@ -926,7 +931,7 @@ export class SriLankaHmsStack extends Stack {
     // Cognito User Pool for multi-tenant hotel staff & super-admins
     // Free Tier allows 50,000 MAUs per month with Cognito Essentials/Lite
     this.userPool = new UserPool(this, "HmsUserPool", {
-      userPoolName: "HmsUserPool",
+      userPoolName,
       selfSignUpEnabled: true,
       signInAliases: {
         email: true,
@@ -1158,7 +1163,9 @@ export class SriLankaHmsStack extends Stack {
     const budgetAlertEmail = props?.budgetAlertEmail ?? "alerts@srilanka-hms.local";
     this.costBudget = new CfnBudget(this, "HmsZeroSpendBudget", {
       budget: {
-        budgetName: "HmsPermanentFreeTierBudget",
+        budgetName: isDefaultDev
+          ? "HmsPermanentFreeTierBudget"
+          : `HmsPermanentFreeTierBudget-${stage}`,
         budgetType: "COST",
         timeUnit: "MONTHLY",
         budgetLimit: {
@@ -1200,7 +1207,7 @@ export class SriLankaHmsStack extends Stack {
 
     // Step 496: CloudWatch Free-Tier Alarms (Up to 10 Always Free metric alarms)
     this.lambdaErrorsAlarm = new Alarm(this, "LambdaErrorsAlarm", {
-      alarmName: "SriLankaHms-LambdaErrors",
+      alarmName: isDefaultDev ? "SriLankaHms-LambdaErrors" : `SriLankaHms-LambdaErrors-${stage}`,
       alarmDescription: "Alerts when any Lambda invocation encounters an unhandled error",
       metric: new Metric({
         namespace: "AWS/Lambda",
@@ -1215,7 +1222,9 @@ export class SriLankaHmsStack extends Stack {
     });
 
     this.dynamoReadThrottleAlarm = new Alarm(this, "DynamoReadThrottleAlarm", {
-      alarmName: "SriLankaHms-DynamoReadThrottle",
+      alarmName: isDefaultDev
+        ? "SriLankaHms-DynamoReadThrottle"
+        : `SriLankaHms-DynamoReadThrottle-${stage}`,
       alarmDescription: "Alerts when DynamoDB HmsTable read capacity is throttled",
       metric: this.hmsTable.metric("ReadThrottleEvents", {
         statistic: "Sum",
@@ -1228,7 +1237,9 @@ export class SriLankaHmsStack extends Stack {
     });
 
     this.dynamoWriteThrottleAlarm = new Alarm(this, "DynamoWriteThrottleAlarm", {
-      alarmName: "SriLankaHms-DynamoWriteThrottle",
+      alarmName: isDefaultDev
+        ? "SriLankaHms-DynamoWriteThrottle"
+        : `SriLankaHms-DynamoWriteThrottle-${stage}`,
       alarmDescription: "Alerts when DynamoDB HmsTable write capacity is throttled",
       metric: this.hmsTable.metric("WriteThrottleEvents", {
         statistic: "Sum",
