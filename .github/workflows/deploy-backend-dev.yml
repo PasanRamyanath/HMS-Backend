@@ -1,0 +1,92 @@
+name: Deploy Backend - DEV
+
+on:
+  push:
+    branches:
+      - main
+      - dev
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate-and-test:
+    name: Lint, Knip, Typecheck & Test (DEV)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 22 LTS
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Build Monorepo Workspaces
+        run: npm run build
+
+      - name: Quality Gate — Biome Lint & Format Check
+        run: npx biome check .
+
+      - name: Quality Gate — Knip Dead Code Analysis
+        run: npx knip
+
+      - name: Quality Gate — TypeScript Compilation
+        run: npx tsc --noEmit
+
+      - name: Quality Gate — Unit Tests
+        run: npm test
+
+  deploy-aws-cdk:
+    name: Deploy AWS CDK Serverless Stack (DEV)
+    needs: validate-and-test
+    runs-on: ubuntu-latest
+    env:
+      AWS_REGION: ${{ secrets.AWS_REGION || 'ap-south-1' }}
+      DEPLOY_ENV: dev
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 22 LTS
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Build Monorepo Workspaces
+        run: npm run build
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: CDK Synthesize Infrastructure
+        run: |
+          cd packages/cdk
+          npx cdk synth
+
+      - name: Deploy AWS CDK Stacks
+        run: |
+          cd packages/cdk
+          npx cdk deploy SriLankaHmsStack --require-approval never
+
+      - name: Deployment Step Summary
+        run: |
+          echo "### 🚀 Backend DEV Deployment Successful" >> $GITHUB_STEP_SUMMARY
+          echo "- **Target Environment**: DEV" >> $GITHUB_STEP_SUMMARY
+          echo "- **Triggered Branch**: \`${{ github.ref_name }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **AWS Region**: \`$AWS_REGION\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **CDK Stack**: \`SriLankaHmsStack\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Commit SHA**: \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
