@@ -442,7 +442,7 @@ describe("CloudFormation Permanent Free-Tier Cost-Ceiling Guardrails", () => {
     hmsTemplate.resourceCountIs("AWS::CloudFront::ResponseHeadersPolicy", 1);
     hmsTemplate.hasResourceProperties("AWS::CloudFront::ResponseHeadersPolicy", {
       ResponseHeadersPolicyConfig: {
-        Name: "HmsStrictSecurityHeadersPolicy",
+        Name: Match.stringLikeRegexp("^TestSriLankaHmsStackHmsSecurityHeadersPolicy[A-Za-z0-9]+$"),
         SecurityHeadersConfig: {
           ContentSecurityPolicy: {
             Override: true,
