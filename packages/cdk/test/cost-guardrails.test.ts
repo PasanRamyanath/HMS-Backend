@@ -40,6 +40,17 @@ function calculateTableCapacity(tableProps: Record<string, unknown> | undefined)
   };
 }
 
+function extractOutputExportNames(template: Template): Set<string> {
+  const outputs = (template.toJSON().Outputs ?? {}) as Record<
+    string,
+    { Export?: { Name?: string } } | undefined
+  >;
+  const names = Object.values(outputs)
+    .map((output) => output?.Export?.Name)
+    .filter((name): name is string => typeof name === "string");
+  return new Set(names);
+}
+
 describe("CloudFormation Permanent Free-Tier Cost-Ceiling Guardrails", () => {
   const oidcApp = new App();
   const oidcStack = new GitHubOidcStack(oidcApp, "TestGitHubOidcStack", {
@@ -52,6 +63,7 @@ describe("CloudFormation Permanent Free-Tier Cost-Ceiling Guardrails", () => {
     env: { region: "ap-south-1", account: "123456789012" },
   });
   const hmsTemplate = Template.fromStack(hmsStack);
+  const hmsExportName = (name: string): string => `${hmsStack.stackName}-${name}`;
 
   it("guarantees 0 NAT Gateways to prevent idle hourly VPC charges", () => {
     oidcTemplate.resourceCountIs("AWS::EC2::NatGateway", 0);
@@ -224,31 +236,31 @@ describe("CloudFormation Permanent Free-Tier Cost-Ceiling Guardrails", () => {
   it("exports Cognito User Pool and Table stack outputs for frontend & CI/CD", () => {
     hmsTemplate.hasOutput("HmsTableArn", {
       Export: {
-        Name: "HmsTableArn",
+        Name: hmsExportName("HmsTableArn"),
       },
     });
 
     hmsTemplate.hasOutput("HmsTableName", {
       Export: {
-        Name: "HmsTableName",
+        Name: hmsExportName("HmsTableName"),
       },
     });
 
     hmsTemplate.hasOutput("HmsUserPoolId", {
       Export: {
-        Name: "HmsUserPoolId",
+        Name: hmsExportName("HmsUserPoolId"),
       },
     });
 
     hmsTemplate.hasOutput("HmsUserPoolArn", {
       Export: {
-        Name: "HmsUserPoolArn",
+        Name: hmsExportName("HmsUserPoolArn"),
       },
     });
 
     hmsTemplate.hasOutput("HmsUserPoolClientId", {
       Export: {
-        Name: "HmsUserPoolClientId",
+        Name: hmsExportName("HmsUserPoolClientId"),
       },
     });
   });
@@ -327,19 +339,19 @@ describe("CloudFormation Permanent Free-Tier Cost-Ceiling Guardrails", () => {
 
     // Outputs for the 5 core backend Lambdas and Function URL
     hmsTemplate.hasOutput("OrderAndFolioTxFnArn", {
-      Export: { Name: "OrderAndFolioTxFnArn" },
+      Export: { Name: hmsExportName("OrderAndFolioTxFnArn") },
     });
     hmsTemplate.hasOutput("ReservationAndCheckInTxFnArn", {
-      Export: { Name: "ReservationAndCheckInTxFnArn" },
+      Export: { Name: hmsExportName("ReservationAndCheckInTxFnArn") },
     });
     hmsTemplate.hasOutput("WebhooksIngressUrl", {
-      Export: { Name: "WebhooksIngressUrl" },
+      Export: { Name: hmsExportName("WebhooksIngressUrl") },
     });
     hmsTemplate.hasOutput("NightAuditCronFnArn", {
-      Export: { Name: "NightAuditCronFnArn" },
+      Export: { Name: hmsExportName("NightAuditCronFnArn") },
     });
     hmsTemplate.hasOutput("PresignMediaUploadFnArn", {
-      Export: { Name: "PresignMediaUploadFnArn" },
+      Export: { Name: hmsExportName("PresignMediaUploadFnArn") },
     });
   });
 
@@ -384,10 +396,10 @@ describe("CloudFormation Permanent Free-Tier Cost-Ceiling Guardrails", () => {
     });
 
     hmsTemplate.hasOutput("HmsAssetBucketName", {
-      Export: { Name: "HmsAssetBucketName" },
+      Export: { Name: hmsExportName("HmsAssetBucketName") },
     });
     hmsTemplate.hasOutput("HmsAssetBucketArn", {
-      Export: { Name: "HmsAssetBucketArn" },
+      Export: { Name: hmsExportName("HmsAssetBucketArn") },
     });
   });
 
@@ -413,16 +425,16 @@ describe("CloudFormation Permanent Free-Tier Cost-Ceiling Guardrails", () => {
     });
 
     hmsTemplate.hasOutput("HmsDistributionId", {
-      Export: { Name: "HmsDistributionId" },
+      Export: { Name: hmsExportName("HmsDistributionId") },
     });
     hmsTemplate.hasOutput("HmsDistributionDomainName", {
-      Export: { Name: "HmsDistributionDomainName" },
+      Export: { Name: hmsExportName("HmsDistributionDomainName") },
     });
     hmsTemplate.hasOutput("HmsCloudFrontUrl", {
-      Export: { Name: "HmsCloudFrontUrl" },
+      Export: { Name: hmsExportName("HmsCloudFrontUrl") },
     });
     hmsTemplate.hasOutput("HmsSecurityHeadersPolicyId", {
-      Export: { Name: "HmsSecurityHeadersPolicyId" },
+      Export: { Name: hmsExportName("HmsSecurityHeadersPolicyId") },
     });
   });
 
@@ -470,7 +482,7 @@ describe("CloudFormation Permanent Free-Tier Cost-Ceiling Guardrails", () => {
     });
 
     hmsTemplate.hasOutput("NightAuditRuleArn", {
-      Export: { Name: "NightAuditRuleArn" },
+      Export: { Name: hmsExportName("NightAuditRuleArn") },
     });
   });
 
@@ -506,28 +518,48 @@ describe("CloudFormation Permanent Free-Tier Cost-Ceiling Guardrails", () => {
     });
 
     hmsTemplate.hasOutput("HmsBudgetId", {
-      Export: { Name: "HmsBudgetId" },
+      Export: { Name: hmsExportName("HmsBudgetId") },
     });
   });
 
   it("exports AppSync GraphQL API stack outputs", () => {
     hmsTemplate.hasOutput("HmsGraphQLApiId", {
       Export: {
-        Name: "HmsGraphQLApiId",
+        Name: hmsExportName("HmsGraphQLApiId"),
       },
     });
 
     hmsTemplate.hasOutput("HmsGraphQLApiUrl", {
       Export: {
-        Name: "HmsGraphQLApiUrl",
+        Name: hmsExportName("HmsGraphQLApiUrl"),
       },
     });
 
     hmsTemplate.hasOutput("HmsGraphQLApiArn", {
       Export: {
-        Name: "HmsGraphQLApiArn",
+        Name: hmsExportName("HmsGraphQLApiArn"),
       },
     });
+  });
+
+  it("uses distinct export names for different environment stack names", () => {
+    const multiEnvApp = new App();
+    const devStack = new SriLankaHmsStack(multiEnvApp, "SriLankaHmsStack", {
+      env: { region: "ap-south-1", account: "123456789012" },
+      stage: "dev",
+    });
+    const sqaStack = new SriLankaHmsStack(multiEnvApp, "SriLankaHmsStack-sqa", {
+      env: { region: "ap-south-1", account: "123456789012" },
+      stage: "sqa",
+    });
+
+    const devExportNames = extractOutputExportNames(Template.fromStack(devStack));
+    const sqaExportNames = extractOutputExportNames(Template.fromStack(sqaStack));
+    const collisions = [...devExportNames].filter((name) => sqaExportNames.has(name));
+
+    assert.deepEqual(collisions, []);
+    assert.ok(devExportNames.has(`${devStack.stackName}-HmsDistributionId`));
+    assert.ok(sqaExportNames.has(`${sqaStack.stackName}-HmsDistributionId`));
   });
 
   it("registers HmsTable as AppSync DynamoDB DataSource", () => {
